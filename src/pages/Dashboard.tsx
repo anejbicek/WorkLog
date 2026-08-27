@@ -20,6 +20,9 @@ function Dashboard() {
 
     startDate,
     endDate,
+
+    setStartDate,
+    setEndDate,
   } = useWorkOrders();
 
   const [
@@ -92,6 +95,110 @@ function Dashboard() {
       ===================================== */}
 
       <WorkOrderHeader />
+
+      {/* =====================================
+          IZBIRA OBDOBJA
+      ===================================== */}
+
+      <div
+        style={{
+          width:
+            "calc(100% - 226px)",
+          maxWidth: "1080px",
+          margin:
+            "0 auto 20px auto",
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: "12px",
+        }}
+      >
+        {/* OD */}
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <label
+            style={{
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "#334155",
+            }}
+          >
+            Od:
+          </label>
+
+          <input
+            type="date"
+            value={startDate}
+            onChange={(event) =>
+              setStartDate(
+                event.target.value
+              )
+            }
+            style={{
+              height: "42px",
+              padding: "0 12px",
+              border:
+                "1px solid #d1d5db",
+              borderRadius: "9px",
+              background: "#ffffff",
+              color: "#334155",
+              fontSize: "14px",
+              boxSizing:
+                "border-box",
+              cursor: "pointer",
+            }}
+          />
+        </div>
+
+        {/* DO */}
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <label
+            style={{
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "#334155",
+            }}
+          >
+            Do:
+          </label>
+
+          <input
+            type="date"
+            value={endDate}
+            onChange={(event) =>
+              setEndDate(
+                event.target.value
+              )
+            }
+            style={{
+              height: "42px",
+              padding: "0 12px",
+              border:
+                "1px solid #d1d5db",
+              borderRadius: "9px",
+              background: "#ffffff",
+              color: "#334155",
+              fontSize: "14px",
+              boxSizing:
+                "border-box",
+              cursor: "pointer",
+            }}
+          />
+        </div>
+      </div>
 
       {/* =====================================
           VNOS DELOVNEGA NALOGA
