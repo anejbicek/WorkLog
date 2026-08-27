@@ -553,17 +553,16 @@ function WorkOrderCard({
      DODATNE URE
   ===================================================== */
 
-  const additionalHours =
-    machine &&
-    additionalMachine &&
-    machine !== additionalMachine
-      ? Number(
-          (
-            hours / 3
-          ).toFixed(2)
-        )
-      : 0;
-
+const additionalHours =
+  machine &&
+  additionalMachine &&
+  machine !== additionalMachine
+    ? Number(
+        (
+          7.5 / 3
+        ).toFixed(2)
+      )
+    : 0;
   /* =====================================================
      POČISTI
   ===================================================== */

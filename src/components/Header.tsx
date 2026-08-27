@@ -93,48 +93,6 @@ function Header() {
           </div>
         </div>
 
-        {/* PROJEKTI – V PRIPRAVI */}
-
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "#f4c430",
-            padding: "7px 22px",
-            borderRadius: "4px",
-            fontSize: "13px",
-            fontWeight: 800,
-            color: "#263238",
-            letterSpacing: "0.5px",
-            boxShadow:
-              "0 2px 5px rgba(0,0,0,0.12)",
-            border:
-              "1px solid #d9aa18",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage:
-                "repeating-linear-gradient(135deg, transparent 0px, transparent 10px, rgba(0,0,0,0.18) 10px, rgba(0,0,0,0.18) 14px)",
-              pointerEvents: "none",
-            }}
-          />
-
-          <span
-            style={{
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            🦺 &nbsp; PROJEKTI – V PRIPRAVI
-          </span>
-        </div>
-
         {/* DESNA STRAN – ISKANJE + UPORABNIK */}
 
         <div
