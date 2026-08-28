@@ -1,35 +1,52 @@
-import { Pencil, Trash2 } from "lucide-react";
-import type { WorkOrder } from "../../types/WorkOrder";
+import {
+  Pencil,
+  Trash2,
+} from "lucide-react";
+
+import type {
+  WorkOrder,
+} from "../../types/WorkOrder";
 
 type WorkOrderRowProps = {
   workOrder: WorkOrder;
-  onDelete: (id: number) => void;
-    onEdit: (workOrder: WorkOrder) => void;
+
+  onDelete: (
+    id: number
+  ) => void;
+
+  onEdit: (
+    workOrder: WorkOrder
+  ) => void;
 };
 
 type ActionButtonProps = {
   children: React.ReactNode;
+
   danger?: boolean;
+
   onClick?: () => void;
 };
 
 function ActionButton({
   children,
   danger = false,
-    onClick,
+  onClick,
 }: ActionButtonProps) {
   return (
     <button
-    onClick={onClick}
+      onClick={onClick}
       style={{
         display: "flex",
         alignItems: "center",
         gap: "6px",
         padding: "8px 14px",
         borderRadius: "8px",
-        border: "1px solid #dbe3e8",
+        border:
+          "1px solid #dbe3e8",
         background: "#ffffff",
-        color: danger ? "#dc2626" : "#334155",
+        color: danger
+          ? "#dc2626"
+          : "#334155",
         cursor: "pointer",
         fontSize: "14px",
         fontWeight: 500,
@@ -45,12 +62,17 @@ function WorkOrderRow({
   onDelete,
   onEdit,
 }: WorkOrderRowProps) {
-   console.log("onDelete:", onDelete);
+  console.log(
+    "onDelete:",
+    onDelete
+  );
+
   return (
     <div
       style={{
         background: "#ffffff",
-        border: "1px solid #e5e7eb",
+        border:
+          "1px solid #e5e7eb",
         borderRadius: "14px",
         padding: "18px 22px",
         marginBottom: "12px",
@@ -67,27 +89,54 @@ function WorkOrderRow({
           fontWeight: 600,
         }}
       >
-        <span>{workOrder.project}</span>
-
-        <span style={{ color: "#cbd5e1" }}>|</span>
-
-        <span>{workOrder.machine}</span>
-
-        <span style={{ color: "#cbd5e1" }}>|</span>
-
-        <span>{workOrder.quantity} kos</span>
-
-        <span style={{ color: "#cbd5e1" }}>|</span>
-
-        <span>{workOrder.date}</span>
-
-        <span style={{ color: "#cbd5e1" }}>|</span>
-
         <span>
-          {workOrder.startTime} - {workOrder.endTime}
+          {workOrder.project}
         </span>
 
-        <span style={{ color: "#cbd5e1" }}>|</span>
+        <span
+          style={{
+            color: "#cbd5e1",
+          }}
+        >
+          |
+        </span>
+
+        <span>
+          {workOrder.machine}
+        </span>
+
+        <span
+          style={{
+            color: "#cbd5e1",
+          }}
+        >
+          |
+        </span>
+
+        <span>
+          {workOrder.date}
+        </span>
+
+        <span
+          style={{
+            color: "#cbd5e1",
+          }}
+        >
+          |
+        </span>
+
+        <span>
+          {workOrder.startTime} -{" "}
+          {workOrder.endTime}
+        </span>
+
+        <span
+          style={{
+            color: "#cbd5e1",
+          }}
+        >
+          |
+        </span>
 
         <span
           style={{
@@ -103,7 +152,8 @@ function WorkOrderRow({
         style={{
           marginTop: "10px",
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent:
+            "space-between",
           alignItems: "center",
           gap: "20px",
         }}
@@ -115,7 +165,10 @@ function WorkOrderRow({
             flex: 1,
           }}
         >
-          <strong>Opomba:</strong> {workOrder.note}
+          <strong>
+            Opomba:
+          </strong>{" "}
+          {workOrder.note}
         </div>
 
         <div
@@ -125,19 +178,27 @@ function WorkOrderRow({
           }}
         >
           <ActionButton
-            onClick={() => onEdit(workOrder)}
+            onClick={() =>
+              onEdit(workOrder)
+            }
           >
             <Pencil size={16} />
+
             Uredi
           </ActionButton>
 
           <ActionButton
-  danger
-  onClick={() => onDelete(workOrder.id)}
->
-  <Trash2 size={16} />
-  Izbriši
-</ActionButton>
+            danger
+            onClick={() =>
+              onDelete(
+                workOrder.id
+              )
+            }
+          >
+            <Trash2 size={16} />
+
+            Izbriši
+          </ActionButton>
         </div>
       </div>
     </div>
