@@ -490,10 +490,10 @@ function WorkOrderCard({
   ] = useState(false);
 
   const machineOptions = [
-    "HAAS VF-2",
-    "HAAS VF-4",
-    "DMG Mori",
-    "Okuma",
+    "OKUMA MB-56VB",
+    "OKUMA M460V-5AX",
+    "Žična erozija",
+    "Potopna erozija",
   ];
 
   /* =================================================
