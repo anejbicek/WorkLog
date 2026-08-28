@@ -1,25 +1,51 @@
 import { useState } from "react";
-import type { WorkOrder } from "../../types/WorkOrder";
+
+import type {
+  WorkOrder,
+} from "../../types/WorkOrder";
 
 type WorkOrderEditModalProps = {
   workOrder: WorkOrder;
-  onSave: (workOrder: WorkOrder) => void;
+
+  onSave: (
+    workOrder: WorkOrder
+  ) => void;
+
   onClose: () => void;
 };
 
-/* =====================================================
-   URE NA 15 MINUT
-===================================================== */
+const machineOptions = [
+  "OKUMA MB-56VB",
+  "OKUMA M460V-5AX",
+  "Žična erozija",
+  "Potopna erozija",
+];
 
 function createTimeOptions() {
   const options: string[] = [];
 
-  for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 15) {
+  for (
+    let hour = 0;
+    hour < 24;
+    hour++
+  ) {
+    for (
+      let minute = 0;
+      minute < 60;
+      minute += 15
+    ) {
       options.push(
-        `${String(hour).padStart(2, "0")}:${String(
+        `${String(
+          hour
+        ).padStart(
+          2,
+          "0"
+        )}:${String(
           minute
-        ).padStart(2, "0")}`
+        ).padStart(
+          2,
+          "0"
+        )}`
       );
     }
   }
@@ -27,44 +53,74 @@ function createTimeOptions() {
   return options;
 }
 
-const timeOptions = createTimeOptions();
+const timeOptions =
+  createTimeOptions();
 
-/* =====================================================
-   PRETVORBA ČASA
-===================================================== */
+function timeToMinutes(
+  time: string
+) {
+  const [
+    hour,
+    minute,
+  ] =
+    time
+      .split(":")
+      .map(Number);
 
-function timeToMinutes(time: string) {
-  const [hour, minute] = time.split(":").map(Number);
-
-  return hour * 60 + minute;
+  return (
+    hour * 60 +
+    minute
+  );
 }
 
-/* =====================================================
-   PRAZNIKI
-===================================================== */
-
-function formatDate(date: Date) {
-  const year = date.getFullYear();
-
-  const month = String(
+function formatDate(
+  date: Date
+) {
+  return `${date.getFullYear()}-${String(
     date.getMonth() + 1
-  ).padStart(2, "0");
-
-  const day = String(
+  ).padStart(
+    2,
+    "0"
+  )}-${String(
     date.getDate()
-  ).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  ).padStart(
+    2,
+    "0"
+  )}`;
 }
 
-function calculateEaster(year: number) {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
+function calculateEaster(
+  year: number
+) {
+  const a =
+    year % 19;
+
+  const b =
+    Math.floor(
+      year / 100
+    );
+
+  const c =
+    year % 100;
+
+  const d =
+    Math.floor(
+      b / 4
+    );
+
+  const e =
+    b % 4;
+
+  const f =
+    Math.floor(
+      (b + 8) / 25
+    );
+
+  const g =
+    Math.floor(
+      (b - f + 1) /
+        3
+    );
 
   const h =
     (19 * a +
@@ -74,8 +130,13 @@ function calculateEaster(year: number) {
       15) %
     30;
 
-  const i = Math.floor(c / 4);
-  const k = c % 4;
+  const i =
+    Math.floor(
+      c / 4
+    );
+
+  const k =
+    c % 4;
 
   const l =
     (32 +
@@ -85,16 +146,30 @@ function calculateEaster(year: number) {
       k) %
     7;
 
-  const m = Math.floor(
-    (a + 11 * h + 22 * l) / 451
-  );
+  const m =
+    Math.floor(
+      (a +
+        11 * h +
+        22 * l) /
+        451
+    );
 
-  const month = Math.floor(
-    (h + l - 7 * m + 114) / 31
-  );
+  const month =
+    Math.floor(
+      (h +
+        l -
+        7 * m +
+        114) /
+        31
+    );
 
   const day =
-    ((h + l - 7 * m + 114) % 31) + 1;
+    ((h +
+      l -
+      7 * m +
+      114) %
+      31) +
+    1;
 
   return new Date(
     year,
@@ -103,14 +178,20 @@ function calculateEaster(year: number) {
   );
 }
 
-function isHoliday(dateString: string) {
+function isHoliday(
+  dateString: string
+) {
   if (!dateString) {
     return false;
   }
 
-  const year = Number(
-    dateString.substring(0, 4)
-  );
+  const year =
+    Number(
+      dateString.substring(
+        0,
+        4
+      )
+    );
 
   const fixedHolidays = [
     `${year}-01-01`,
@@ -127,374 +208,445 @@ function isHoliday(dateString: string) {
     `${year}-12-26`,
   ];
 
-  const easter = calculateEaster(year);
+  const easter =
+    calculateEaster(
+      year
+    );
 
-  const easterMonday = new Date(easter);
+  const easterMonday =
+    new Date(easter);
 
   easterMonday.setDate(
-    easterMonday.getDate() + 1
+    easterMonday.getDate() +
+      1
   );
-
-  const easterMondayString =
-    formatDate(easterMonday);
 
   return (
-    fixedHolidays.includes(dateString) ||
-    dateString === easterMondayString
+    fixedHolidays.includes(
+      dateString
+    ) ||
+    dateString ===
+      formatDate(
+        easterMonday
+      )
   );
 }
-
-/* =====================================================
-   KOMPONENTA
-===================================================== */
 
 function WorkOrderEditModal({
   workOrder,
   onSave,
   onClose,
 }: WorkOrderEditModalProps) {
-  /* ---------------------------------------------------
-     OSNOVNI PODATKI
-  --------------------------------------------------- */
-
-  const [project, setProject] = useState(
+  const [
+    project,
+    setProject,
+  ] = useState(
     workOrder.project
   );
 
-  const [machine, setMachine] = useState(
+  const [
+    machine,
+    setMachine,
+  ] = useState(
     workOrder.machine
   );
 
-  const [additionalMachine, setAdditionalMachine] =
-    useState(
-      workOrder.additionalMachine || ""
-    );
-
-  const [showAdditionalMachine, setShowAdditionalMachine] =
-    useState(
-      Boolean(workOrder.additionalMachine)
-    );
-
-  const [quantity, setQuantity] = useState(
-    workOrder.quantity.toString()
+  const [
+    additionalMachine,
+    setAdditionalMachine,
+  ] = useState(
+    workOrder.additionalMachine ||
+      ""
   );
 
-  const [date, setDate] = useState(
+  const [
+    showAdditionalMachine,
+    setShowAdditionalMachine,
+  ] = useState(
+    Boolean(
+      workOrder.additionalMachine
+    )
+  );
+
+  const [
+    date,
+    setDate,
+  ] = useState(
     workOrder.date
   );
 
-  const [startTime, setStartTime] = useState(
-    workOrder.startTime || "06:00"
+  const [
+    startTime,
+    setStartTime,
+  ] = useState(
+    workOrder.startTime ||
+      "06:00"
   );
 
-  const [endTime, setEndTime] = useState(
-    workOrder.endTime || "14:00"
+  const [
+    endTime,
+    setEndTime,
+  ] = useState(
+    workOrder.endTime ||
+      "14:00"
   );
 
-  const [note, setNote] = useState(
+  const [
+    mealType,
+    setMealType,
+  ] =
+    useState<
+      "outside" |
+      "withMe"
+    >(
+      workOrder.mealType ||
+        "withMe"
+    );
+
+  const [
+    note,
+    setNote,
+  ] = useState(
     workOrder.note
   );
 
-  /* ---------------------------------------------------
-     STROJI
-  --------------------------------------------------- */
+  const calculateHours =
+    () => {
+      if (
+        !startTime ||
+        !endTime
+      ) {
+        return 0;
+      }
 
-  const machines = [
-    "OKUMA MB-56VB",
-    "OKUMA M460V-5AX",
-    "žična erozija",
-    "potopna erozija",
-  ];
+      let start =
+        timeToMinutes(
+          startTime
+        );
 
-  /* ---------------------------------------------------
-     IZRAČUN SKUPNIH UR
-  --------------------------------------------------- */
+      let end =
+        timeToMinutes(
+          endTime
+        );
 
-  const calculateHours = () => {
-    if (!startTime || !endTime) {
-      return 0;
-    }
+      if (
+        end <= start
+      ) {
+        end +=
+          24 * 60;
+      }
 
-    let start = timeToMinutes(startTime);
-    let end = timeToMinutes(endTime);
-
-    // Če delo traja čez polnoč
-    if (end <= start) {
-      end += 24 * 60;
-    }
-
-    const difference = end - start;
-
-    return Number(
-      (difference / 60).toFixed(2)
-    );
-  };
-
-  const hours = calculateHours();
-
-  /* ---------------------------------------------------
-     IZRAČUN REDNIH / NOČNIH / PRAZNIKOV / NADUR
-  --------------------------------------------------- */
-
-  const calculateBreakdown = () => {
-    if (!startTime || !endTime) {
-      return {
-        regular: 0,
-        night: 0,
-        holiday: 0,
-        overtime: 0,
-      };
-    }
-
-    let start = timeToMinutes(startTime);
-    let end = timeToMinutes(endTime);
-
-    if (end <= start) {
-      end += 24 * 60;
-    }
-
-    const selectedDate =
-      new Date(`${date}T00:00:00`);
-
-    const isSunday =
-      selectedDate.getDay() === 0;
-
-    const isHolidayDate =
-      isHoliday(date);
-
-    let regularMinutes = 0;
-    let nightMinutes = 0;
-    let holidayMinutes = 0;
-    let overtimeMinutes = 0;
-
-    let workedMinutes = 0;
-
-    for (
-      let minute = start;
-      minute < end;
-      minute++
-    ) {
-      const minuteOfDay =
-        minute % (24 * 60);
-
-      const hour = Math.floor(
-        minuteOfDay / 60
+      return Number(
+        (
+          (end - start) /
+          60
+        ).toFixed(2)
       );
-
-      const isNight =
-        hour >= 22 || hour < 6;
-
-      const isSpecialDay =
-        isSunday || isHolidayDate;
-
-      /*
-        Nadure:
-        vse kar je nad 8 ur.
-      */
-
-      if (workedMinutes >= 8 * 60) {
-        overtimeMinutes++;
-      }
-
-      /*
-        Nedelja ali praznik
-      */
-
-      else if (isSpecialDay) {
-        holidayMinutes++;
-      }
-
-      /*
-        Nočne:
-        22:00 - 06:00
-      */
-
-      else if (isNight) {
-        nightMinutes++;
-      }
-
-      /*
-        Redne
-      */
-
-      else {
-        regularMinutes++;
-      }
-
-      workedMinutes++;
-    }
-
-    return {
-      regular: Number(
-        (regularMinutes / 60).toFixed(2)
-      ),
-
-      night: Number(
-        (nightMinutes / 60).toFixed(2)
-      ),
-
-      holiday: Number(
-        (holidayMinutes / 60).toFixed(2)
-      ),
-
-      overtime: Number(
-        (overtimeMinutes / 60).toFixed(2)
-      ),
     };
-  };
 
-  const breakdown = calculateBreakdown();
+  const hours =
+    calculateHours();
 
-  /* ---------------------------------------------------
-     DODATNE URE
+  const calculateBreakdown =
+    () => {
+      if (
+        !startTime ||
+        !endTime
+      ) {
+        return {
+          regular: 0,
+          night: 0,
+          holiday: 0,
+          overtime: 0,
+        };
+      }
 
-     Če sta izbrana dva različna stroja:
-     dodatne ure = 1/3 vseh opravljenih ur
-  --------------------------------------------------- */
+      let start =
+        timeToMinutes(
+          startTime
+        );
+
+      let end =
+        timeToMinutes(
+          endTime
+        );
+
+      if (
+        end <= start
+      ) {
+        end +=
+          24 * 60;
+      }
+
+      const selectedDate =
+        new Date(
+          `${date}T00:00:00`
+        );
+
+      const sunday =
+        selectedDate.getDay() ===
+        0;
+
+      const holiday =
+        isHoliday(date);
+
+      let regularMinutes =
+        0;
+
+      let nightMinutes =
+        0;
+
+      let holidayMinutes =
+        0;
+
+      let overtimeMinutes =
+        0;
+
+      let workedMinutes =
+        0;
+
+      for (
+        let minute =
+          start;
+        minute < end;
+        minute++
+      ) {
+        const minuteOfDay =
+          minute %
+          (24 * 60);
+
+        const hour =
+          Math.floor(
+            minuteOfDay /
+              60
+          );
+
+        const isNight =
+          hour >= 22 ||
+          hour < 6;
+
+        if (
+          workedMinutes >=
+          8 * 60
+        ) {
+          overtimeMinutes++;
+        } else if (
+          sunday ||
+          holiday
+        ) {
+          holidayMinutes++;
+        } else if (
+          isNight
+        ) {
+          nightMinutes++;
+        } else {
+          regularMinutes++;
+        }
+
+        workedMinutes++;
+      }
+
+      return {
+        regular:
+          Number(
+            (
+              regularMinutes /
+              60
+            ).toFixed(2)
+          ),
+
+        night:
+          Number(
+            (
+              nightMinutes /
+              60
+            ).toFixed(2)
+          ),
+
+        holiday:
+          Number(
+            (
+              holidayMinutes /
+              60
+            ).toFixed(2)
+          ),
+
+        overtime:
+          Number(
+            (
+              overtimeMinutes /
+              60
+            ).toFixed(2)
+          ),
+      };
+    };
+
+  const breakdown =
+    calculateBreakdown();
+
+  /*
+    TOČNO 8 h:
+    (8 - 0,5) / 3 = 2,50
+
+    VSE OSTALO:
+    ure / 3
+  */
 
   const additionalHours =
     machine &&
     additionalMachine &&
-    machine !== additionalMachine
+    machine !==
+      additionalMachine
       ? Number(
-          (hours / 3).toFixed(2)
+          (
+            (
+              hours === 8
+                ? hours - 0.5
+                : hours
+            ) / 3
+          ).toFixed(2)
         )
       : 0;
 
-  /* ---------------------------------------------------
-     SKUPAJ ZA EVIDENCO
+  const handleSave =
+    () => {
+      if (!project) {
+        alert(
+          "Izberi projekt."
+        );
 
-     To so ure, ki se bodo zapisale v WorkOrder.
-  --------------------------------------------------- */
+        return;
+      }
 
+      if (!machine) {
+        alert(
+          "Izberi stroj."
+        );
 
-  /* ---------------------------------------------------
-     SHRANI SPREMEMBE
-  --------------------------------------------------- */
+        return;
+      }
 
-  const handleSave = () => {
-    if (!project) {
-      alert("Izberi projekt.");
-      return;
-    }
+      if (
+        showAdditionalMachine &&
+        !additionalMachine
+      ) {
+        alert(
+          "Izberi drugi stroj."
+        );
 
-    if (!machine) {
-      alert("Izberi stroj.");
-      return;
-    }
+        return;
+      }
 
-    if (
-      showAdditionalMachine &&
-      !additionalMachine
-    ) {
-      alert("Izberi drugi stroj.");
-      return;
-    }
+      if (
+        showAdditionalMachine &&
+        machine ===
+          additionalMachine
+      ) {
+        alert(
+          "Prvi in drugi stroj ne smeta biti enak."
+        );
 
-    if (
-      showAdditionalMachine &&
-      machine === additionalMachine
-    ) {
-      alert(
-        "Prvi in drugi stroj ne smeta biti enak."
+        return;
+      }
+
+      const updatedWorkOrder:
+        WorkOrder = {
+        ...workOrder,
+
+        project,
+
+        machine,
+
+        additionalMachine:
+          additionalMachine ||
+          undefined,
+
+        date,
+
+        startTime,
+
+        endTime,
+
+        hours,
+
+        regularHours:
+          breakdown.regular,
+
+        nightHours:
+          breakdown.night,
+
+        holidayHours:
+          breakdown.holiday,
+
+        overtimeHours:
+          breakdown.overtime,
+
+        additionalHours,
+
+        mealType,
+
+        note,
+      };
+
+      onSave(
+        updatedWorkOrder
       );
-
-      return;
-    }
-
-    const updatedWorkOrder: WorkOrder = {
-      ...workOrder,
-
-      id: workOrder.id,
-
-      project,
-
-      machine,
-
-      additionalMachine:
-        additionalMachine || undefined,
-
-      quantity: Number(quantity),
-
-      date,
-
-      startTime,
-
-      endTime,
-
-      /*
-        Osnovne ure naloga.
-      */
-
-      hours,
-
-      /*
-        Razdelitev ur.
-      */
-
-      regularHours:
-        breakdown.regular,
-
-      nightHours:
-        breakdown.night,
-
-      holidayHours:
-        breakdown.holiday,
-
-      overtimeHours:
-        breakdown.overtime,
-
-      additionalHours,
-
-      note,
     };
-
-    onSave(updatedWorkOrder);
-  };
-
-  /* ===================================================
-     IZPIS
-  =================================================== */
 
   return (
     <div
       style={{
-        position: "fixed",
+        position:
+          "fixed",
         inset: 0,
         background:
           "rgba(15, 23, 42, 0.45)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "20px",
+        display:
+          "flex",
+        alignItems:
+          "center",
+        justifyContent:
+          "center",
+        padding:
+          "20px",
         zIndex: 1000,
       }}
-      onClick={onClose}
+      onClick={
+        onClose
+      }
     >
       <div
         style={{
           width:
             "min(1100px, 100%)",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          background: "#ffffff",
-          borderRadius: "18px",
-          padding: "30px",
+          maxHeight:
+            "90vh",
+          overflowY:
+            "auto",
+          background:
+            "#ffffff",
+          borderRadius:
+            "18px",
+          padding:
+            "30px",
           boxShadow:
             "0 20px 50px rgba(0,0,0,0.2)",
         }}
-        onClick={(event) =>
+        onClick={(
+          event
+        ) =>
           event.stopPropagation()
         }
       >
-        {/* NASLOV */}
-
         <h2
           style={{
             margin: 0,
-            fontSize: "28px",
-            fontWeight: 700,
-            color: "#12344d",
+            fontSize:
+              "28px",
+            fontWeight:
+              700,
+            color:
+              "#12344d",
           }}
         >
           Uredi delovni nalog
@@ -502,48 +654,66 @@ function WorkOrderEditModal({
 
         <p
           style={{
-            marginTop: "8px",
-            color: "#64748b",
-            fontSize: "15px",
+            marginTop:
+              "8px",
+            color:
+              "#64748b",
+            fontSize:
+              "15px",
           }}
         >
-          Spremenite podatke delovnega naloga.
+          Spremenite podatke
+          delovnega naloga.
         </p>
-
-        {/* =================================================
-            PRVA VRSTICA
-        ================================================= */}
 
         <div
           style={{
-            display: "grid",
+            display:
+              "grid",
             gridTemplateColumns:
-              "140px 140px 160px 1fr 260px 120px",
-            gap: "18px",
-            marginTop: "30px",
+              "140px 140px 160px 1fr 260px",
+            gap:
+              "18px",
+            marginTop:
+              "30px",
           }}
         >
-          {/* ZAČETEK */}
-
           <div>
-            <label style={labelStyle}>
+            <label
+              style={
+                labelStyle
+              }
+            >
               Začetek
             </label>
 
             <select
-              value={startTime}
-              onChange={(e) =>
+              value={
+                startTime
+              }
+              onChange={(
+                e
+              ) =>
                 setStartTime(
-                  e.target.value
+                  e.target
+                    .value
                 )
               }
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             >
               {timeOptions.map(
-                (time) => (
+                (
+                  time
+                ) => (
                   <option
-                    key={time}
-                    value={time}
+                    key={
+                      time
+                    }
+                    value={
+                      time
+                    }
                   >
                     {time}
                   </option>
@@ -552,27 +722,42 @@ function WorkOrderEditModal({
             </select>
           </div>
 
-          {/* KONČANO */}
-
           <div>
-            <label style={labelStyle}>
+            <label
+              style={
+                labelStyle
+              }
+            >
               Končano
             </label>
 
             <select
-              value={endTime}
-              onChange={(e) =>
+              value={
+                endTime
+              }
+              onChange={(
+                e
+              ) =>
                 setEndTime(
-                  e.target.value
+                  e.target
+                    .value
                 )
               }
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             >
               {timeOptions.map(
-                (time) => (
+                (
+                  time
+                ) => (
                   <option
-                    key={time}
-                    value={time}
+                    key={
+                      time
+                    }
+                    value={
+                      time
+                    }
                   >
                     {time}
                   </option>
@@ -581,71 +766,94 @@ function WorkOrderEditModal({
             </select>
           </div>
 
-          {/* DATUM */}
-
           <div>
-            <label style={labelStyle}>
+            <label
+              style={
+                labelStyle
+              }
+            >
               Datum
             </label>
 
             <input
               type="date"
-              value={date}
-              onChange={(e) =>
+              value={
+                date
+              }
+              onChange={(
+                e
+              ) =>
                 setDate(
-                  e.target.value
+                  e.target
+                    .value
                 )
               }
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             />
           </div>
 
-          {/* PROJEKT */}
-
           <div>
-            <label style={labelStyle}>
+            <label
+              style={
+                labelStyle
+              }
+            >
               Projekt
             </label>
 
             <input
               type="text"
-              value={project}
-              onChange={(e) =>
+              value={
+                project
+              }
+              onChange={(
+                e
+              ) =>
                 setProject(
-                  e.target.value
+                  e.target
+                    .value
                 )
               }
               placeholder="Izberi projekt"
-              style={inputStyle}
+              style={
+                inputStyle
+              }
             />
           </div>
 
-          {/* STROJ */}
-
           <div>
-            <label style={labelStyle}>
+            <label
+              style={
+                labelStyle
+              }
+            >
               Stroj
             </label>
 
             <div
               style={{
-                display: "flex",
-                gap: "8px",
+                display:
+                  "flex",
+                gap:
+                  "8px",
               }}
             >
               <select
-                value={machine}
-                onChange={(e) => {
+                value={
+                  machine
+                }
+                onChange={(
+                  e
+                ) => {
                   const selected =
-                    e.target.value;
+                    e.target
+                      .value;
 
-                  setMachine(selected);
-
-                  /*
-                    Če je bil drugi stroj
-                    enak novemu prvemu,
-                    ga odstranimo.
-                  */
+                  setMachine(
+                    selected
+                  );
 
                   if (
                     selected ===
@@ -665,13 +873,21 @@ function WorkOrderEditModal({
                   Izberi stroj
                 </option>
 
-                {machines.map(
-                  (machineName) => (
+                {machineOptions.map(
+                  (
+                    machineName
+                  ) => (
                     <option
-                      key={machineName}
-                      value={machineName}
+                      key={
+                        machineName
+                      }
+                      value={
+                        machineName
+                      }
                     >
-                      {machineName}
+                      {
+                        machineName
+                      }
                     </option>
                   )
                 )}
@@ -685,30 +901,36 @@ function WorkOrderEditModal({
                       true
                     )
                   }
-                  style={plusButtonStyle}
+                  style={
+                    plusButtonStyle
+                  }
                 >
                   +
                 </button>
               )}
             </div>
 
-            {/* DRUGI STROJ */}
-
             {showAdditionalMachine && (
               <div
                 style={{
-                  display: "flex",
-                  gap: "8px",
-                  marginTop: "8px",
+                  display:
+                    "flex",
+                  gap:
+                    "8px",
+                  marginTop:
+                    "8px",
                 }}
               >
                 <select
                   value={
                     additionalMachine
                   }
-                  onChange={(e) =>
+                  onChange={(
+                    e
+                  ) =>
                     setAdditionalMachine(
-                      e.target.value
+                      e.target
+                        .value
                     )
                   }
                   style={{
@@ -720,17 +942,25 @@ function WorkOrderEditModal({
                     Izberi drugi stroj
                   </option>
 
-                  {machines.map(
-                    (machineName) => (
+                  {machineOptions.map(
+                    (
+                      machineName
+                    ) => (
                       <option
-                        key={machineName}
-                        value={machineName}
+                        key={
+                          machineName
+                        }
+                        value={
+                          machineName
+                        }
                         disabled={
                           machineName ===
                           machine
                         }
                       >
-                        {machineName}
+                        {
+                          machineName
+                        }
                       </option>
                     )
                   )}
@@ -747,74 +977,164 @@ function WorkOrderEditModal({
                       ""
                     );
                   }}
-                  style={minusButtonStyle}
+                  style={
+                    minusButtonStyle
+                  }
                 >
                   −
                 </button>
               </div>
             )}
           </div>
-
-          {/* KOLIČINA */}
-
-          <div>
-            <label style={labelStyle}>
-              Količina
-            </label>
-
-            <input
-              type="number"
-              value={quantity}
-              onChange={(e) =>
-                setQuantity(
-                  e.target.value
-                )
-              }
-              style={inputStyle}
-            />
-          </div>
         </div>
-
-        {/* =================================================
-            OPIS DELA
-        ================================================= */}
 
         <div
           style={{
-            marginTop: "25px",
+            marginTop:
+              "22px",
+            display:
+              "flex",
+            alignItems:
+              "center",
+            gap:
+              "12px",
           }}
         >
-          <label style={labelStyle}>
+          <input
+            id="edit-meal-checkbox"
+            type="checkbox"
+            checked={
+              mealType ===
+              "outside"
+            }
+            onChange={(
+              e
+            ) =>
+              setMealType(
+                e.target
+                  .checked
+                  ? "outside"
+                  : "withMe"
+              )
+            }
+            style={{
+              width:
+                "18px",
+              height:
+                "18px",
+              cursor:
+                "pointer",
+            }}
+          />
+
+          <label
+            htmlFor="edit-meal-checkbox"
+            style={{
+              fontSize:
+                "14px",
+              color:
+                "#475569",
+              cursor:
+                "pointer",
+            }}
+          >
+            {mealType ===
+            "outside"
+              ? "Malica zunaj"
+              : "Malica s seboj"}
+          </label>
+        </div>
+
+        <div
+          style={{
+            marginTop:
+              "25px",
+          }}
+        >
+          <label
+            style={
+              labelStyle
+            }
+          >
             Opis dela
           </label>
 
           <textarea
-            value={note}
-            onChange={(e) =>
-              setNote(e.target.value)
+            value={
+              note
+            }
+            onChange={(
+              e
+            ) =>
+              setNote(
+                e.target
+                  .value
+              )
             }
             rows={4}
             placeholder="Vnesite opis opravljenega dela..."
-            style={textareaStyle}
+            style={
+              textareaStyle
+            }
           />
         </div>
 
-        {/* =================================================
-            GUMBI
-        ================================================= */}
+        <div
+          style={{
+            marginTop:
+              "18px",
+            padding:
+              "12px 15px",
+            borderRadius:
+              "9px",
+            background:
+              "#f8fafc",
+            color:
+              "#475569",
+            fontSize:
+              "14px",
+          }}
+        >
+          Oddelane ure:{" "}
+          <strong>
+            {
+              hours.toFixed(
+                2
+              )
+            }{" "}
+            h
+          </strong>
+
+          {" · "}
+
+          Dodatne ure:{" "}
+          <strong>
+            {
+              additionalHours.toFixed(
+                2
+              )
+            }{" "}
+            h
+          </strong>
+        </div>
 
         <div
           style={{
-            display: "flex",
+            display:
+              "flex",
             justifyContent:
               "flex-end",
-            gap: "12px",
-            marginTop: "25px",
+            gap:
+              "12px",
+            marginTop:
+              "25px",
           }}
         >
           <button
             type="button"
-            onClick={onClose}
+            onClick={
+              onClose
+            }
             style={
               cancelButtonStyle
             }
@@ -824,7 +1144,9 @@ function WorkOrderEditModal({
 
           <button
             type="button"
-            onClick={handleSave}
+            onClick={
+              handleSave
+            }
             style={
               saveButtonStyle
             }
@@ -837,10 +1159,6 @@ function WorkOrderEditModal({
   );
 }
 
-/* =====================================================
-   STILI
-===================================================== */
-
 const labelStyle = {
   display: "block",
   marginBottom: "8px",
@@ -852,71 +1170,103 @@ const labelStyle = {
 const inputStyle = {
   width: "100%",
   height: "46px",
-  border: "1px solid #d1d5db",
+  border:
+    "1px solid #d1d5db",
   borderRadius: "10px",
   padding: "0 14px",
   fontSize: "15px",
   outline: "none",
-  boxSizing: "border-box" as const,
-  background: "#ffffff",
+  boxSizing:
+    "border-box" as const,
+  background:
+    "#ffffff",
 };
 
 const textareaStyle = {
   width: "100%",
-  border: "1px solid #d1d5db",
+  border:
+    "1px solid #d1d5db",
   borderRadius: "10px",
   padding: "14px",
   fontSize: "15px",
   outline: "none",
-  resize: "none" as const,
-  boxSizing: "border-box" as const,
-  fontFamily: "inherit",
+  resize:
+    "none" as const,
+  boxSizing:
+    "border-box" as const,
+  fontFamily:
+    "inherit",
 };
 
 const plusButtonStyle = {
   width: "46px",
   height: "46px",
-  border: "1px solid #d1d5db",
-  borderRadius: "10px",
-  background: "#ffffff",
-  color: "#2563eb",
-  fontSize: "24px",
-  cursor: "pointer",
+  border:
+    "1px solid #d1d5db",
+  borderRadius:
+    "10px",
+  background:
+    "#ffffff",
+  color:
+    "#2563eb",
+  fontSize:
+    "24px",
+  cursor:
+    "pointer",
 };
 
 const minusButtonStyle = {
   width: "46px",
   height: "46px",
-  border: "1px solid #d1d5db",
-  borderRadius: "10px",
-  background: "#ffffff",
-  color: "#dc2626",
-  fontSize: "24px",
-  cursor: "pointer",
+  border:
+    "1px solid #d1d5db",
+  borderRadius:
+    "10px",
+  background:
+    "#ffffff",
+  color:
+    "#dc2626",
+  fontSize:
+    "24px",
+  cursor:
+    "pointer",
 };
 
 const cancelButtonStyle = {
   height: "48px",
   padding: "0 24px",
-  borderRadius: "10px",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
-  color: "#334155",
-  fontSize: "15px",
-  fontWeight: 600,
-  cursor: "pointer",
+  borderRadius:
+    "10px",
+  border:
+    "1px solid #cbd5e1",
+  background:
+    "#ffffff",
+  color:
+    "#334155",
+  fontSize:
+    "15px",
+  fontWeight:
+    600,
+  cursor:
+    "pointer",
 };
 
 const saveButtonStyle = {
   height: "48px",
   padding: "0 28px",
   border: "none",
-  borderRadius: "10px",
-  background: "#2563eb",
-  color: "#ffffff",
-  fontSize: "15px",
-  fontWeight: 600,
-  cursor: "pointer",
+  borderRadius:
+    "10px",
+  background:
+    "#2563eb",
+  color:
+    "#ffffff",
+  fontSize:
+    "15px",
+  fontWeight:
+    600,
+  cursor:
+    "pointer",
   boxShadow:
     "0 4px 10px rgba(37,99,235,0.25)",
 };

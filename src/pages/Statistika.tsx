@@ -9,34 +9,21 @@ import {
 
 import WorkOrderEditModal from "../components/Workorders/WorkOrderEditModal";
 
-import type { WorkOrder } from "../types/WorkOrder";
-
-/* =====================================================
-   STATUS DNEVA
-===================================================== */
-
-type DayStatus =
-  | "none"
-  | "work"
-  | "twoMachines"
-  | "sick"
-  | "vacation"
-  | "holiday";
-
-/* =====================================================
-   STATISTIKA
-===================================================== */
+import type {
+  DayStatus,
+  WorkOrder,
+} from "../types/WorkOrder";
 
 function Statistika() {
   const {
     workOrders,
+    updateWorkOrder,
+    dayStatuses,
+    setDayStatus,
   } = useWorkOrders();
 
-  /* ===================================================
-     IZBIRA MESECA
-  =================================================== */
-
-  const today = new Date();
+  const today =
+    new Date();
 
   const [
     selectedMonth,
@@ -44,112 +31,115 @@ function Statistika() {
   ] = useState(
     `${today.getFullYear()}-${String(
       today.getMonth() + 1
-    ).padStart(2, "0")}`
+    ).padStart(
+      2,
+      "0"
+    )}`
   );
-
-  /* ===================================================
-     UREDI KARTICO
-  =================================================== */
 
   const [
     editingWorkOrder,
     setEditingWorkOrder,
-  ] = useState<WorkOrder | null>(
-    null
-  );
-
-  /* ===================================================
-     STATUSI DNI
-
-     Zaenkrat lokalno.
-     Kasneje jih bova shranila skupaj
-     z ostalimi podatki.
-  =================================================== */
+  ] =
+    useState<WorkOrder | null>(
+      null
+    );
 
   const [
-    dayStatuses,
-    setDayStatuses,
-  ] = useState<
-    Record<string, DayStatus>
-  >({});
+    editMode,
+    setEditMode,
+  ] = useState(false);
 
-  /* ===================================================
-     WORK ORDERJI IZBRANEGA MESECA
-  =================================================== */
+  const [
+    statusDate,
+    setStatusDate,
+  ] = useState<
+    string | null
+  >(null);
 
   const monthWorkOrders =
-    useMemo(() => {
-      return workOrders.filter(
-        (workOrder) =>
-          workOrder.date.startsWith(
-            selectedMonth
-          )
-      );
-    }, [
-      workOrders,
-      selectedMonth,
-    ]);
-
-  /* ===================================================
-     FORMAT UR
-  =================================================== */
-
-  const formatHours = (
-    value: number
-  ) => {
-    return `${value.toFixed(2)} h`;
-  };
-
-  /* ===================================================
-     SEŠTEVKI
-  =================================================== */
+    useMemo(
+      () =>
+        workOrders.filter(
+          (
+            workOrder
+          ) =>
+            workOrder.date.startsWith(
+              selectedMonth
+            )
+        ),
+      [
+        workOrders,
+        selectedMonth,
+      ]
+    );
 
   const regularHours =
     monthWorkOrders.reduce(
-      (sum, workOrder) =>
+      (
+        sum,
+        workOrder
+      ) =>
         sum +
         Number(
-          workOrder.regularHours || 0
+          workOrder.regularHours ||
+            0
         ),
       0
     );
 
   const nightHours =
     monthWorkOrders.reduce(
-      (sum, workOrder) =>
+      (
+        sum,
+        workOrder
+      ) =>
         sum +
         Number(
-          workOrder.nightHours || 0
+          workOrder.nightHours ||
+            0
         ),
       0
     );
 
   const holidayHours =
     monthWorkOrders.reduce(
-      (sum, workOrder) =>
+      (
+        sum,
+        workOrder
+      ) =>
         sum +
         Number(
-          workOrder.holidayHours || 0
+          workOrder.holidayHours ||
+            0
         ),
       0
     );
 
   const additionalHours =
     monthWorkOrders.reduce(
-      (sum, workOrder) =>
+      (
+        sum,
+        workOrder
+      ) =>
         sum +
         Number(
-          workOrder.additionalHours || 0
+          workOrder.additionalHours ||
+            0
         ),
       0
     );
 
   const overtimeHours =
     monthWorkOrders.reduce(
-      (sum, workOrder) =>
+      (
+        sum,
+        workOrder
+      ) =>
         sum +
         Number(
-          workOrder.overtimeHours || 0
+          workOrder.overtimeHours ||
+            0
         ),
       0
     );
@@ -161,26 +151,30 @@ function Statistika() {
     additionalHours +
     overtimeHours;
 
-  /* ===================================================
-     STATISTIKA STROJEV
-  =================================================== */
-
-  const machineTotals: Record<
-    string,
-    number
-  > = {};
+  const machineTotals:
+    Record<
+      string,
+      number
+    > = {};
 
   monthWorkOrders.forEach(
-    (workOrder) => {
-      if (workOrder.machine) {
+    (
+      workOrder
+    ) => {
+      if (
+        workOrder.machine
+      ) {
         machineTotals[
           workOrder.machine
         ] =
-          (machineTotals[
-            workOrder.machine
-          ] || 0) +
+          (
+            machineTotals[
+              workOrder.machine
+            ] || 0
+          ) +
           Number(
-            workOrder.hours || 0
+            workOrder.hours ||
+              0
           );
       }
 
@@ -190,124 +184,138 @@ function Statistika() {
         machineTotals[
           workOrder.additionalMachine
         ] =
-          (machineTotals[
-            workOrder
-              .additionalMachine
-          ] || 0) +
+          (
+            machineTotals[
+              workOrder.additionalMachine
+            ] || 0
+          ) +
           Number(
-            workOrder.hours || 0
+            workOrder.hours ||
+              0
           );
       }
     }
   );
 
-  /* ===================================================
-     STATISTIKA PROJEKTOV
-  =================================================== */
-
-  const projectTotals: Record<
-    string,
-    number
-  > = {};
+  const projectTotals:
+    Record<
+      string,
+      number
+    > = {};
 
   monthWorkOrders.forEach(
-    (workOrder) => {
-      if (!workOrder.project) {
+    (
+      workOrder
+    ) => {
+      if (
+        !workOrder.project
+      ) {
         return;
       }
 
       projectTotals[
         workOrder.project
       ] =
-        (projectTotals[
-          workOrder.project
-        ] || 0) +
+        (
+          projectTotals[
+            workOrder.project
+          ] || 0
+        ) +
         Number(
-          workOrder.hours || 0
+          workOrder.hours ||
+            0
         );
     }
   );
 
-  /* ===================================================
-     PODATKI PO DNEVIH
-  =================================================== */
-
   const dailyData =
-    useMemo(() => {
-      const days: Record<
-        string,
-        {
-          orders: WorkOrder[];
-          hours: number;
-          additionalHours: number;
-          twoMachines: boolean;
-        }
-      > = {};
+    useMemo(
+      () => {
+        const days:
+          Record<
+            string,
+            {
+              orders: WorkOrder[];
+              hours: number;
+              additionalHours: number;
+              twoMachines: boolean;
+            }
+          > = {};
 
-      monthWorkOrders.forEach(
-        (workOrder) => {
-          if (
-            !days[
-              workOrder.date
-            ]
-          ) {
+        monthWorkOrders.forEach(
+          (
+            workOrder
+          ) => {
+            if (
+              !days[
+                workOrder.date
+              ]
+            ) {
+              days[
+                workOrder.date
+              ] = {
+                orders: [],
+                hours: 0,
+                additionalHours: 0,
+                twoMachines: false,
+              };
+            }
+
             days[
               workOrder.date
-            ] = {
-              orders: [],
-              hours: 0,
-              additionalHours: 0,
-              twoMachines: false,
-            };
-          }
-
-          days[
-            workOrder.date
-          ].orders.push(
-            workOrder
-          );
-
-          days[
-            workOrder.date
-          ].hours += Number(
-            workOrder.hours || 0
-          );
-
-          days[
-            workOrder.date
-          ].additionalHours +=
-            Number(
-              workOrder.additionalHours ||
-                0
+            ].orders.push(
+              workOrder
             );
 
-          if (
-            workOrder.additionalMachine
-          ) {
             days[
               workOrder.date
-            ].twoMachines = true;
+            ].hours +=
+              Number(
+                workOrder.hours ||
+                  0
+              );
+
+            days[
+              workOrder.date
+            ].additionalHours +=
+              Number(
+                workOrder.additionalHours ||
+                  0
+              );
+
+            if (
+              workOrder.additionalMachine
+            ) {
+              days[
+                workOrder.date
+              ].twoMachines =
+                true;
+            }
           }
-        }
-      );
+        );
 
-      return days;
-    }, [monthWorkOrders]);
-
-  /* ===================================================
-     MESEC
-  =================================================== */
+        return days;
+      },
+      [monthWorkOrders]
+    );
 
   const [
     yearString,
     monthString,
-  ] = selectedMonth.split("-");
+  ] =
+    selectedMonth.split(
+      "-"
+    );
 
   const year =
-    Number(yearString);
+    Number(
+      yearString
+    );
 
   const month =
-    Number(monthString);
+    Number(
+      monthString
+    );
 
   const daysInMonth =
     new Date(
@@ -323,27 +331,21 @@ function Statistika() {
       1
     ).getDay();
 
-  /*
-    JavaScript:
-    0 = nedelja
-
-    Mi želimo:
-    PON TOR SRE ČET PET SOB NED
-  */
-
   const firstDayMonday =
     firstDay === 0
       ? 6
       : firstDay - 1;
 
-  const calendarCells: (
-    | number
-    | null
-  )[] = [];
+  const calendarCells:
+    (
+      | number
+      | null
+    )[] = [];
 
   for (
     let i = 0;
-    i < firstDayMonday;
+    i <
+    firstDayMonday;
     i++
   ) {
     calendarCells.push(
@@ -353,17 +355,14 @@ function Statistika() {
 
   for (
     let day = 1;
-    day <= daysInMonth;
+    day <=
+    daysInMonth;
     day++
   ) {
     calendarCells.push(
       day
     );
   }
-
-  /* ===================================================
-     IME MESECA
-  =================================================== */
 
   const monthName =
     new Date(
@@ -373,272 +372,51 @@ function Statistika() {
     ).toLocaleDateString(
       "sl-SI",
       {
-        month: "long",
-        year: "numeric",
+        month:
+          "long",
+        year:
+          "numeric",
       }
     );
 
-  /* ===================================================
-     SPREMENI STATUS
-  =================================================== */
+  const getStatusText =
+    (
+      status:
+        | DayStatus
+        | undefined,
+      data:
+        | {
+            twoMachines: boolean;
+          }
+        | undefined
+    ) => {
+      switch (
+        status
+      ) {
+        case "sick":
+          return "Bolniška";
 
-  const setDayStatus = (
-    dateString: string,
-    status: DayStatus
-  ) => {
-    setDayStatuses(
-      (previous) => ({
-        ...previous,
-        [dateString]:
-          status,
-      })
-    );
-  };
+        case "vacation":
+          return "Dopust";
 
-  /* ===================================================
-     STATUS TEKSTA
-  =================================================== */
+        case "holiday":
+          return "Praznik";
 
-  const getStatusText = (
-    status: DayStatus
-  ) => {
-    switch (status) {
-      case "sick":
-        return "Bolniška";
+        case "work":
+          return data?.twoMachines
+            ? "Delo – 2 stroja"
+            : "Delal";
 
-      case "vacation":
-        return "Dopust";
-
-      case "holiday":
-        return "Praznik";
-
-      case "twoMachines":
-        return "Delo – 2 stroja";
-
-      case "work":
-        return "Delal";
-
-      default:
-        return "Brez vnosa";
-    }
-  };
-
-  /* ===================================================
-     STATUS BARVA
-  =================================================== */
-
-  const getDayColors = (
-    dateString: string
-  ) => {
-    const data =
-      dailyData[
-        dateString
-      ];
-
-    const manualStatus =
-      dayStatuses[
-        dateString
-      ];
-
-    /*
-      Ročno nastavljen status
-      ima prednost.
-    */
-
-    if (
-      manualStatus ===
-      "sick"
-    ) {
-      return {
-        background:
-          "#fee2e2",
-        border:
-          "#ef4444",
-        text:
-          "#991b1b",
-      };
-    }
-
-    if (
-      manualStatus ===
-      "vacation"
-    ) {
-      return {
-        background:
-          "#fef3c7",
-        border:
-          "#f59e0b",
-        text:
-          "#92400e",
-      };
-    }
-
-    if (
-      manualStatus ===
-      "holiday"
-    ) {
-      return {
-        background:
-          "#e0e7ff",
-        border:
-          "#6366f1",
-        text:
-          "#3730a3",
-      };
-    }
-
-    /*
-      Dva stroja
-    */
-
-    if (
-      data?.twoMachines
-    ) {
-      return {
-        background:
-          "#d9f5ef",
-        border:
-          "#0f766e",
-        text:
-          "#115e59",
-      };
-    }
-
-    /*
-      En stroj
-    */
-
-    if (data) {
-      return {
-        background:
-          "#dcfce7",
-        border:
-          "#15803d",
-        text:
-          "#166534",
-      };
-    }
-
-    /*
-      Prazen dan
-    */
-
-    return {
-      background:
-        "#ffffff",
-      border:
-        "#e2e8f0",
-      text:
-        "#64748b",
+        default:
+          return data
+            ? data.twoMachines
+              ? "Delo – 2 stroja"
+              : "Delal"
+            : "Brez vnosa";
+      }
     };
-  };
 
-  /* ===================================================
-     KLIK NA DAN
-  =================================================== */
-
-  const handleDayClick = (
-    dateString: string
-  ) => {
-    const currentStatus =
-      dayStatuses[
-        dateString
-      ];
-
-    const data =
-      dailyData[
-        dateString
-      ];
-
-    let message =
-      "Izberi status dneva:\n\n";
-
-    message +=
-      "1 - Delal\n";
-
-    message +=
-      "2 - Bolniška\n";
-
-    message +=
-      "3 - Dopust\n";
-
-    message +=
-      "4 - Praznik\n";
-
-    message +=
-      "5 - Brez vnosa\n";
-
-    const choice =
-      window.prompt(
-        message,
-        currentStatus ===
-          "sick"
-          ? "2"
-          : currentStatus ===
-            "vacation"
-          ? "3"
-          : currentStatus ===
-            "holiday"
-          ? "4"
-          : data
-          ? "1"
-          : "5"
-      );
-
-    if (
-      choice === null
-    ) {
-      return;
-    }
-
-    switch (choice) {
-      case "1":
-        setDayStatus(
-          dateString,
-          data?.twoMachines
-            ? "twoMachines"
-            : "work"
-        );
-        break;
-
-      case "2":
-        setDayStatus(
-          dateString,
-          "sick"
-        );
-        break;
-
-      case "3":
-        setDayStatus(
-          dateString,
-          "vacation"
-        );
-        break;
-
-      case "4":
-        setDayStatus(
-          dateString,
-          "holiday"
-        );
-        break;
-
-      case "5":
-        setDayStatus(
-          dateString,
-          "none"
-        );
-        break;
-
-      default:
-        break;
-    }
-  };
-
-  /* ===================================================
-     DVOJNI KLIK
-  =================================================== */
-
-  const handleDayDoubleClick =
+  const getDayColors =
     (
       dateString: string
     ) => {
@@ -647,51 +425,207 @@ function Statistika() {
           dateString
         ];
 
+      const manualStatus =
+        dayStatuses[
+          dateString
+        ];
+
       if (
-        !data ||
-        data.orders.length ===
-          0
+        manualStatus ===
+        "sick"
+      ) {
+        return {
+          background:
+            "#fee2e2",
+          border:
+            "#ef4444",
+          text:
+            "#991b1b",
+        };
+      }
+
+      if (
+        manualStatus ===
+        "vacation"
+      ) {
+        return {
+          background:
+            "#fef3c7",
+          border:
+            "#f59e0b",
+          text:
+            "#92400e",
+        };
+      }
+
+      if (
+        manualStatus ===
+        "holiday"
+      ) {
+        return {
+          background:
+            "#e0e7ff",
+          border:
+            "#6366f1",
+          text:
+            "#3730a3",
+        };
+      }
+
+      if (
+        data?.twoMachines
+      ) {
+        return {
+          background:
+            "#d9f5ef",
+          border:
+            "#0f766e",
+          text:
+            "#115e59",
+        };
+      }
+
+      if (data) {
+        return {
+          background:
+            "#dcfce7",
+          border:
+            "#15803d",
+          text:
+            "#166534",
+        };
+      }
+
+      return {
+        background:
+          "#ffffff",
+        border:
+          "#e2e8f0",
+        text:
+          "#64748b",
+      };
+    };
+
+  const handleDayClick =
+    (
+      dateString: string
+    ) => {
+      if (
+        editMode
+      ) {
+        setStatusDate(
+          dateString
+        );
+
+        return;
+      }
+
+      const data =
+        dailyData[
+          dateString
+        ];
+
+      if (
+        data &&
+        data.orders
+          .length > 0
+      ) {
+        setEditingWorkOrder(
+          data.orders[0]
+        );
+      }
+    };
+
+  const handleStatusSave =
+    async (
+      status: DayStatus
+    ) => {
+      if (
+        !statusDate
       ) {
         return;
       }
 
-      /*
-        Če je več kartic,
-        trenutno odpremo prvo.
-      */
+      await setDayStatus(
+        statusDate,
+        status
+      );
 
-      setEditingWorkOrder(
-        data.orders[0]
+      setStatusDate(
+        null
       );
     };
 
-  /* ===================================================
-     RETURN
-  =================================================== */
+  const formatHours =
+    (
+      value: number
+    ) =>
+      `${value.toFixed(
+        2
+      )} h`;
 
   return (
     <div
       style={{
-        width: "100%",
-        maxWidth: "1080px",
-        margin: "0 auto",
+        width:
+          "100%",
+        maxWidth:
+          "1080px",
+        margin:
+          "0 auto",
       }}
     >
-      {/* =========================================
-          NASLOV
-      ========================================= */}
+      <style>
+        {`
+          @keyframes worklogJiggle {
+            0% {
+              transform:
+                rotate(-0.7deg)
+                translateY(0);
+            }
+
+            25% {
+              transform:
+                rotate(0.7deg)
+                translateY(-1px);
+            }
+
+            50% {
+              transform:
+                rotate(-0.5deg)
+                translateY(1px);
+            }
+
+            75% {
+              transform:
+                rotate(0.6deg)
+                translateY(0);
+            }
+
+            100% {
+              transform:
+                rotate(-0.7deg)
+                translateY(0);
+            }
+          }
+        `}
+      </style>
 
       <div
         style={{
-          marginBottom: "25px",
+          marginBottom:
+            "25px",
         }}
       >
         <h1
           style={{
             margin: 0,
-            fontSize: "32px",
-            fontWeight: 700,
-            color: "#12344d",
+            fontSize:
+              "32px",
+            fontWeight:
+              700,
+            color:
+              "#12344d",
           }}
         >
           Statistika
@@ -699,9 +633,12 @@ function Statistika() {
 
         <p
           style={{
-            marginTop: "8px",
-            fontSize: "15px",
-            color: "#64748b",
+            marginTop:
+              "8px",
+            fontSize:
+              "15px",
+            color:
+              "#64748b",
           }}
         >
           Pregled opravljenega
@@ -709,21 +646,20 @@ function Statistika() {
         </p>
       </div>
 
-      {/* =========================================
-          IZBIRA MESECA
-      ========================================= */}
-
       <div
         style={{
           background:
             "#ffffff",
           border:
             "1px solid #e2e8f0",
-          borderRadius: "16px",
-          padding: "20px",
+          borderRadius:
+            "16px",
+          padding:
+            "20px",
           marginBottom:
             "20px",
-          display: "flex",
+          display:
+            "flex",
           alignItems:
             "center",
           justifyContent:
@@ -767,9 +703,12 @@ function Statistika() {
           value={
             selectedMonth
           }
-          onChange={(event) =>
+          onChange={(
+            event
+          ) =>
             setSelectedMonth(
-              event.target.value
+              event.target
+                .value
             )
           }
           style={{
@@ -792,10 +731,6 @@ function Statistika() {
           }}
         />
       </div>
-
-      {/* =========================================
-          KOLEDAR
-      ========================================= */}
 
       <div
         style={{
@@ -852,9 +787,9 @@ function Statistika() {
                   "#64748b",
               }}
             >
-              Klikni za status,
-              dvakrat klikni za
-              urejanje kartice.
+              {editMode
+                ? "Izberi dan za nastavitev statusa."
+                : "Klikni dan za urejanje delovne kartice."}
             </p>
           </div>
 
@@ -874,17 +809,14 @@ function Statistika() {
           </div>
         </div>
 
-        {/* =====================================
-            DNEVI TEDNA
-        ===================================== */}
-
         <div
           style={{
             display:
               "grid",
             gridTemplateColumns:
               "repeat(7, 1fr)",
-            gap: "8px",
+            gap:
+              "8px",
             marginBottom:
               "8px",
           }}
@@ -898,9 +830,13 @@ function Statistika() {
             "SOB",
             "NED",
           ].map(
-            (day) => (
+            (
+              day
+            ) => (
               <div
-                key={day}
+                key={
+                  day
+                }
                 style={{
                   textAlign:
                     "center",
@@ -920,17 +856,14 @@ function Statistika() {
           )}
         </div>
 
-        {/* =====================================
-            CELICE KOLEDARJA
-        ===================================== */}
-
         <div
           style={{
             display:
               "grid",
             gridTemplateColumns:
               "repeat(7, 1fr)",
-            gap: "8px",
+            gap:
+              "8px",
           }}
         >
           {calendarCells.map(
@@ -939,7 +872,8 @@ function Statistika() {
               index
             ) => {
               if (
-                day === null
+                day ===
+                null
               ) {
                 return (
                   <div
@@ -981,15 +915,10 @@ function Statistika() {
                 );
 
               const statusText =
-                manualStatus
-                  ? getStatusText(
-                      manualStatus
-                    )
-                  : data
-                  ? data.twoMachines
-                    ? "Delo – 2 stroja"
-                    : "Delal"
-                  : "Brez vnosa";
+                getStatusText(
+                  manualStatus,
+                  data
+                );
 
               return (
                 <div
@@ -1001,15 +930,12 @@ function Statistika() {
                       dateString
                     )
                   }
-                  onDoubleClick={() =>
-                    handleDayDoubleClick(
-                      dateString
-                    )
-                  }
                   title={
-                    data
-                      ? "Klik = status | Dvojni klik = uredi kartico"
-                      : "Klik = izberi status"
+                    editMode
+                      ? "Nastavi status dneva"
+                      : data
+                      ? "Uredi delovno kartico"
+                      : "Ni delovne kartice"
                   }
                   style={{
                     minHeight:
@@ -1025,15 +951,25 @@ function Statistika() {
                     background:
                       colors.background,
                     cursor:
-                      "pointer",
+                      editMode ||
+                      data
+                        ? "pointer"
+                        : "default",
                     userSelect:
                       "none",
                     transition:
                       "all 0.15s ease",
+                    animation:
+                      editMode
+                        ? `worklogJiggle ${
+                            0.32 +
+                            (day %
+                              4) *
+                              0.04
+                          }s infinite`
+                        : "none",
                   }}
                 >
-                  {/* ŠTEVILKA */}
-
                   <div
                     style={{
                       fontSize:
@@ -1049,8 +985,6 @@ function Statistika() {
                     {day}
                   </div>
 
-                  {/* STATUS */}
-
                   <div
                     style={{
                       fontSize:
@@ -1061,10 +995,10 @@ function Statistika() {
                         colors.text,
                     }}
                   >
-                    {statusText}
+                    {
+                      statusText
+                    }
                   </div>
-
-                  {/* URE */}
 
                   {data && (
                     <>
@@ -1078,16 +1012,15 @@ function Statistika() {
                             "#475569",
                         }}
                       >
-                        {data.hours.toFixed(
-                          2
-                        )}{" "}
+                        {
+                          data.hours.toFixed(
+                            2
+                          )
+                        }{" "}
                         h
                       </div>
 
-                      {/* DODATNE URE */}
-
-                      {data
-                        .additionalHours >
+                      {data.additionalHours >
                         0 && (
                         <div
                           style={{
@@ -1101,16 +1034,15 @@ function Statistika() {
                               "#f97316",
                           }}
                         >
-                          +
-                          {" "}
-                          {data.additionalHours.toFixed(
-                            2
-                          )}{" "}
+                          +{" "}
+                          {
+                            data.additionalHours.toFixed(
+                              2
+                            )
+                          }{" "}
                           dodatnih
                         </div>
                       )}
-
-                      {/* ŠTEVILO KARTIC */}
 
                       <div
                         style={{
@@ -1122,11 +1054,11 @@ function Statistika() {
                             "#64748b",
                         }}
                       >
-                        {data
-                          .orders
-                          .length}{" "}
-                        {data
-                          .orders
+                        {
+                          data.orders
+                            .length
+                        }{" "}
+                        {data.orders
                           .length ===
                         1
                           ? "kartica"
@@ -1140,10 +1072,6 @@ function Statistika() {
           )}
         </div>
 
-        {/* =====================================
-            LEGENDA
-        ===================================== */}
-
         <div
           style={{
             display:
@@ -1152,7 +1080,8 @@ function Statistika() {
               "wrap",
             alignItems:
               "center",
-            gap: "18px",
+            gap:
+              "18px",
             marginTop:
               "20px",
             paddingTop:
@@ -1190,12 +1119,52 @@ function Statistika() {
             border="#6366f1"
             text="Praznik"
           />
+
+          <button
+            type="button"
+            onClick={() =>
+              setEditMode(
+                (
+                  previous
+                ) =>
+                  !previous
+              )
+            }
+            style={{
+              marginLeft:
+                "auto",
+              height:
+                "36px",
+              padding:
+                "0 16px",
+              border:
+                editMode
+                  ? "1px solid #12344d"
+                  : "1px solid #cbd5e1",
+              borderRadius:
+                "9px",
+              background:
+                editMode
+                  ? "#12344d"
+                  : "#ffffff",
+              color:
+                editMode
+                  ? "#ffffff"
+                  : "#334155",
+              fontSize:
+                "13px",
+              fontWeight:
+                600,
+              cursor:
+                "pointer",
+            }}
+          >
+            {editMode
+              ? "Končaj urejanje"
+              : "Uredi"}
+          </button>
         </div>
       </div>
-
-      {/* =========================================
-          STATISTIČNE KARTICE
-      ========================================= */}
 
       <div
         style={{
@@ -1203,7 +1172,8 @@ function Statistika() {
             "grid",
           gridTemplateColumns:
             "repeat(3, 1fr)",
-          gap: "18px",
+          gap:
+            "18px",
           marginBottom:
             "20px",
         }}
@@ -1257,10 +1227,6 @@ function Statistika() {
         />
       </div>
 
-      {/* =========================================
-          STROJI
-      ========================================= */}
-
       <StatisticsList
         title="Statistika strojev"
         subtitle="Pregled opravljenih ur po strojih."
@@ -1268,10 +1234,6 @@ function Statistika() {
           machineTotals
         }
       />
-
-      {/* =========================================
-          PROJEKTI
-      ========================================= */}
 
       <StatisticsList
         title="Statistika projektov"
@@ -1281,10 +1243,6 @@ function Statistika() {
         }
       />
 
-      {/* =========================================
-          MODAL ZA UREJANJE
-      ========================================= */}
-
       {editingWorkOrder && (
         <WorkOrderEditModal
           workOrder={
@@ -1293,18 +1251,7 @@ function Statistika() {
           onSave={(
             updatedWorkOrder
           ) => {
-            /*
-              WorkOrderEditModal že vrne
-              celoten posodobljen WorkOrder.
-
-              Tukaj zaenkrat zapremo modal.
-              Če je glavni WorkOrderTable povezan
-              z istim Contextom, bo tam spremembo
-              obravnaval njegov obstoječi mehanizem.
-            */
-
-            console.log(
-              "Posodobljen delovni nalog:",
+            updateWorkOrder(
               updatedWorkOrder
             );
 
@@ -1319,25 +1266,41 @@ function Statistika() {
           }
         />
       )}
+
+      {statusDate && (
+        <StatusModal
+          date={
+            statusDate
+          }
+          currentStatus={
+            dayStatuses[
+              statusDate
+            ] ||
+            "none"
+          }
+          onSave={
+            handleStatusSave
+          }
+          onClose={() =>
+            setStatusDate(
+              null
+            )
+          }
+        />
+      )}
     </div>
   );
 }
-
-/* =====================================================
-   LEGENDA
-===================================================== */
-
-type LegendProps = {
-  background: string;
-  border: string;
-  text: string;
-};
 
 function Legend({
   background,
   border,
   text,
-}: LegendProps) {
+}: {
+  background: string;
+  border: string;
+  text: string;
+}) {
   return (
     <div
       style={{
@@ -1345,7 +1308,8 @@ function Legend({
           "flex",
         alignItems:
           "center",
-        gap: "7px",
+        gap:
+          "7px",
         fontSize:
           "12px",
         color:
@@ -1375,21 +1339,274 @@ function Legend({
   );
 }
 
-/* =====================================================
-   STATISTIČNA KARTICA
-===================================================== */
+function StatusModal({
+  date,
+  currentStatus,
+  onSave,
+  onClose,
+}: {
+  date: string;
 
-type StatCardProps = {
-  title: string;
-  value: string;
-  color: string;
-};
+  currentStatus:
+    DayStatus;
+
+  onSave: (
+    status: DayStatus
+  ) => Promise<void>;
+
+  onClose: () => void;
+}) {
+  const [
+    status,
+    setStatus,
+  ] =
+    useState<DayStatus>(
+      currentStatus
+    );
+
+  const options: {
+    value: DayStatus;
+    label: string;
+  }[] = [
+    {
+      value: "none",
+      label:
+        "Brez vnosa",
+    },
+    {
+      value: "work",
+      label: "Delal",
+    },
+    {
+      value: "sick",
+      label:
+        "Bolniška",
+    },
+    {
+      value: "vacation",
+      label:
+        "Dopust",
+    },
+    {
+      value: "holiday",
+      label:
+        "Praznik",
+    },
+  ];
+
+  return (
+    <div
+      style={{
+        position:
+          "fixed",
+        inset: 0,
+        zIndex:
+          1100,
+        background:
+          "rgba(15,23,42,0.45)",
+        display:
+          "flex",
+        alignItems:
+          "center",
+        justifyContent:
+          "center",
+        padding:
+          "20px",
+      }}
+      onClick={
+        onClose
+      }
+    >
+      <div
+        style={{
+          width:
+            "min(420px, 100%)",
+          background:
+            "#ffffff",
+          borderRadius:
+            "16px",
+          padding:
+            "25px",
+          boxShadow:
+            "0 20px 50px rgba(0,0,0,0.2)",
+        }}
+        onClick={(
+          event
+        ) =>
+          event.stopPropagation()
+        }
+      >
+        <h2
+          style={{
+            margin: 0,
+            color:
+              "#12344d",
+            fontSize:
+              "22px",
+          }}
+        >
+          Status dneva
+        </h2>
+
+        <p
+          style={{
+            color:
+              "#64748b",
+            marginTop:
+              "7px",
+          }}
+        >
+          {date}
+        </p>
+
+        <label
+          style={{
+            display:
+              "block",
+            marginTop:
+              "20px",
+            marginBottom:
+              "8px",
+            fontSize:
+              "14px",
+            fontWeight:
+              600,
+            color:
+              "#334155",
+          }}
+        >
+          Izberi status
+        </label>
+
+        <select
+          value={
+            status
+          }
+          onChange={(
+            event
+          ) =>
+            setStatus(
+              event.target
+                .value as DayStatus
+            )
+          }
+          style={{
+            width:
+              "100%",
+            height:
+              "44px",
+            border:
+              "1px solid #cbd5e1",
+            borderRadius:
+              "9px",
+            padding:
+              "0 12px",
+            fontSize:
+              "14px",
+            background:
+              "#ffffff",
+          }}
+        >
+          {options.map(
+            (
+              option
+            ) => (
+              <option
+                key={
+                  option.value
+                }
+                value={
+                  option.value
+                }
+              >
+                {
+                  option.label
+                }
+              </option>
+            )
+          )}
+        </select>
+
+        <div
+          style={{
+            display:
+              "flex",
+            justifyContent:
+              "flex-end",
+            gap:
+              "10px",
+            marginTop:
+              "22px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={
+              onClose
+            }
+            style={{
+              height:
+                "42px",
+              padding:
+                "0 18px",
+              border:
+                "1px solid #cbd5e1",
+              borderRadius:
+                "9px",
+              background:
+                "#ffffff",
+              color:
+                "#334155",
+              cursor:
+                "pointer",
+            }}
+          >
+            Prekliči
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              onSave(
+                status
+              )
+            }
+            style={{
+              height:
+                "42px",
+              padding:
+                "0 18px",
+              border:
+                "none",
+              borderRadius:
+                "9px",
+              background:
+                "#12344d",
+              color:
+                "#ffffff",
+              cursor:
+                "pointer",
+              fontWeight:
+                600,
+            }}
+          >
+            Shrani
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatCard({
   title,
   value,
   color,
-}: StatCardProps) {
+}: {
+  title: string;
+  value: string;
+  color: string;
+}) {
   return (
     <div
       style={{
@@ -1439,24 +1656,18 @@ function StatCard({
   );
 }
 
-/* =====================================================
-   SEZNAM STATISTIKE
-===================================================== */
-
-type StatisticsListProps = {
+function StatisticsList({
+  title,
+  subtitle,
+  data,
+}: {
   title: string;
   subtitle: string;
   data: Record<
     string,
     number
   >;
-};
-
-function StatisticsList({
-  title,
-  subtitle,
-  data,
-}: StatisticsListProps) {
+}) {
   return (
     <div
       style={{
@@ -1503,8 +1714,9 @@ function StatisticsList({
         {subtitle}
       </p>
 
-      {Object.keys(data)
-        .length === 0 ? (
+      {Object.keys(
+        data
+      ).length === 0 ? (
         <div
           style={{
             marginTop:
@@ -1515,7 +1727,8 @@ function StatisticsList({
               "14px",
           }}
         >
-          Trenutno ni podatkov.
+          Trenutno ni
+          podatkov.
         </div>
       ) : (
         <div
@@ -1527,12 +1740,16 @@ function StatisticsList({
           {Object.entries(
             data
           ).map(
-            ([
-              name,
-              hours,
-            ]) => (
+            (
+              [
+                name,
+                hours,
+              ]
+            ) => (
               <div
-                key={name}
+                key={
+                  name
+                }
                 style={{
                   display:
                     "flex",
@@ -1565,9 +1782,11 @@ function StatisticsList({
                       "15px",
                   }}
                 >
-                  {hours.toFixed(
-                    2
-                  )}{" "}
+                  {
+                    hours.toFixed(
+                      2
+                    )
+                  }{" "}
                   h
                 </strong>
               </div>

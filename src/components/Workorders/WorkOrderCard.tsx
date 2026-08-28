@@ -1,33 +1,8 @@
 import { useState } from "react";
 
-/* =====================================================
-   TIPI
-===================================================== */
-
-type WorkOrder = {
-  id: number;
-
-  project: string;
-  machine: string;
-  additionalMachine?: string;
-
-  quantity: number;
-
-  date: string;
-  startTime: string;
-  endTime: string;
-
-  hours: number;
-
-  regularHours: number;
-  nightHours: number;
-  holidayHours: number;
-  overtimeHours: number;
-
-  additionalHours: number;
-
-  note: string;
-};
+import type {
+  WorkOrder,
+} from "../../types/WorkOrder";
 
 type WorkOrderCardProps = {
   onAddWorkOrder: (
@@ -35,62 +10,125 @@ type WorkOrderCardProps = {
   ) => void;
 };
 
-/* =====================================================
-   POMOŽNE FUNKCIJE
-===================================================== */
+const machineOptions = [
+  "OKUMA MB-56VB",
+  "OKUMA M460V-5AX",
+  "Žična erozija",
+  "Potopna erozija",
+];
 
-const timeToMinutes = (time: string) => {
-  const [hours, minutes] =
-    time.split(":").map(Number);
+const timeOptions: string[] = [];
 
-  return hours * 60 + minutes;
+for (
+  let hour = 0;
+  hour < 24;
+  hour++
+) {
+  for (
+    let minute = 0;
+    minute < 60;
+    minute += 15
+  ) {
+    timeOptions.push(
+      `${String(
+        hour
+      ).padStart(
+        2,
+        "0"
+      )}:${String(
+        minute
+      ).padStart(
+        2,
+        "0"
+      )}`
+    );
+  }
+}
+
+const timeToMinutes = (
+  time: string
+) => {
+  const [
+    hours,
+    minutes,
+  ] =
+    time
+      .split(":")
+      .map(Number);
+
+  return (
+    hours * 60 +
+    minutes
+  );
 };
 
-const formatDate = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(
+const formatDate = (
+  date: Date
+) => {
+  return `${date.getFullYear()}-${String(
     date.getMonth() + 1
-  ).padStart(2, "0");
-  const day = String(
+  ).padStart(
+    2,
+    "0"
+  )}-${String(
     date.getDate()
-  ).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  ).padStart(
+    2,
+    "0"
+  )}`;
 };
 
 const addDays = (
   dateString: string,
   days: number
 ) => {
-  const date = new Date(
-    `${dateString}T00:00:00`
-  );
+  const date =
+    new Date(
+      `${dateString}T00:00:00`
+    );
 
   date.setDate(
-    date.getDate() + days
+    date.getDate() +
+      days
   );
 
-  return formatDate(date);
+  return formatDate(
+    date
+  );
 };
-
-/* =====================================================
-   VELIKONOČNI PONEDELJEK
-===================================================== */
 
 const calculateEaster = (
   year: number
 ) => {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor(
-    (b + 8) / 25
-  );
-  const g = Math.floor(
-    (b - f + 1) / 3
-  );
+  const a =
+    year % 19;
+
+  const b =
+    Math.floor(
+      year / 100
+    );
+
+  const c =
+    year % 100;
+
+  const d =
+    Math.floor(
+      b / 4
+    );
+
+  const e =
+    b % 4;
+
+  const f =
+    Math.floor(
+      (b + 8) / 25
+    );
+
+  const g =
+    Math.floor(
+      (b - f + 1) / 3
+    );
+
   const h =
     (19 * a +
       b -
@@ -99,8 +137,13 @@ const calculateEaster = (
       15) %
     30;
 
-  const i = Math.floor(c / 4);
-  const k = c % 4;
+  const i =
+    Math.floor(
+      c / 4
+    );
+
+  const k =
+    c % 4;
 
   const l =
     (32 +
@@ -110,17 +153,22 @@ const calculateEaster = (
       k) %
     7;
 
-  const m = Math.floor(
-    (a +
-      11 * h +
-      22 * l) /
-      451
-  );
+  const m =
+    Math.floor(
+      (a +
+        11 * h +
+        22 * l) /
+        451
+    );
 
-  const month = Math.floor(
-    (h + l - 7 * m + 114) /
-      31
-  );
+  const month =
+    Math.floor(
+      (h +
+        l -
+        7 * m +
+        114) /
+        31
+    );
 
   const day =
     ((h +
@@ -137,16 +185,16 @@ const calculateEaster = (
   );
 };
 
-/* =====================================================
-   PRAZNIKI
-===================================================== */
-
 const isHoliday = (
   dateString: string
 ) => {
-  const year = Number(
-    dateString.substring(0, 4)
-  );
+  const year =
+    Number(
+      dateString.substring(
+        0,
+        4
+      )
+    );
 
   const fixedHolidays = [
     `${year}-01-01`,
@@ -164,13 +212,16 @@ const isHoliday = (
   ];
 
   const easter =
-    calculateEaster(year);
+    calculateEaster(
+      year
+    );
 
   const easterMonday =
     new Date(easter);
 
   easterMonday.setDate(
-    easterMonday.getDate() + 1
+    easterMonday.getDate() +
+      1
   );
 
   return (
@@ -178,39 +229,14 @@ const isHoliday = (
       dateString
     ) ||
     dateString ===
-      formatDate(easterMonday)
+      formatDate(
+        easterMonday
+      )
   );
 };
 
-/* =====================================================
-   TIME SELECT
-===================================================== */
-
-const timeOptions: string[] = [];
-
-for (let hour = 0; hour < 24; hour++) {
-  for (
-    let minute = 0;
-    minute < 60;
-    minute += 30
-  ) {
-    timeOptions.push(
-      `${String(hour).padStart(
-        2,
-        "0"
-      )}:${String(minute).padStart(
-        2,
-        "0"
-      )}`
-    );
-  }
-}
-
-/* =====================================================
-   STILI
-===================================================== */
-
-const labelStyle: React.CSSProperties = {
+const labelStyle:
+  React.CSSProperties = {
   display: "block",
   fontSize: "14px",
   fontWeight: 600,
@@ -218,33 +244,38 @@ const labelStyle: React.CSSProperties = {
   marginBottom: "7px",
 };
 
-const inputStyle: React.CSSProperties = {
+const inputStyle:
+  React.CSSProperties = {
   width: "100%",
   height: "42px",
-  border: "1px solid #cbd5e1",
+  border:
+    "1px solid #cbd5e1",
   borderRadius: "8px",
   padding: "0 12px",
   fontSize: "14px",
-  boxSizing: "border-box",
-  background: "#ffffff",
+  boxSizing:
+    "border-box",
+  background:
+    "#ffffff",
 };
-
-/* =====================================================
-   WORK ORDER CARD
-===================================================== */
 
 function WorkOrderCard({
   onAddWorkOrder,
 }: WorkOrderCardProps) {
-  const today = new Date()
-    .toISOString()
-    .split("T")[0];
+  const today =
+    new Date()
+      .toISOString()
+      .split("T")[0];
 
-  const [project, setProject] =
-    useState("");
+  const [
+    project,
+    setProject,
+  ] = useState("");
 
-  const [machine, setMachine] =
-    useState("");
+  const [
+    machine,
+    setMachine,
+  ] = useState("");
 
   const [
     showAdditionalMachine,
@@ -256,213 +287,234 @@ function WorkOrderCard({
     setAdditionalMachine,
   ] = useState("");
 
-  const [quantity, setQuantity] =
-    useState("");
+  const [
+    date,
+    setDate,
+  ] = useState(today);
 
-  const [date, setDate] =
-    useState(today);
+  const [
+    startTime,
+    setStartTime,
+  ] = useState("06:00");
 
-  const [startTime, setStartTime] =
-    useState("06:00");
+  const [
+    endTime,
+    setEndTime,
+  ] = useState("14:00");
 
-  const [endTime, setEndTime] =
-    useState("14:00");
+  const [
+    mealType,
+    setMealType,
+  ] =
+    useState<
+      "outside" |
+      "withMe"
+    >("withMe");
 
-  const [note, setNote] =
-    useState("");
-
-  const machineOptions = [
-    "OKUMA MB-46VB",
-    "OKUMA M460V-5AX",
-    "Žična erozija",
-    "Potopna erozija",
-  ];
-
-  /* =====================================================
-     ALI JE DELO ČEZ POLNOČ?
-  ===================================================== */
+  const [
+    note,
+    setNote,
+  ] = useState("");
 
   const startMinutes =
-    timeToMinutes(startTime);
+    timeToMinutes(
+      startTime
+    );
 
   const endMinutes =
-    timeToMinutes(endTime);
+    timeToMinutes(
+      endTime
+    );
 
   const crossesMidnight =
-    endMinutes <= startMinutes;
+    endMinutes <=
+    startMinutes;
 
-  /* =====================================================
-     SKUPNE URE
-  ===================================================== */
+  const calculateHours =
+    () => {
+      if (
+        !startTime ||
+        !endTime
+      ) {
+        return 0;
+      }
 
-  const calculateHours = () => {
-    if (
-      !startTime ||
-      !endTime
-    ) {
-      return 0;
-    }
+      let start =
+        timeToMinutes(
+          startTime
+        );
 
-    let start =
-      timeToMinutes(startTime);
+      let end =
+        timeToMinutes(
+          endTime
+        );
 
-    let end =
-      timeToMinutes(endTime);
+      if (
+        end <= start
+      ) {
+        end +=
+          24 * 60;
+      }
 
-    if (end <= start) {
-      end += 24 * 60;
-    }
-
-    return Number(
-      (
-        (end - start) /
-        60
-      ).toFixed(2)
-    );
-  };
+      return Number(
+        (
+          (end - start) /
+          60
+        ).toFixed(2)
+      );
+    };
 
   const hours =
     calculateHours();
 
-  /* =====================================================
-     RAZDELITEV UR ZA EN DAN
-  ===================================================== */
-
-  const calculateBreakdown = (
-    dayDate: string,
-    dayStart: string,
-    dayEnd: string
-  ) => {
-    if (
-      !dayStart ||
-      !dayEnd
-    ) {
-      return {
-        regular: 0,
-        night: 0,
-        holiday: 0,
-        overtime: 0,
-      };
-    }
-
-    let start =
-      timeToMinutes(dayStart);
-
-    let end =
-      timeToMinutes(dayEnd);
-
-    /*
-      Če je konec manjši ali enak začetku,
-      gre za delo čez polnoč.
-    */
-
-    if (end <= start) {
-      end += 24 * 60;
-    }
-
-    const selectedDate =
-      new Date(
-        `${dayDate}T00:00:00`
-      );
-
-    const sunday =
-      selectedDate.getDay() === 0;
-
-    const holiday =
-      isHoliday(dayDate);
-
-    let regularMinutes = 0;
-    let nightMinutes = 0;
-    let holidayMinutes = 0;
-    let overtimeMinutes = 0;
-
-    let workedMinutes = 0;
-
-    for (
-      let minute = start;
-      minute < end;
-      minute++
-    ) {
-      const minuteOfDay =
-        minute %
-        (24 * 60);
-
-      const hour =
-        Math.floor(
-          minuteOfDay / 60
-        );
-
-      const isNight =
-        hour >= 22 ||
-        hour < 6;
-
-      const isSpecialDay =
-        sunday ||
-        holiday;
-
-      /*
-        Prvih 8 ur.
-        Nato nadure.
-      */
-
+  const calculateBreakdown =
+    (
+      dayDate: string,
+      dayStart: string,
+      dayEnd: string
+    ) => {
       if (
-        workedMinutes >=
-        8 * 60
+        !dayStart ||
+        !dayEnd
       ) {
-        overtimeMinutes++;
-      } else if (
-        isSpecialDay
-      ) {
-        holidayMinutes++;
-      } else if (
-        isNight
-      ) {
-        nightMinutes++;
-      } else {
-        regularMinutes++;
+        return {
+          regular: 0,
+          night: 0,
+          holiday: 0,
+          overtime: 0,
+        };
       }
 
-      workedMinutes++;
-    }
+      let start =
+        timeToMinutes(
+          dayStart
+        );
 
-    return {
-      regular: Number(
-        (
-          regularMinutes / 60
-        ).toFixed(2)
-      ),
+      let end =
+        timeToMinutes(
+          dayEnd
+        );
 
-      night: Number(
-        (
-          nightMinutes / 60
-        ).toFixed(2)
-      ),
+      if (
+        end <= start
+      ) {
+        end +=
+          24 * 60;
+      }
 
-      holiday: Number(
-        (
-          holidayMinutes / 60
-        ).toFixed(2)
-      ),
+      const selectedDate =
+        new Date(
+          `${dayDate}T00:00:00`
+        );
 
-      overtime: Number(
-        (
-          overtimeMinutes / 60
-        ).toFixed(2)
-      ),
+      const sunday =
+        selectedDate.getDay() ===
+        0;
+
+      const holiday =
+        isHoliday(
+          dayDate
+        );
+
+      let regularMinutes =
+        0;
+
+      let nightMinutes =
+        0;
+
+      let holidayMinutes =
+        0;
+
+      let overtimeMinutes =
+        0;
+
+      let workedMinutes =
+        0;
+
+      for (
+        let minute =
+          start;
+        minute < end;
+        minute++
+      ) {
+        const minuteOfDay =
+          minute %
+          (24 * 60);
+
+        const hour =
+          Math.floor(
+            minuteOfDay /
+              60
+          );
+
+        const isNight =
+          hour >= 22 ||
+          hour < 6;
+
+        const isSpecialDay =
+          sunday ||
+          holiday;
+
+        if (
+          workedMinutes >=
+          8 * 60
+        ) {
+          overtimeMinutes++;
+        } else if (
+          isSpecialDay
+        ) {
+          holidayMinutes++;
+        } else if (
+          isNight
+        ) {
+          nightMinutes++;
+        } else {
+          regularMinutes++;
+        }
+
+        workedMinutes++;
+      }
+
+      return {
+        regular:
+          Number(
+            (
+              regularMinutes /
+              60
+            ).toFixed(2)
+          ),
+
+        night:
+          Number(
+            (
+              nightMinutes /
+              60
+            ).toFixed(2)
+          ),
+
+        holiday:
+          Number(
+            (
+              holidayMinutes /
+              60
+            ).toFixed(2)
+          ),
+
+        overtime:
+          Number(
+            (
+              overtimeMinutes /
+              60
+            ).toFixed(2)
+          ),
+      };
     };
-  };
-
-  /* =====================================================
-     RAZDELITEV CELOTNEGA NALOGA
-  ===================================================== */
 
   const calculateWorkOrders =
     () => {
-      /*
-        NORMALEN DELOVNI DAN
-      */
-
-      if (!crossesMidnight) {
+      if (
+        !crossesMidnight
+      ) {
         const breakdown =
           calculateBreakdown(
             date,
@@ -481,22 +533,11 @@ function WorkOrderCard({
         ];
       }
 
-      /*
-        DELO ČEZ POLNOČ
-
-        Primer:
-
-        16:00 → 01:50
-
-        kartica 1:
-        16:00 → 00:00
-
-        kartica 2:
-        00:00 → 01:50
-      */
-
       const nextDate =
-        addDays(date, 1);
+        addDays(
+          date,
+          1
+        );
 
       const firstHours =
         Number(
@@ -510,7 +551,8 @@ function WorkOrderCard({
       const secondHours =
         Number(
           (
-            endMinutes / 60
+            endMinutes /
+            60
           ).toFixed(2)
         );
 
@@ -532,65 +574,87 @@ function WorkOrderCard({
         {
           date,
           startTime,
-          endTime: "00:00",
-          hours: firstHours,
+          endTime:
+            "00:00",
+          hours:
+            firstHours,
           breakdown:
             firstBreakdown,
         },
 
         {
-          date: nextDate,
-          startTime: "00:00",
+          date:
+            nextDate,
+          startTime:
+            "00:00",
           endTime,
-          hours: secondHours,
+          hours:
+            secondHours,
           breakdown:
             secondBreakdown,
         },
       ];
     };
 
-  /* =====================================================
-     DODATNE URE
-  ===================================================== */
+  /*
+    DODATNE URE
 
-const additionalHours =
-  machine &&
-  additionalMachine &&
-  machine !== additionalMachine
-    ? Number(
-        (
-          7.5 / 3
-        ).toFixed(2)
-      )
-    : 0;
-  /* =====================================================
-     POČISTI
-  ===================================================== */
+    TOČNO 8,00 h:
+    8 - 0,50 = 7,50
+    7,50 / 3 = 2,50
 
-  const clearForm = () => {
-    setProject("");
-    setMachine("");
+    VSE OSTALE:
+    oddelane ure / 3
 
-    setShowAdditionalMachine(
-      false
-    );
+    8,15 / 3 = 2,72
+  */
 
-    setAdditionalMachine("");
+  const additionalHours =
+    machine &&
+    additionalMachine &&
+    machine !==
+      additionalMachine
+      ? Number(
+          (
+            (
+              hours === 8
+                ? hours - 0.5
+                : hours
+            ) / 3
+          ).toFixed(2)
+        )
+      : 0;
 
-    setQuantity("");
+  const clearForm =
+    () => {
+      setProject("");
 
-    setDate(today);
+      setMachine("");
 
-    setStartTime("06:00");
+      setShowAdditionalMachine(
+        false
+      );
 
-    setEndTime("14:00");
+      setAdditionalMachine(
+        ""
+      );
 
-    setNote("");
-  };
+      setDate(today);
 
-  /* =====================================================
-     DODAJ DELOVNI NALOG
-  ===================================================== */
+      setStartTime(
+        "06:00"
+      );
+
+      setEndTime(
+        "14:00"
+      );
+
+      setMealType(
+        "withMe"
+      );
+
+      setNote("");
+    };
 
   const handleAddWorkOrder =
     () => {
@@ -598,6 +662,7 @@ const additionalHours =
         alert(
           "Izberi projekt."
         );
+
         return;
       }
 
@@ -605,6 +670,7 @@ const additionalHours =
         alert(
           "Izberi stroj."
         );
+
         return;
       }
 
@@ -615,22 +681,21 @@ const additionalHours =
         alert(
           "Izberi drugi stroj."
         );
+
         return;
       }
 
       if (
         showAdditionalMachine &&
-        machine === additionalMachine
+        machine ===
+          additionalMachine
       ) {
         alert(
           "Prvi in drugi stroj ne smeta biti enak."
         );
+
         return;
       }
-
-      /*
-        Izračunamo eno ali dve kartici.
-      */
 
       const calculatedOrders =
         calculateWorkOrders();
@@ -640,74 +705,63 @@ const additionalHours =
           calculatedOrder,
           index
         ) => {
-          /*
-            Dodatne ure pripišemo
-            samo prvi kartici.
+          const workOrder:
+            WorkOrder = {
+            id:
+              Date.now() +
+              index,
 
-            Tako se 1/3 ur ne
-            podvoji pri delu čez
-            polnoč.
-          */
+            project,
 
-          const orderAdditionalHours =
-            index === 0
-              ? additionalHours
-              : 0;
+            machine,
 
-          const workOrder: WorkOrder =
-            {
-              id:
-                Date.now() +
-                index,
+            additionalMachine:
+              additionalMachine ||
+              undefined,
 
-              project,
+            quantity: 0,
 
-              machine,
+            date:
+              calculatedOrder.date,
 
-              additionalMachine:
-                additionalMachine ||
-                undefined,
+            startTime:
+              calculatedOrder.startTime,
 
-              quantity:
-                Number(quantity),
+            endTime:
+              calculatedOrder.endTime,
 
-              date:
-                calculatedOrder.date,
+            hours:
+              calculatedOrder.hours,
 
-              startTime:
-                calculatedOrder.startTime,
+            regularHours:
+              calculatedOrder
+                .breakdown
+                .regular,
 
-              endTime:
-                calculatedOrder.endTime,
+            nightHours:
+              calculatedOrder
+                .breakdown
+                .night,
 
-              hours:
-                calculatedOrder.hours,
+            holidayHours:
+              calculatedOrder
+                .breakdown
+                .holiday,
 
-              regularHours:
-                calculatedOrder
-                  .breakdown
-                  .regular,
+            overtimeHours:
+              calculatedOrder
+                .breakdown
+                .overtime,
 
-              nightHours:
-                calculatedOrder
-                  .breakdown
-                  .night,
+            additionalHours:
+              index === 0
+                ? additionalHours
+                : 0,
 
-              holidayHours:
-                calculatedOrder
-                  .breakdown
-                  .holiday,
+            mealType,
 
-              overtimeHours:
-                calculatedOrder
-                  .breakdown
-                  .overtime,
-
-              additionalHours:
-                orderAdditionalHours,
-
-              note,
-            };
+            note,
+          };
 
           onAddWorkOrder(
             workOrder
@@ -718,23 +772,19 @@ const additionalHours =
       clearForm();
     };
 
-  /* =====================================================
-     IZPIS UR
-  ===================================================== */
-
   const previewOrders =
     calculateWorkOrders();
 
   const totalPreviewHours =
     previewOrders.reduce(
-      (sum, order) =>
-        sum + order.hours,
+      (
+        sum,
+        order
+      ) =>
+        sum +
+        order.hours,
       0
     );
-
-  /* =====================================================
-     RETURN
-  ===================================================== */
 
   return (
     <div
@@ -743,23 +793,24 @@ const additionalHours =
         maxWidth: "1400px",
         margin:
           "30px auto 50px auto",
-        background: "#ffffff",
+        background:
+          "#ffffff",
         border:
           "1px solid #e2e8f0",
-        borderRadius: "18px",
-        padding: "30px",
+        borderRadius:
+          "18px",
+        padding:
+          "30px",
         boxShadow:
           "0 4px 12px rgba(15,23,42,0.06)",
-        boxSizing: "border-box",
+        boxSizing:
+          "border-box",
       }}
     >
-      {/* =================================================
-          NASLOV
-      ================================================= */}
-
       <div
         style={{
-          maxWidth: "1080px",
+          maxWidth:
+            "1080px",
           width: "100%",
           margin:
             "0 auto 30px auto",
@@ -768,9 +819,11 @@ const additionalHours =
         <h2
           style={{
             margin: 0,
-            fontSize: "28px",
+            fontSize:
+              "28px",
             fontWeight: 700,
-            color: "#12344d",
+            color:
+              "#12344d",
           }}
         >
           Nov delovni nalog
@@ -778,9 +831,12 @@ const additionalHours =
 
         <p
           style={{
-            marginTop: "8px",
-            color: "#64748b",
-            fontSize: "15px",
+            marginTop:
+              "8px",
+            color:
+              "#64748b",
+            fontSize:
+              "15px",
           }}
         >
           Vnesite podatke
@@ -788,39 +844,44 @@ const additionalHours =
         </p>
       </div>
 
-      {/* =================================================
-          ZGORNJA POLJA
-      ================================================= */}
-
       <div
         style={{
           width: "100%",
-          maxWidth: "1080px",
-          margin: "0 auto",
-          display: "grid",
+          maxWidth:
+            "1080px",
+          margin:
+            "0 auto",
+          display:
+            "grid",
           gridTemplateColumns:
-            "120px 120px 140px 420px 190px 90px",
-          gap: "18px",
-          alignItems: "start",
+            "120px 120px 140px 420px 190px",
+          gap:
+            "18px",
+          alignItems:
+            "start",
         }}
       >
-        {/* ZAČETEK */}
-
         <div>
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
             Začetek
           </label>
 
           <select
-            value={startTime}
+            value={
+              startTime
+            }
             onChange={(e) =>
               setStartTime(
                 e.target.value
               )
             }
-            style={inputStyle}
+            style={
+              inputStyle
+            }
           >
             {timeOptions.map(
               (time) => (
@@ -835,23 +896,27 @@ const additionalHours =
           </select>
         </div>
 
-        {/* KONČANO */}
-
         <div>
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
             Končano
           </label>
 
           <select
-            value={endTime}
+            value={
+              endTime
+            }
             onChange={(e) =>
               setEndTime(
                 e.target.value
               )
             }
-            style={inputStyle}
+            style={
+              inputStyle
+            }
           >
             {timeOptions.map(
               (time) => (
@@ -866,11 +931,11 @@ const additionalHours =
           </select>
         </div>
 
-        {/* DATUM */}
-
         <div>
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
             Datum
           </label>
@@ -883,180 +948,296 @@ const additionalHours =
                 e.target.value
               )
             }
-            style={inputStyle}
+            style={
+              inputStyle
+            }
           />
         </div>
 
-        {/* PROJEKT */}
-
         <div>
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
             Projekt
           </label>
 
           <input
             type="text"
-            value={project}
+            value={
+              project
+            }
             onChange={(e) =>
               setProject(
                 e.target.value
               )
             }
             placeholder="Izberi projekt"
-            style={inputStyle}
+            style={
+              inputStyle
+            }
           />
         </div>
 
-        {/* STROJ */}
-
         <div>
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
             Stroj
           </label>
 
-          <select
-            value={machine}
-            onChange={(e) =>
-              setMachine(
-                e.target.value
-              )
-            }
-            style={inputStyle}
-          >
-            <option value="">
-              Izberi stroj
-            </option>
-
-            {machineOptions.map(
-              (option) => (
-                <option
-                  key={option}
-                  value={option}
-                >
-                  {option}
-                </option>
-              )
-            )}
-          </select>
-        </div>
-
-        {/* KOLIČINA */}
-
-        <div>
-          <label
-            style={labelStyle}
-          >
-            Količina
-          </label>
-
-          <input
-            type="number"
-            min="0"
-            value={quantity}
-            onChange={(e) =>
-              setQuantity(
-                e.target.value
-              )
-            }
-            style={inputStyle}
-          />
-        </div>
-      </div>
-
-      {/* =================================================
-          DRUGI STROJ
-      ================================================= */}
-
-      <div
-        style={{
-          maxWidth: "1080px",
-          margin: "20px auto 0 auto",
-        }}
-      >
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "9px",
-            fontSize: "14px",
-            color: "#475569",
-            cursor: "pointer",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={
-              showAdditionalMachine
-            }
-            onChange={(e) =>
-              setShowAdditionalMachine(
-                e.target.checked
-              )
-            }
-          />
-
-          Delo na drugem stroju
-        </label>
-
-        {showAdditionalMachine && (
           <div
             style={{
-              width: "190px",
-              marginTop: "12px",
+              display:
+                "flex",
+              gap: "8px",
             }}
           >
-            <label
-              style={labelStyle}
-            >
-              Drugi stroj
-            </label>
-
             <select
               value={
-                additionalMachine
+                machine
               }
-              onChange={(e) =>
-                setAdditionalMachine(
-                  e.target.value
-                )
-              }
-              style={inputStyle}
+              onChange={(e) => {
+                const selected =
+                  e.target
+                    .value;
+
+                setMachine(
+                  selected
+                );
+
+                if (
+                  selected ===
+                  additionalMachine
+                ) {
+                  setAdditionalMachine(
+                    ""
+                  );
+                }
+              }}
+              style={{
+                ...inputStyle,
+                flex: 1,
+              }}
             >
               <option value="">
                 Izberi stroj
               </option>
 
               {machineOptions.map(
-                (option) => (
+                (
+                  machineName
+                ) => (
                   <option
-                    key={option}
-                    value={option}
+                    key={
+                      machineName
+                    }
+                    value={
+                      machineName
+                    }
                   >
-                    {option}
+                    {
+                      machineName
+                    }
                   </option>
                 )
               )}
             </select>
-          </div>
-        )}
-      </div>
 
-      {/* =================================================
-          OPOMBA
-      ================================================= */}
+            {!showAdditionalMachine && (
+              <button
+                type="button"
+                onClick={() =>
+                  setShowAdditionalMachine(
+                    true
+                  )
+                }
+                style={{
+                  width:
+                    "42px",
+                  height:
+                    "42px",
+                  border:
+                    "1px solid #cbd5e1",
+                  borderRadius:
+                    "8px",
+                  background:
+                    "#ffffff",
+                  color:
+                    "#2563eb",
+                  fontSize:
+                    "24px",
+                  cursor:
+                    "pointer",
+                }}
+              >
+                +
+              </button>
+            )}
+          </div>
+
+          {showAdditionalMachine && (
+            <div
+              style={{
+                display:
+                  "flex",
+                gap: "8px",
+                marginTop:
+                  "8px",
+              }}
+            >
+              <select
+                value={
+                  additionalMachine
+                }
+                onChange={(e) =>
+                  setAdditionalMachine(
+                    e.target
+                      .value
+                  )
+                }
+                style={{
+                  ...inputStyle,
+                  flex: 1,
+                }}
+              >
+                <option value="">
+                  Izberi drugi stroj
+                </option>
+
+                {machineOptions.map(
+                  (
+                    machineName
+                  ) => (
+                    <option
+                      key={
+                        machineName
+                      }
+                      value={
+                        machineName
+                      }
+                      disabled={
+                        machineName ===
+                        machine
+                      }
+                    >
+                      {
+                        machineName
+                      }
+                    </option>
+                  )
+                )}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAdditionalMachine(
+                    false
+                  );
+
+                  setAdditionalMachine(
+                    ""
+                  );
+                }}
+                style={{
+                  width:
+                    "42px",
+                  height:
+                    "42px",
+                  border:
+                    "1px solid #fecaca",
+                  borderRadius:
+                    "8px",
+                  background:
+                    "#ffffff",
+                  color:
+                    "#dc2626",
+                  fontSize:
+                    "24px",
+                  cursor:
+                    "pointer",
+                }}
+              >
+                −
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div
         style={{
-          maxWidth: "1080px",
-          margin: "20px auto 0 auto",
+          maxWidth:
+            "1080px",
+          margin:
+            "20px auto 0 auto",
+          display:
+            "flex",
+          alignItems:
+            "center",
+          gap:
+            "12px",
+        }}
+      >
+        <input
+          id="meal-checkbox"
+          type="checkbox"
+          checked={
+            mealType ===
+            "outside"
+          }
+          onChange={(e) =>
+            setMealType(
+              e.target
+                .checked
+                ? "outside"
+                : "withMe"
+            )
+          }
+          style={{
+            width:
+              "18px",
+            height:
+              "18px",
+            cursor:
+              "pointer",
+          }}
+        />
+
+        <label
+          htmlFor="meal-checkbox"
+          style={{
+            fontSize:
+              "14px",
+            color:
+              "#475569",
+            cursor:
+              "pointer",
+          }}
+        >
+          {mealType ===
+          "outside"
+            ? "Malica zunaj"
+            : "Malica s seboj"}
+        </label>
+      </div>
+
+      <div
+        style={{
+          maxWidth:
+            "1080px",
+          margin:
+            "20px auto 0 auto",
         }}
       >
         <label
-          style={labelStyle}
+          style={
+            labelStyle
+          }
         >
           Opomba
         </label>
@@ -1070,36 +1251,46 @@ const additionalHours =
           }
           placeholder="Opomba..."
           style={{
-            width: "100%",
-            minHeight: "80px",
-            resize: "vertical",
+            width:
+              "100%",
+            minHeight:
+              "80px",
+            resize:
+              "vertical",
             border:
               "1px solid #cbd5e1",
-            borderRadius: "8px",
-            padding: "10px 12px",
-            fontSize: "14px",
-            boxSizing: "border-box",
+            borderRadius:
+              "8px",
+            padding:
+              "10px 12px",
+            fontSize:
+              "14px",
+            boxSizing:
+              "border-box",
             fontFamily:
               "inherit",
           }}
         />
       </div>
 
-      {/* =================================================
-          PREDOGLED
-      ================================================= */}
-
       <div
         style={{
-          maxWidth: "1080px",
-          margin: "25px auto 0 auto",
-          padding: "15px 18px",
-          background: "#f8fafc",
+          maxWidth:
+            "1080px",
+          margin:
+            "25px auto 0 auto",
+          padding:
+            "15px 18px",
+          background:
+            "#f8fafc",
           border:
             "1px solid #e2e8f0",
-          borderRadius: "10px",
-          fontSize: "14px",
-          color: "#475569",
+          borderRadius:
+            "10px",
+          fontSize:
+            "14px",
+          color:
+            "#475569",
         }}
       >
         <strong>
@@ -1108,28 +1299,43 @@ const additionalHours =
 
         {crossesMidnight ? (
           <>
-            delo bo avtomatsko
-            razdeljeno na{" "}
+            delo bo
+            avtomatsko
+            razdeljeno
+            na{" "}
             <strong>
-              2 delovna naloga
+              2 delovna
+              naloga
             </strong>
             .
             <br />
 
             {previewOrders.map(
-              (order, index) => (
+              (
+                order,
+                index
+              ) => (
                 <span
-                  key={index}
+                  key={
+                    index
+                  }
                 >
-                  {index === 0
-                    ? "1. "
-                    : "2. "}
-
-                  {order.date}{" "}
-                  {order.startTime} –{" "}
-                  {order.endTime}
-                  {" "}
-                  ({order.hours} h)
+                  {index + 1}.{" "}
+                  {
+                    order.date
+                  }{" "}
+                  {
+                    order.startTime
+                  }{" "}
+                  –{" "}
+                  {
+                    order.endTime
+                  }{" "}
+                  (
+                  {
+                    order.hours
+                  }{" "}
+                  h)
                   <br />
                 </span>
               )
@@ -1137,48 +1343,52 @@ const additionalHours =
 
             Skupaj:{" "}
             <strong>
-              {totalPreviewHours} h
+              {
+                totalPreviewHours
+              }{" "}
+              h
             </strong>
           </>
         ) : (
-          <>
-            {hours} h
-          </>
+          `${hours} h`
         )}
       </div>
 
-      {/* =================================================
-          DODATNE URE
-      ================================================= */}
-
-      {additionalHours > 0 && (
+      {additionalHours >
+        0 && (
         <div
           style={{
-            maxWidth: "1080px",
+            maxWidth:
+              "1080px",
             margin:
               "12px auto 0 auto",
-            fontSize: "14px",
-            color: "#64748b",
+            fontSize:
+              "14px",
+            color:
+              "#64748b",
           }}
         >
-          Dodatne ure zaradi
-          dela na dveh strojih:{" "}
+          Dodatne ure
+          zaradi dela
+          na dveh
+          strojih:{" "}
           <strong>
-            {additionalHours} h
+            {
+              additionalHours
+            }{" "}
+            h
           </strong>
         </div>
       )}
 
-      {/* =================================================
-          GUMB
-      ================================================= */}
-
       <div
         style={{
-          maxWidth: "1080px",
+          maxWidth:
+            "1080px",
           margin:
             "25px auto 0 auto",
-          display: "flex",
+          display:
+            "flex",
           justifyContent:
             "flex-end",
         }}
@@ -1189,17 +1399,24 @@ const additionalHours =
             handleAddWorkOrder
           }
           style={{
-            height: "44px",
+            height:
+              "44px",
             padding:
               "0 24px",
-            border: "none",
-            borderRadius: "8px",
+            border:
+              "none",
+            borderRadius:
+              "8px",
             background:
               "#12344d",
-            color: "#ffffff",
-            fontSize: "14px",
-            fontWeight: 600,
-            cursor: "pointer",
+            color:
+              "#ffffff",
+            fontSize:
+              "14px",
+            fontWeight:
+              600,
+            cursor:
+              "pointer",
           }}
         >
           Dodaj delovni nalog

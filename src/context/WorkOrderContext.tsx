@@ -6,7 +6,11 @@ import {
   type ReactNode,
 } from "react";
 
-import type { WorkOrder } from "../types/WorkOrder";
+import type {
+  DayStatus,
+  WorkOrder,
+} from "../types/WorkOrder";
+
 import { supabase } from "../services/supabase";
 
 type WorkOrderContextType = {
@@ -24,10 +28,6 @@ type WorkOrderContextType = {
     id: number
   ) => Promise<void>;
 
-  /* =========================================
-     OBDOBJE PRIKAZA
-  ========================================= */
-
   startDate: string;
 
   endDate: string;
@@ -39,6 +39,16 @@ type WorkOrderContextType = {
   setEndDate: (
     date: string
   ) => void;
+
+  dayStatuses: Record<
+    string,
+    DayStatus
+  >;
+
+  setDayStatus: (
+    date: string,
+    status: DayStatus
+  ) => Promise<void>;
 };
 
 const WorkOrderContext =
@@ -52,9 +62,6 @@ type WorkOrderProviderProps = {
 
 /* =========================================
    SUPABASE → WORKORDER
-
-   Supabase uporablja snake_case,
-   aplikacija pa camelCase.
 ========================================= */
 
 function fromDatabase(
@@ -63,18 +70,23 @@ function fromDatabase(
   return {
     id: Number(row.id),
 
-    project: row.project ?? "",
+    project:
+      row.project ?? "",
 
-    machine: row.machine ?? "",
+    machine:
+      row.machine ?? "",
 
     additionalMachine:
       row.additional_machine ??
       undefined,
 
     quantity:
-      Number(row.quantity ?? 0),
+      Number(
+        row.quantity ?? 0
+      ),
 
-    date: row.date ?? "",
+    date:
+      row.date ?? "",
 
     startTime:
       row.start_time ?? "",
@@ -83,7 +95,9 @@ function fromDatabase(
       row.end_time ?? "",
 
     hours:
-      Number(row.hours ?? 0),
+      Number(
+        row.hours ?? 0
+      ),
 
     regularHours:
       Number(
@@ -110,7 +124,17 @@ function fromDatabase(
         row.additional_hours ?? 0
       ),
 
-    note: row.note ?? "",
+    mealType:
+      row.meal_type ===
+      "outside"
+        ? "outside"
+        : row.meal_type ===
+          "withMe"
+        ? "withMe"
+        : undefined,
+
+    note:
+      row.note ?? "",
   };
 }
 
@@ -162,6 +186,10 @@ function toDatabase(
     additional_hours:
       workOrder.additionalHours,
 
+    meal_type:
+      workOrder.mealType ??
+      null,
+
     note:
       workOrder.note,
   };
@@ -177,22 +205,14 @@ export function WorkOrderProvider({
   const [
     workOrders,
     setWorkOrders,
-  ] = useState<WorkOrder[]>([]);
-
-  /* =========================================
-     TRENUTNI DATUM
-  ========================================= */
+  ] = useState<WorkOrder[]>(
+    []
+  );
 
   const today =
     new Date()
       .toISOString()
       .split("T")[0];
-
-  /* =========================================
-     ZAČETNI DATUM
-     
-     Privzeto začetek trenutnega meseca
-  ========================================= */
 
   const firstDayOfMonth =
     new Date();
@@ -203,10 +223,6 @@ export function WorkOrderProvider({
     firstDayOfMonth
       .toISOString()
       .split("T")[0];
-
-  /* =========================================
-     DATUMA OBDOBJA
-  ========================================= */
 
   const [
     startDate,
@@ -222,96 +238,161 @@ export function WorkOrderProvider({
     today
   );
 
+  const [
+    dayStatuses,
+    setDayStatuses,
+  ] = useState<
+    Record<
+      string,
+      DayStatus
+    >
+  >({});
+
   /* =========================================
-     NALOŽI KARTICE IZ SUPABASE
+     NALOŽI PODATKE
   ========================================= */
 
   useEffect(() => {
-    const loadWorkOrders =
+    const loadData =
       async () => {
-        const {
-          data,
-          error,
-        } = await supabase
-          .from("work_orders")
-          .select("*")
-          .order(
-            "created_at",
-            {
-              ascending: false,
-            }
-          );
+        /* DELovni NALOGI */
 
-        if (error) {
+        const {
+          data:
+            workOrderData,
+          error:
+            workOrderError,
+        } =
+          await supabase
+            .from(
+              "work_orders"
+            )
+            .select("*")
+            .order(
+              "created_at",
+              {
+                ascending:
+                  false,
+              }
+            );
+
+        if (
+          workOrderError
+        ) {
           console.error(
             "Napaka pri nalaganju delovnih nalogov:",
-            error
+            workOrderError
+          );
+        } else {
+          setWorkOrders(
+            (
+              workOrderData ??
+              []
+            ).map(
+              fromDatabase
+            )
+          );
+        }
+
+        /* STATUSI DNI */
+
+        const {
+          data:
+            statusData,
+          error:
+            statusError,
+        } =
+          await supabase
+            .from(
+              "work_day_statuses"
+            )
+            .select("*");
+
+        if (
+          statusError
+        ) {
+          console.error(
+            "Napaka pri nalaganju statusov dni:",
+            statusError
           );
 
           return;
         }
 
-        const loadedWorkOrders =
-          (data ?? []).map(
-            fromDatabase
-          );
+        const statuses:
+          Record<
+            string,
+            DayStatus
+          > = {};
 
-        setWorkOrders(
-          loadedWorkOrders
+        (
+          statusData ??
+          []
+        ).forEach(
+          (row: any) => {
+            statuses[
+              row.date
+            ] =
+              row.status as DayStatus;
+          }
+        );
+
+        setDayStatuses(
+          statuses
         );
       };
 
-    loadWorkOrders();
+    loadData();
   }, []);
 
   /* =========================================
      DODAJ DELOVNI NALOG
   ========================================= */
 
-  const addWorkOrder = async (
-    workOrder: WorkOrder
-  ) => {
-    const databaseWorkOrder =
-      toDatabase(workOrder);
+  const addWorkOrder =
+    async (
+      workOrder: WorkOrder
+    ) => {
+      const {
+        data,
+        error,
+      } =
+        await supabase
+          .from(
+            "work_orders"
+          )
+          .insert(
+            toDatabase(
+              workOrder
+            )
+          )
+          .select()
+          .single();
 
-    const {
-      data,
-      error,
-    } = await supabase
-      .from("work_orders")
-      .insert(
-        databaseWorkOrder
-      )
-      .select()
-      .single();
+      if (error) {
+        console.error(
+          "Napaka pri shranjevanju delovnega naloga:",
+          error
+        );
 
-    if (error) {
-      console.error(
-        "Napaka pri shranjevanju delovnega naloga:",
-        error
+        alert(
+          "Delovnega naloga ni bilo mogoče shraniti."
+        );
+
+        return;
+      }
+
+      setWorkOrders(
+        (
+          previous
+        ) => [
+          fromDatabase(
+            data
+          ),
+          ...previous,
+        ]
       );
-
-      alert(
-        "Delovnega naloga ni bilo mogoče shraniti."
-      );
-
-      return;
-    }
-
-    const savedWorkOrder =
-      fromDatabase(data);
-
-    /* =====================================
-       NOVA KARTICA GRE NA VRH
-    ===================================== */
-
-    setWorkOrders(
-      (previous) => [
-        savedWorkOrder,
-        ...previous,
-      ]
-    );
-  };
+    };
 
   /* =========================================
      UREDI DELOVNI NALOG
@@ -321,25 +402,25 @@ export function WorkOrderProvider({
     async (
       updatedWorkOrder: WorkOrder
     ) => {
-      const databaseWorkOrder =
-        toDatabase(
-          updatedWorkOrder
-        );
-
       const {
         data,
         error,
-      } = await supabase
-        .from("work_orders")
-        .update(
-          databaseWorkOrder
-        )
-        .eq(
-          "id",
-          updatedWorkOrder.id
-        )
-        .select()
-        .single();
+      } =
+        await supabase
+          .from(
+            "work_orders"
+          )
+          .update(
+            toDatabase(
+              updatedWorkOrder
+            )
+          )
+          .eq(
+            "id",
+            updatedWorkOrder.id
+          )
+          .select()
+          .single();
 
       if (error) {
         console.error(
@@ -355,12 +436,18 @@ export function WorkOrderProvider({
       }
 
       const savedWorkOrder =
-        fromDatabase(data);
+        fromDatabase(
+          data
+        );
 
       setWorkOrders(
-        (previous) =>
+        (
+          previous
+        ) =>
           previous.map(
-            (workOrder) =>
+            (
+              workOrder
+            ) =>
               workOrder.id ===
               savedWorkOrder.id
                 ? savedWorkOrder
@@ -379,13 +466,16 @@ export function WorkOrderProvider({
     ) => {
       const {
         error,
-      } = await supabase
-        .from("work_orders")
-        .delete()
-        .eq(
-          "id",
-          id
-        );
+      } =
+        await supabase
+          .from(
+            "work_orders"
+          )
+          .delete()
+          .eq(
+            "id",
+            id
+          );
 
       if (error) {
         console.error(
@@ -401,17 +491,120 @@ export function WorkOrderProvider({
       }
 
       setWorkOrders(
-        (previous) =>
+        (
+          previous
+        ) =>
           previous.filter(
-            (workOrder) =>
-              workOrder.id !== id
+            (
+              workOrder
+            ) =>
+              workOrder.id !==
+              id
           )
       );
     };
 
   /* =========================================
-     CONTEXT
+     STATUS DNEVA
+
+     none = izbriši status
+     ostalo = shrani v Supabase
   ========================================= */
+
+  const setDayStatus =
+    async (
+      date: string,
+      status: DayStatus
+    ) => {
+      if (
+        status === "none"
+      ) {
+        const {
+          error,
+        } =
+          await supabase
+            .from(
+              "work_day_statuses"
+            )
+            .delete()
+            .eq(
+              "date",
+              date
+            );
+
+        if (error) {
+          console.error(
+            "Napaka pri brisanju statusa dneva:",
+            error
+          );
+
+          alert(
+            "Status dneva ni bilo mogoče shraniti."
+          );
+
+          return;
+        }
+
+        setDayStatuses(
+          (
+            previous
+          ) => {
+            const next = {
+              ...previous,
+            };
+
+            delete next[
+              date
+            ];
+
+            return next;
+          }
+        );
+
+        return;
+      }
+
+      const {
+        error,
+      } =
+        await supabase
+          .from(
+            "work_day_statuses"
+          )
+          .upsert(
+            {
+              date,
+              status,
+            },
+            {
+              onConflict:
+                "date",
+            }
+          );
+
+      if (error) {
+        console.error(
+          "Napaka pri shranjevanju statusa dneva:",
+          error
+        );
+
+        alert(
+          "Status dneva ni bilo mogoče shraniti."
+        );
+
+        return;
+      }
+
+      setDayStatuses(
+        (
+          previous
+        ) => ({
+          ...previous,
+          [date]:
+            status,
+        })
+      );
+    };
 
   return (
     <WorkOrderContext.Provider
@@ -431,6 +624,10 @@ export function WorkOrderProvider({
         setStartDate,
 
         setEndDate,
+
+        dayStatuses,
+
+        setDayStatus,
       }}
     >
       {children}

@@ -1,3 +1,15 @@
+export type MealType =
+  | "outside"
+  | "withMe";
+
+export type DayStatus =
+  | "none"
+  | "work"
+  | "twoMachines"
+  | "sick"
+  | "vacation"
+  | "holiday";
+
 export type WorkOrder = {
   id: number;
 
@@ -26,6 +38,9 @@ export type WorkOrder = {
 
   // 1/3 ur zaradi dela na dveh strojih
   additionalHours: number;
+
+  // Malica: zunaj ali s seboj
+  mealType?: MealType;
 
   note: string;
 };

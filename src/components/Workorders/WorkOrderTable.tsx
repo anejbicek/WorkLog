@@ -1,4 +1,6 @@
-import type { WorkOrder } from "../../types/WorkOrder";
+import type {
+  WorkOrder,
+} from "../../types/WorkOrder";
 
 type WorkOrderTableProps = {
   workOrders: WorkOrder[];
@@ -17,79 +19,79 @@ function WorkOrderTable({
   onDeleteWorkOrder,
   onEditWorkOrder,
 }: WorkOrderTableProps) {
-  /*
-    NOVEJŠE KARTICE SO VEDNO NA VRHU.
+  const sortedWorkOrders =
+    [
+      ...workOrders,
+    ].sort((a, b) => {
+      const dateComparison =
+        b.date.localeCompare(
+          a.date
+        );
 
-    Najprej primerjamo datum.
-    Če je datum novejši, gre kartica višje.
+      if (
+        dateComparison !==
+        0
+      ) {
+        return dateComparison;
+      }
 
-    Če sta dve kartici na isti datum,
-    uporabimo ID. Višji ID pomeni,
-    da je bila kartica dodana kasneje.
-  */
-  const sortedWorkOrders = [
-    ...workOrders,
-  ].sort((a, b) => {
-    const dateComparison =
-      b.date.localeCompare(a.date);
-
-    if (dateComparison !== 0) {
-      return dateComparison;
-    }
-
-    return b.id - a.id;
-  });
+      return b.id - a.id;
+    });
 
   return (
     <div
       style={{
-        width: "calc(100% - 40px)",
-        maxWidth: "calc(1080px + 1cm)",
-        margin: "25px auto 0 auto",
+        width:
+          "calc(100% - 40px)",
+        maxWidth:
+          "calc(1080px + 1cm)",
+        margin:
+          "25px auto 0 auto",
       }}
     >
-      {sortedWorkOrders.length === 0 ? (
+      {sortedWorkOrders.length ===
+      0 ? (
         <div
           style={{
-            background: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "14px",
-            padding: "30px",
-            textAlign: "center",
-            color: "#64748b",
+            background:
+              "#ffffff",
+            border:
+              "1px solid #e5e7eb",
+            borderRadius:
+              "14px",
+            padding:
+              "30px",
+            textAlign:
+              "center",
+            color:
+              "#64748b",
           }}
         >
-          Ni dodanih delovnih nalogov.
+          Ni dodanih delovnih
+          nalogov.
         </div>
       ) : (
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
+            display:
+              "flex",
+            flexDirection:
+              "column",
+            gap:
+              "14px",
           }}
         >
           {sortedWorkOrders.map(
-            (workOrder) => {
-              /*
-                PRVI STROJ
-              */
-
+            (
+              workOrder
+            ) => {
               const firstMachine =
-                workOrder.machine || "";
-
-              /*
-                DRUGI STROJ
-              */
+                workOrder.machine ||
+                "";
 
               const secondMachine =
                 workOrder.additionalMachine ||
                 "";
-
-              /*
-                PRIKAŽEMO OBA STROJA,
-                ČE STA IZBRANA
-              */
 
               const machineText =
                 firstMachine &&
@@ -101,7 +103,9 @@ function WorkOrderTable({
 
               return (
                 <div
-                  key={workOrder.id}
+                  key={
+                    workOrder.id
+                  }
                   style={{
                     background:
                       "#ffffff",
@@ -115,10 +119,6 @@ function WorkOrderTable({
                       "border-box",
                   }}
                 >
-                  {/* =================================
-                      ZGORNJI DEL KARTICE
-                  ================================= */}
-
                   <div
                     style={{
                       display:
@@ -127,21 +127,16 @@ function WorkOrderTable({
                         "space-between",
                       alignItems:
                         "flex-start",
-                      gap: "20px",
+                      gap:
+                        "20px",
                     }}
                   >
-                    {/* =================================
-                        LEVA STRAN
-                    ================================= */}
-
                     <div
                       style={{
                         flex: 1,
                         minWidth: 0,
                       }}
                     >
-                      {/* DATUM */}
-
                       <div
                         style={{
                           fontSize:
@@ -156,8 +151,6 @@ function WorkOrderTable({
                           workOrder.date
                         }
                       </div>
-
-                      {/* PROJEKT */}
 
                       <div
                         style={{
@@ -176,8 +169,6 @@ function WorkOrderTable({
                         }
                       </div>
 
-                      {/* STROJ / STROJA */}
-
                       <div
                         style={{
                           fontSize:
@@ -192,8 +183,6 @@ function WorkOrderTable({
                           machineText
                         }
                       </div>
-
-                      {/* OPIS */}
 
                       {workOrder.note && (
                         <div
@@ -213,71 +202,28 @@ function WorkOrderTable({
                       )}
                     </div>
 
-                    {/* =================================
-                        DESNA STRAN
-
-                        KOLIČINA | URE | UREDI | IZBRIŠI
-                    ================================= */}
-
                     <div
                       style={{
                         display:
                           "flex",
                         alignItems:
                           "center",
-                        gap: "18px",
-                        flexShrink: 0,
+                        gap:
+                          "18px",
+                        flexShrink:
+                          0,
                         transform:
                           "translateY(28px)",
                       }}
                     >
-                      {/* KOLIČINA */}
-
                       <div
                         style={{
                           display:
                             "flex",
                           alignItems:
                             "baseline",
-                          gap: "6px",
-                          whiteSpace:
-                            "nowrap",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize:
-                              "12px",
-                            color:
-                              "#64748b",
-                          }}
-                        >
-                          Količina
-                        </span>
-
-                        <strong
-                          style={{
-                            fontSize:
-                              "18px",
-                            color:
-                              "#12344d",
-                          }}
-                        >
-                          {
-                            workOrder.quantity
-                          }
-                        </strong>
-                      </div>
-
-                      {/* URE */}
-
-                      <div
-                        style={{
-                          display:
-                            "flex",
-                          alignItems:
-                            "baseline",
-                          gap: "6px",
+                          gap:
+                            "6px",
                           whiteSpace:
                             "nowrap",
                         }}
@@ -311,8 +257,6 @@ function WorkOrderTable({
                         </strong>
                       </div>
 
-                      {/* UREDI */}
-
                       <button
                         onClick={() =>
                           onEditWorkOrder(
@@ -344,8 +288,6 @@ function WorkOrderTable({
                       >
                         Uredi
                       </button>
-
-                      {/* IZBRIŠI */}
 
                       <button
                         onClick={() =>
@@ -381,10 +323,6 @@ function WorkOrderTable({
                     </div>
                   </div>
 
-                  {/* =================================
-                      SPODNJI DEL
-                  ================================= */}
-
                   <div
                     style={{
                       marginTop:
@@ -401,8 +339,6 @@ function WorkOrderTable({
                         "center",
                     }}
                   >
-                    {/* ČAS */}
-
                     <div
                       style={{
                         fontSize:
@@ -418,6 +354,23 @@ function WorkOrderTable({
                       {
                         workOrder.endTime
                       }
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize:
+                          "13px",
+                        color:
+                          "#64748b",
+                      }}
+                    >
+                      {workOrder.mealType ===
+                      "outside"
+                        ? "Malica zunaj"
+                        : workOrder.mealType ===
+                          "withMe"
+                        ? "Malica s seboj"
+                        : "Malica ni izbrana"}
                     </div>
                   </div>
                 </div>
