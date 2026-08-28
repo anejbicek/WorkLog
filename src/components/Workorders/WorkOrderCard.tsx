@@ -484,7 +484,6 @@ function WorkOrderCard({
     Napis je vedno enak:
     "Malico sem imel s seboj"
   */
-
   const [
     meal,
     setMeal,
@@ -816,16 +815,36 @@ function WorkOrderCard({
   return (
     <div
       style={{
-        marginTop: "30px",
+        /*
+          NOVA ŠIRINA KARTICE
+
+          Ostala vsebina ostane
+          popolnoma enaka.
+        */
+        width:
+          "calc(100% - 40px)",
+        maxWidth:
+          "1400px",
+        margin:
+          "30px auto 0 auto",
+
         background:
           "#ffffff",
+
         border:
           "1px solid #e5e7eb",
+
         borderRadius:
           "18px",
-        padding: "30px",
+
+        padding:
+          "30px",
+
         boxShadow:
           "0 4px 12px rgba(0,0,0,0.05)",
+
+        boxSizing:
+          "border-box",
       }}
     >
       {/* =================================================
