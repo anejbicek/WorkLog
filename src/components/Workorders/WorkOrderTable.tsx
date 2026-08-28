@@ -1,6 +1,4 @@
-import type {
-  WorkOrder,
-} from "../../types/WorkOrder";
+import type { WorkOrder } from "../../types/WorkOrder";
 
 type WorkOrderTableProps = {
   workOrders: WorkOrder[];
@@ -19,368 +17,438 @@ function WorkOrderTable({
   onDeleteWorkOrder,
   onEditWorkOrder,
 }: WorkOrderTableProps) {
-  const sortedWorkOrders =
-    [
-      ...workOrders,
-    ].sort((a, b) => {
-      const dateComparison =
-        b.date.localeCompare(
-          a.date
-        );
-
-      if (
-        dateComparison !==
-        0
-      ) {
-        return dateComparison;
-      }
-
-      return b.id - a.id;
-    });
-
   return (
     <div
       style={{
         width:
-          "calc(100% - 40px)",
-        maxWidth:
-          "calc(1080px + 1cm)",
+          "calc(100% - 226px)",
+        maxWidth: "1080px",
         margin:
-          "25px auto 0 auto",
+          "30px auto 0 auto",
+        background: "#ffffff",
+        border:
+          "1px solid #e5e7eb",
+        borderRadius: "14px",
+        overflow: "hidden",
       }}
     >
-      {sortedWorkOrders.length ===
-      0 ? (
-        <div
+      {/* =========================================
+          NASLOV TABELE
+      ========================================= */}
+
+      <div
+        style={{
+          padding: "20px",
+          borderBottom:
+            "1px solid #e5e7eb",
+        }}
+      >
+        <h2
           style={{
-            background:
-              "#ffffff",
-            border:
-              "1px solid #e5e7eb",
-            borderRadius:
-              "14px",
-            padding:
-              "30px",
-            textAlign:
-              "center",
-            color:
-              "#64748b",
+            margin: 0,
+            fontSize: "20px",
+            color: "#12344d",
           }}
         >
-          Ni dodanih delovnih
-          nalogov.
+          Delovni nalogi
+        </h2>
+      </div>
+
+      {/* =========================================
+          PRAZNA TABELA
+      ========================================= */}
+
+      {workOrders.length === 0 ? (
+        <div
+          style={{
+            padding: "40px",
+            textAlign: "center",
+            color: "#64748b",
+          }}
+        >
+          Za izbrano obdobje ni delovnih nalogov.
         </div>
       ) : (
         <div
           style={{
-            display:
-              "flex",
-            flexDirection:
-              "column",
-            gap:
-              "14px",
+            overflowX: "auto",
           }}
         >
-          {sortedWorkOrders.map(
-            (
-              workOrder
-            ) => {
-              const firstMachine =
-                workOrder.machine ||
-                "";
-
-              const secondMachine =
-                workOrder.additionalMachine ||
-                "";
-
-              const machineText =
-                firstMachine &&
-                secondMachine
-                  ? `${firstMachine} + ${secondMachine}`
-                  : firstMachine ||
-                    secondMachine ||
-                    "Stroj ni izbran";
-
-              return (
-                <div
-                  key={
-                    workOrder.id
+          <table
+            style={{
+              width: "100%",
+              borderCollapse:
+                "collapse",
+              minWidth:
+                "1000px",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  background:
+                    "#f8fafc",
+                }}
+              >
+                <th
+                  style={
+                    tableHeaderStyle
                   }
+                >
+                  Datum
+                </th>
+
+                <th
+                  style={
+                    tableHeaderStyle
+                  }
+                >
+                  Projekt
+                </th>
+
+                <th
+                  style={
+                    tableHeaderStyle
+                  }
+                >
+                  Stroj
+                </th>
+
+                <th
+                  style={
+                    tableHeaderStyle
+                  }
+                >
+                  Začetek
+                </th>
+
+                <th
+                  style={
+                    tableHeaderStyle
+                  }
+                >
+                  Končano
+                </th>
+
+                <th
+                  style={
+                    tableHeaderStyle
+                  }
+                >
+                  Ure
+                </th>
+
+                <th
+                  style={
+                    tableHeaderStyle
+                  }
+                >
+                  Dodatne
+                </th>
+
+                <th
+                  style={
+                    tableHeaderStyle
+                  }
+                >
+                  Malica
+                </th>
+
+                <th
                   style={{
-                    background:
-                      "#ffffff",
-                    border:
-                      "1px solid #e5e7eb",
-                    borderRadius:
-                      "14px",
-                    padding:
-                      "18px 20px",
-                    boxSizing:
-                      "border-box",
+                    ...tableHeaderStyle,
+                    textAlign:
+                      "center",
                   }}
                 >
-                  <div
-                    style={{
-                      display:
-                        "flex",
-                      justifyContent:
-                        "space-between",
-                      alignItems:
-                        "flex-start",
-                      gap:
-                        "20px",
-                    }}
+                  Akcije
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {workOrders.map(
+                (workOrder) => (
+                  <tr
+                    key={
+                      workOrder.id
+                    }
                   >
-                    <div
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                      }}
+                    {/* DATUM */}
+
+                    <td
+                      style={
+                        tableCellStyle
+                      }
                     >
-                      <div
-                        style={{
-                          fontSize:
-                            "13px",
-                          color:
-                            "#64748b",
-                          marginBottom:
-                            "5px",
-                        }}
-                      >
-                        {
-                          workOrder.date
-                        }
+                      {workOrder.date}
+                    </td>
+
+                    {/* PROJEKT */}
+
+                    <td
+                      style={
+                        tableCellStyle
+                      }
+                    >
+                      {workOrder.project}
+                    </td>
+
+                    {/* STROJ */}
+
+                    <td
+                      style={
+                        tableCellStyle
+                      }
+                    >
+                      <div>
+                        {workOrder.machine}
                       </div>
 
-                      <div
-                        style={{
-                          fontSize:
-                            "19px",
-                          fontWeight:
-                            700,
-                          color:
-                            "#12344d",
-                          marginBottom:
-                            "7px",
-                        }}
-                      >
-                        {
-                          workOrder.project
-                        }
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize:
-                            "14px",
-                          color:
-                            "#334155",
-                          fontWeight:
-                            600,
-                        }}
-                      >
-                        {
-                          machineText
-                        }
-                      </div>
-
-                      {workOrder.note && (
+                      {workOrder.additionalMachine && (
                         <div
                           style={{
                             marginTop:
-                              "8px",
+                              "4px",
+                            color:
+                              "#64748b",
                             fontSize:
-                              "14px",
+                              "13px",
+                          }}
+                        >
+                          +
+                          {" "}
+                          {
+                            workOrder.additionalMachine
+                          }
+                        </div>
+                      )}
+                    </td>
+
+                    {/* ZAČETEK */}
+
+                    <td
+                      style={
+                        tableCellStyle
+                      }
+                    >
+                      {
+                        workOrder.startTime
+                      }
+                    </td>
+
+                    {/* KONČANO */}
+
+                    <td
+                      style={
+                        tableCellStyle
+                      }
+                    >
+                      {
+                        workOrder.endTime
+                      }
+                    </td>
+
+                    {/* URE */}
+
+                    <td
+                      style={{
+                        ...tableCellStyle,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {Number(
+                        workOrder.hours ||
+                          0
+                      ).toFixed(2)}{" "}
+                      h
+                    </td>
+
+                    {/* DODATNE */}
+
+                    <td
+                      style={{
+                        ...tableCellStyle,
+                        color:
+                          "#f97316",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {Number(
+                        workOrder.additionalHours ||
+                          0
+                      ).toFixed(2)}{" "}
+                      h
+                    </td>
+
+                    {/* =================================
+                        MALICA
+
+                        true  = s seboj
+                        false = zunaj
+
+                        Napis se ne spreminja
+                        v delovnem nalogu.
+                    ================================= */}
+
+                    <td
+                      style={{
+                        ...tableCellStyle,
+                        whiteSpace:
+                          "nowrap",
+                      }}
+                    >
+                      {workOrder.meal ? (
+                        <span
+                          style={{
+                            color:
+                              "#059669",
+                            fontWeight:
+                              600,
+                          }}
+                        >
+                          ✓ Malica s seboj
+                        </span>
+                      ) : (
+                        <span
+                          style={{
                             color:
                               "#64748b",
                           }}
                         >
-                          {
-                            workOrder.note
-                          }
-                        </div>
+                          Malica zunaj
+                        </span>
                       )}
-                    </div>
+                    </td>
 
-                    <div
+                    {/* =================================
+                        AKCIJE
+                    ================================= */}
+
+                    <td
                       style={{
-                        display:
-                          "flex",
-                        alignItems:
+                        ...tableCellStyle,
+                        textAlign:
                           "center",
-                        gap:
-                          "18px",
-                        flexShrink:
-                          0,
-                        transform:
-                          "translateY(28px)",
                       }}
                     >
                       <div
                         style={{
                           display:
                             "flex",
-                          alignItems:
-                            "baseline",
-                          gap:
-                            "6px",
-                          whiteSpace:
-                            "nowrap",
+                          justifyContent:
+                            "center",
+                          gap: "8px",
                         }}
                       >
-                        <span
-                          style={{
-                            fontSize:
-                              "12px",
-                            color:
-                              "#64748b",
-                          }}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onEditWorkOrder(
+                              workOrder
+                            )
+                          }
+                          style={
+                            editButtonStyle
+                          }
                         >
-                          Ure
-                        </span>
+                          Uredi
+                        </button>
 
-                        <strong
-                          style={{
-                            fontSize:
-                              "16px",
-                            color:
-                              "#184e43",
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const confirmed =
+                              window.confirm(
+                                "Ali res želiš izbrisati ta delovni nalog?"
+                              );
+
+                            if (
+                              confirmed
+                            ) {
+                              onDeleteWorkOrder(
+                                workOrder.id
+                              );
+                            }
                           }}
+                          style={
+                            deleteButtonStyle
+                          }
                         >
-                          {Number(
-                            workOrder.hours ||
-                              0
-                          ).toFixed(
-                            2
-                          )}{" "}
-                          h
-                        </strong>
+                          Izbriši
+                        </button>
                       </div>
-
-                      <button
-                        onClick={() =>
-                          onEditWorkOrder(
-                            workOrder
-                          )
-                        }
-                        style={{
-                          height:
-                            "34px",
-                          padding:
-                            "0 14px",
-                          border:
-                            "1px solid #cbd5e1",
-                          borderRadius:
-                            "9px",
-                          background:
-                            "#ffffff",
-                          color:
-                            "#334155",
-                          fontSize:
-                            "13px",
-                          fontWeight:
-                            600,
-                          cursor:
-                            "pointer",
-                          whiteSpace:
-                            "nowrap",
-                        }}
-                      >
-                        Uredi
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          onDeleteWorkOrder(
-                            workOrder.id
-                          )
-                        }
-                        style={{
-                          height:
-                            "34px",
-                          padding:
-                            "0 14px",
-                          border:
-                            "1px solid #fecaca",
-                          borderRadius:
-                            "9px",
-                          background:
-                            "#ffffff",
-                          color:
-                            "#dc2626",
-                          fontSize:
-                            "13px",
-                          fontWeight:
-                            600,
-                          cursor:
-                            "pointer",
-                          whiteSpace:
-                            "nowrap",
-                        }}
-                      >
-                        Izbriši
-                      </button>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop:
-                        "16px",
-                      paddingTop:
-                        "14px",
-                      borderTop:
-                        "1px solid #e5e7eb",
-                      display:
-                        "flex",
-                      justifyContent:
-                        "space-between",
-                      alignItems:
-                        "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize:
-                          "13px",
-                        color:
-                          "#64748b",
-                      }}
-                    >
-                      {
-                        workOrder.startTime
-                      }
-                      {" – "}
-                      {
-                        workOrder.endTime
-                      }
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize:
-                          "13px",
-                        color:
-                          "#64748b",
-                      }}
-                    >
-                      {workOrder.mealType ===
-                      "outside"
-                        ? "Malica zunaj"
-                        : workOrder.mealType ===
-                          "withMe"
-                        ? "Malica s seboj"
-                        : "Malica ni izbrana"}
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-          )}
+                    </td>
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
   );
 }
+
+/* =========================================
+   STILI
+========================================= */
+
+const tableHeaderStyle = {
+  padding:
+    "14px 18px",
+  textAlign:
+    "left" as const,
+  fontSize: "13px",
+  fontWeight: 600,
+  color: "#475569",
+  whiteSpace:
+    "nowrap" as const,
+};
+
+const tableCellStyle = {
+  padding:
+    "16px 18px",
+  borderTop:
+    "1px solid #e5e7eb",
+  fontSize: "14px",
+  color: "#334155",
+  whiteSpace:
+    "nowrap" as const,
+};
+
+const editButtonStyle = {
+  border: "none",
+  borderRadius:
+    "8px",
+  padding:
+    "8px 14px",
+  background:
+    "#eff6ff",
+  color:
+    "#2563eb",
+  fontSize:
+    "13px",
+  fontWeight: 600,
+  cursor:
+    "pointer",
+};
+
+const deleteButtonStyle = {
+  border: "none",
+  borderRadius:
+    "8px",
+  padding:
+    "8px 14px",
+  background:
+    "#fef2f2",
+  color:
+    "#dc2626",
+  fontSize:
+    "13px",
+  fontWeight: 600,
+  cursor:
+    "pointer",
+};
 
 export default WorkOrderTable;

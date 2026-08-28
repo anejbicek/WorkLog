@@ -1,105 +1,280 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import type { WorkOrder } from "../../types/WorkOrder";
 
-import type {
-  WorkOrder,
-} from "../../types/WorkOrder";
+type InputFieldProps = {
+  label: string;
+  placeholder: string;
+  value?: string;
+  onChange?: (value: string) => void;
+  width?: string;
+  type?: string;
+};
 
-type WorkOrderCardProps = {
-  onAddWorkOrder: (
-    workOrder: WorkOrder
+function InputField({
+  label,
+  placeholder,
+  value = "",
+  onChange,
+  width = "100%",
+  type = "text",
+}: InputFieldProps) {
+  return (
+    <div style={{ width }}>
+      <label style={labelStyle}>{label}</label>
+
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) =>
+          onChange?.(e.target.value)
+        }
+        style={inputStyle}
+      />
+    </div>
+  );
+}
+
+/* =====================================================
+   URE NA 15 MINUT
+===================================================== */
+
+function createTimeOptions() {
+  const options: string[] = [];
+
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      options.push(
+        `${String(hour).padStart(
+          2,
+          "0"
+        )}:${String(minute).padStart(
+          2,
+          "0"
+        )}`
+      );
+    }
+  }
+
+  return options;
+}
+
+const timeOptions =
+  createTimeOptions();
+
+/* =====================================================
+   LASTEN SPUSTNI SEZNAM ZA URE
+===================================================== */
+
+type TimeSelectProps = {
+  value: string;
+  onChange: (
+    value: string
   ) => void;
 };
 
-const machineOptions = [
-  "OKUMA MB-56VB",
-  "OKUMA M460V-5AX",
-  "Žična erozija",
-  "Potopna erozija",
-];
+function TimeSelect({
+  value,
+  onChange,
+}: TimeSelectProps) {
+  const [open, setOpen] =
+    useState(false);
 
-const timeOptions: string[] = [];
-
-for (
-  let hour = 0;
-  hour < 24;
-  hour++
-) {
-  for (
-    let minute = 0;
-    minute < 60;
-    minute += 15
-  ) {
-    timeOptions.push(
-      `${String(
-        hour
-      ).padStart(
-        2,
-        "0"
-      )}:${String(
-        minute
-      ).padStart(
-        2,
-        "0"
-      )}`
+  const containerRef =
+    useRef<HTMLDivElement>(
+      null
     );
-  }
+
+  useEffect(() => {
+    const handleClickOutside =
+      (event: MouseEvent) => {
+        if (
+          containerRef.current &&
+          !containerRef.current.contains(
+            event.target as Node
+          )
+        ) {
+          setOpen(false);
+        }
+      };
+
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        const selectedElement =
+          containerRef.current?.querySelector(
+            `[data-time="${value}"]`
+          ) as HTMLElement | null;
+
+        selectedElement?.scrollIntoView(
+          {
+            block: "center",
+          }
+        );
+      }, 0);
+    }
+  }, [open, value]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "100%",
+      }}
+    >
+      <button
+        type="button"
+        onClick={() =>
+          setOpen(
+            (previous) =>
+              !previous
+          )
+        }
+        style={{
+          ...inputStyle,
+          textAlign: "left",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent:
+            "space-between",
+        }}
+      >
+        <span>{value}</span>
+
+        <span
+          style={{
+            fontSize: "12px",
+            color: "#64748b",
+          }}
+        >
+          ▼
+        </span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            width: "100%",
+            height: "252px",
+            background:
+              "#ffffff",
+            border:
+              "1px solid #d1d5db",
+            borderRadius: "10px",
+            boxShadow:
+              "0 10px 25px rgba(0,0,0,0.15)",
+            zIndex: 1000,
+            overflowY: "auto",
+          }}
+        >
+          {timeOptions.map(
+            (time) => (
+              <div
+                key={time}
+                data-time={time}
+                onClick={() => {
+                  onChange(time);
+                  setOpen(false);
+                }}
+                style={{
+                  height: "36px",
+                  display: "flex",
+                  alignItems:
+                    "center",
+                  padding:
+                    "0 14px",
+                  boxSizing:
+                    "border-box",
+                  cursor:
+                    "pointer",
+                  background:
+                    time === value
+                      ? "#eff6ff"
+                      : "#ffffff",
+                  color:
+                    time === value
+                      ? "#2563eb"
+                      : "#334155",
+                  fontWeight:
+                    time === value
+                      ? 600
+                      : 400,
+                }}
+              >
+                {time}
+              </div>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
-const timeToMinutes = (
+/* =====================================================
+   PRETVORBA ČASA
+===================================================== */
+
+function timeToMinutes(
   time: string
-) => {
+) {
   const [
-    hours,
-    minutes,
+    hour,
+    minute,
   ] =
     time
       .split(":")
       .map(Number);
 
   return (
-    hours * 60 +
-    minutes
+    hour * 60 + minute
   );
-};
+}
 
-const formatDate = (
+/* =====================================================
+   PRAZNIKI
+===================================================== */
+
+function formatDate(
   date: Date
-) => {
-  return `${date.getFullYear()}-${String(
-    date.getMonth() + 1
-  ).padStart(
-    2,
-    "0"
-  )}-${String(
-    date.getDate()
-  ).padStart(
-    2,
-    "0"
-  )}`;
-};
+) {
+  const year =
+    date.getFullYear();
 
-const addDays = (
-  dateString: string,
-  days: number
-) => {
-  const date =
-    new Date(
-      `${dateString}T00:00:00`
-    );
+  const month =
+    String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
 
-  date.setDate(
-    date.getDate() +
-      days
-  );
+  const day =
+    String(
+      date.getDate()
+    ).padStart(2, "0");
 
-  return formatDate(
-    date
-  );
-};
+  return `${year}-${month}-${day}`;
+}
 
-const calculateEaster = (
+function calculateEaster(
   year: number
-) => {
+) {
   const a =
     year % 19;
 
@@ -183,11 +358,15 @@ const calculateEaster = (
     month - 1,
     day
   );
-};
+}
 
-const isHoliday = (
+function isHoliday(
   dateString: string
-) => {
+) {
+  if (!dateString) {
+    return false;
+  }
+
   const year =
     Number(
       dateString.substring(
@@ -224,39 +403,28 @@ const isHoliday = (
       1
   );
 
+  const easterMondayString =
+    formatDate(
+      easterMonday
+    );
+
   return (
     fixedHolidays.includes(
       dateString
     ) ||
     dateString ===
-      formatDate(
-        easterMonday
-      )
+      easterMondayString
   );
-};
+}
 
-const labelStyle:
-  React.CSSProperties = {
-  display: "block",
-  fontSize: "14px",
-  fontWeight: 600,
-  color: "#475569",
-  marginBottom: "7px",
-};
+/* =====================================================
+   WORK ORDER CARD
+===================================================== */
 
-const inputStyle:
-  React.CSSProperties = {
-  width: "100%",
-  height: "42px",
-  border:
-    "1px solid #cbd5e1",
-  borderRadius: "8px",
-  padding: "0 12px",
-  fontSize: "14px",
-  boxSizing:
-    "border-box",
-  background:
-    "#ffffff",
+type WorkOrderCardProps = {
+  onAddWorkOrder: (
+    workOrder: WorkOrder
+  ) => void;
 };
 
 function WorkOrderCard({
@@ -303,32 +471,35 @@ function WorkOrderCard({
   ] = useState("14:00");
 
   const [
-    mealType,
-    setMealType,
-  ] =
-    useState<
-      "outside" |
-      "withMe"
-    >("withMe");
-
-  const [
     note,
     setNote,
   ] = useState("");
 
-  const startMinutes =
-    timeToMinutes(
-      startTime
-    );
+  /*
+    MALICA
 
-  const endMinutes =
-    timeToMinutes(
-      endTime
-    );
+    false = jedel zunaj
+    true  = imel malico s seboj
 
-  const crossesMidnight =
-    endMinutes <=
-    startMinutes;
+    Napis je vedno enak:
+    "Malico sem imel s seboj"
+  */
+
+  const [
+    meal,
+    setMeal,
+  ] = useState(false);
+
+  const machineOptions = [
+    "HAAS VF-2",
+    "HAAS VF-4",
+    "DMG Mori",
+    "Okuma",
+  ];
+
+  /* =================================================
+     IZRAČUN SKUPNIH UR
+  ================================================= */
 
   const calculateHours =
     () => {
@@ -349,9 +520,7 @@ function WorkOrderCard({
           endTime
         );
 
-      if (
-        end <= start
-      ) {
+      if (end <= start) {
         end +=
           24 * 60;
       }
@@ -367,15 +536,15 @@ function WorkOrderCard({
   const hours =
     calculateHours();
 
+  /* =================================================
+     RAZDELITEV UR
+  ================================================= */
+
   const calculateBreakdown =
-    (
-      dayDate: string,
-      dayStart: string,
-      dayEnd: string
-    ) => {
+    () => {
       if (
-        !dayStart ||
-        !dayEnd
+        !startTime ||
+        !endTime
       ) {
         return {
           regular: 0,
@@ -387,24 +556,22 @@ function WorkOrderCard({
 
       let start =
         timeToMinutes(
-          dayStart
+          startTime
         );
 
       let end =
         timeToMinutes(
-          dayEnd
+          endTime
         );
 
-      if (
-        end <= start
-      ) {
+      if (end <= start) {
         end +=
           24 * 60;
       }
 
       const selectedDate =
         new Date(
-          `${dayDate}T00:00:00`
+          `${date}T00:00:00`
         );
 
       const sunday =
@@ -412,9 +579,7 @@ function WorkOrderCard({
         0;
 
       const holiday =
-        isHoliday(
-          dayDate
-        );
+        isHoliday(date);
 
       let regularMinutes =
         0;
@@ -432,8 +597,7 @@ function WorkOrderCard({
         0;
 
       for (
-        let minute =
-          start;
+        let minute = start;
         minute < end;
         minute++
       ) {
@@ -476,154 +640,56 @@ function WorkOrderCard({
       }
 
       return {
-        regular:
-          Number(
-            (
-              regularMinutes /
-              60
-            ).toFixed(2)
-          ),
+        regular: Number(
+          (
+            regularMinutes /
+            60
+          ).toFixed(2)
+        ),
 
-        night:
-          Number(
-            (
-              nightMinutes /
-              60
-            ).toFixed(2)
-          ),
+        night: Number(
+          (
+            nightMinutes /
+            60
+          ).toFixed(2)
+        ),
 
-        holiday:
-          Number(
-            (
-              holidayMinutes /
-              60
-            ).toFixed(2)
-          ),
+        holiday: Number(
+          (
+            holidayMinutes /
+            60
+          ).toFixed(2)
+        ),
 
-        overtime:
-          Number(
-            (
-              overtimeMinutes /
-              60
-            ).toFixed(2)
-          ),
+        overtime: Number(
+          (
+            overtimeMinutes /
+            60
+          ).toFixed(2)
+        ),
       };
     };
 
-  const calculateWorkOrders =
-    () => {
-      if (
-        !crossesMidnight
-      ) {
-        const breakdown =
-          calculateBreakdown(
-            date,
-            startTime,
-            endTime
-          );
+  const breakdown =
+    calculateBreakdown();
 
-        return [
-          {
-            date,
-            startTime,
-            endTime,
-            hours,
-            breakdown,
-          },
-        ];
-      }
-
-      const nextDate =
-        addDays(
-          date,
-          1
-        );
-
-      const firstHours =
-        Number(
-          (
-            (24 * 60 -
-              startMinutes) /
-            60
-          ).toFixed(2)
-        );
-
-      const secondHours =
-        Number(
-          (
-            endMinutes /
-            60
-          ).toFixed(2)
-        );
-
-      const firstBreakdown =
-        calculateBreakdown(
-          date,
-          startTime,
-          "00:00"
-        );
-
-      const secondBreakdown =
-        calculateBreakdown(
-          nextDate,
-          "00:00",
-          endTime
-        );
-
-      return [
-        {
-          date,
-          startTime,
-          endTime:
-            "00:00",
-          hours:
-            firstHours,
-          breakdown:
-            firstBreakdown,
-        },
-
-        {
-          date:
-            nextDate,
-          startTime:
-            "00:00",
-          endTime,
-          hours:
-            secondHours,
-          breakdown:
-            secondBreakdown,
-        },
-      ];
-    };
-
-  /*
-    DODATNE URE
-
-    TOČNO 8,00 h:
-    8 - 0,50 = 7,50
-    7,50 / 3 = 2,50
-
-    VSE OSTALE:
-    oddelane ure / 3
-
-    8,15 / 3 = 2,72
-  */
+  /* =================================================
+     DODATNE URE
+  ================================================= */
 
   const additionalHours =
     machine &&
-    additionalMachine &&
-    machine !==
-      additionalMachine
+    additionalMachine
       ? Number(
           (
-            (
-              hours === 8
-                ? hours - 0.5
-                : hours
-            ) / 3
+            hours / 3
           ).toFixed(2)
         )
       : 0;
+
+  /* =================================================
+     POČISTI
+  ================================================= */
 
   const clearForm =
     () => {
@@ -635,26 +701,26 @@ function WorkOrderCard({
         false
       );
 
-      setAdditionalMachine(
-        ""
-      );
+      setAdditionalMachine("");
 
       setDate(today);
 
-      setStartTime(
-        "06:00"
-      );
+      setStartTime("06:00");
 
-      setEndTime(
-        "14:00"
-      );
-
-      setMealType(
-        "withMe"
-      );
+      setEndTime("14:00");
 
       setNote("");
+
+      /*
+        Privzeto:
+        jedel zunaj
+      */
+      setMeal(false);
     };
+
+  /* =================================================
+     DODAJ DELOVNI NALOG
+  ================================================= */
 
   const handleAddWorkOrder =
     () => {
@@ -697,130 +763,85 @@ function WorkOrderCard({
         return;
       }
 
-      const calculatedOrders =
-        calculateWorkOrders();
+      const workOrder:
+        WorkOrder = {
+        id: Date.now(),
 
-      calculatedOrders.forEach(
-        (
-          calculatedOrder,
-          index
-        ) => {
-          const workOrder:
-            WorkOrder = {
-            id:
-              Date.now() +
-              index,
+        project,
 
-            project,
+        machine,
 
-            machine,
+        additionalMachine:
+          additionalMachine ||
+          undefined,
 
-            additionalMachine:
-              additionalMachine ||
-              undefined,
+        date,
 
-            quantity: 0,
+        startTime,
 
-            date:
-              calculatedOrder.date,
+        endTime,
 
-            startTime:
-              calculatedOrder.startTime,
+        hours,
 
-            endTime:
-              calculatedOrder.endTime,
+        regularHours:
+          breakdown.regular,
 
-            hours:
-              calculatedOrder.hours,
+        nightHours:
+          breakdown.night,
 
-            regularHours:
-              calculatedOrder
-                .breakdown
-                .regular,
+        holidayHours:
+          breakdown.holiday,
 
-            nightHours:
-              calculatedOrder
-                .breakdown
-                .night,
+        overtimeHours:
+          breakdown.overtime,
 
-            holidayHours:
-              calculatedOrder
-                .breakdown
-                .holiday,
+        additionalHours,
 
-            overtimeHours:
-              calculatedOrder
-                .breakdown
-                .overtime,
+        note,
 
-            additionalHours:
-              index === 0
-                ? additionalHours
-                : 0,
+        /*
+          false = zunaj
+          true = s seboj
+        */
+        meal,
+      };
 
-            mealType,
-
-            note,
-          };
-
-          onAddWorkOrder(
-            workOrder
-          );
-        }
+      onAddWorkOrder(
+        workOrder
       );
 
       clearForm();
     };
 
-  const previewOrders =
-    calculateWorkOrders();
-
-  const totalPreviewHours =
-    previewOrders.reduce(
-      (
-        sum,
-        order
-      ) =>
-        sum +
-        order.hours,
-      0
-    );
-
   return (
     <div
       style={{
-        width: "100%",
-        maxWidth: "1400px",
-        margin:
-          "30px auto 50px auto",
+        marginTop: "30px",
         background:
           "#ffffff",
         border:
-          "1px solid #e2e8f0",
+          "1px solid #e5e7eb",
         borderRadius:
           "18px",
-        padding:
-          "30px",
+        padding: "30px",
         boxShadow:
-          "0 4px 12px rgba(15,23,42,0.06)",
-        boxSizing:
-          "border-box",
+          "0 4px 12px rgba(0,0,0,0.05)",
       }}
     >
+      {/* =================================================
+          NASLOV
+      ================================================= */}
+
       <div
         style={{
-          maxWidth:
-            "1080px",
-          width: "100%",
-          margin:
-            "0 auto 30px auto",
+          marginBottom:
+            "30px",
         }}
       >
         <h2
           style={{
             margin: 0,
-            fontSize:
-              "28px",
+            fontSize: "28px",
             fontWeight: 700,
             color:
               "#12344d",
@@ -839,152 +860,86 @@ function WorkOrderCard({
               "15px",
           }}
         >
-          Vnesite podatke
-          delovnega naloga.
+          Vnesite podatke delovnega naloga.
         </p>
       </div>
 
+      {/* =================================================
+          PRVA VRSTICA
+      ================================================= */}
+
       <div
         style={{
-          width: "100%",
-          maxWidth:
-            "1080px",
-          margin:
-            "0 auto",
-          display:
-            "grid",
+          display: "grid",
           gridTemplateColumns:
-            "120px 120px 140px 420px 190px",
-          gap:
-            "18px",
+            "120px 120px 140px 1fr 240px",
+          gap: "18px",
           alignItems:
             "start",
         }}
       >
+        {/* ZAČETEK */}
+
         <div>
           <label
-            style={
-              labelStyle
-            }
+            style={labelStyle}
           >
             Začetek
           </label>
 
-          <select
-            value={
-              startTime
+          <TimeSelect
+            value={startTime}
+            onChange={
+              setStartTime
             }
-            onChange={(e) =>
-              setStartTime(
-                e.target.value
-              )
-            }
-            style={
-              inputStyle
-            }
-          >
-            {timeOptions.map(
-              (time) => (
-                <option
-                  key={time}
-                  value={time}
-                >
-                  {time}
-                </option>
-              )
-            )}
-          </select>
+          />
         </div>
+
+        {/* KONČANO */}
 
         <div>
           <label
-            style={
-              labelStyle
-            }
+            style={labelStyle}
           >
             Končano
           </label>
 
-          <select
-            value={
-              endTime
-            }
-            onChange={(e) =>
-              setEndTime(
-                e.target.value
-              )
-            }
-            style={
-              inputStyle
-            }
-          >
-            {timeOptions.map(
-              (time) => (
-                <option
-                  key={time}
-                  value={time}
-                >
-                  {time}
-                </option>
-              )
-            )}
-          </select>
-        </div>
-
-        <div>
-          <label
-            style={
-              labelStyle
-            }
-          >
-            Datum
-          </label>
-
-          <input
-            type="date"
-            value={date}
-            onChange={(e) =>
-              setDate(
-                e.target.value
-              )
-            }
-            style={
-              inputStyle
+          <TimeSelect
+            value={endTime}
+            onChange={
+              setEndTime
             }
           />
         </div>
 
+        {/* DATUM */}
+
+        <InputField
+          label="Datum"
+          placeholder=""
+          value={date}
+          onChange={
+            setDate
+          }
+          type="date"
+        />
+
+        {/* PROJEKT */}
+
+        <InputField
+          label="Projekt"
+          placeholder="Izberi projekt"
+          value={project}
+          onChange={
+            setProject
+          }
+        />
+
+        {/* STROJ */}
+
         <div>
           <label
-            style={
-              labelStyle
-            }
-          >
-            Projekt
-          </label>
-
-          <input
-            type="text"
-            value={
-              project
-            }
-            onChange={(e) =>
-              setProject(
-                e.target.value
-              )
-            }
-            placeholder="Izberi projekt"
-            style={
-              inputStyle
-            }
-          />
-        </div>
-
-        <div>
-          <label
-            style={
-              labelStyle
-            }
+            style={labelStyle}
           >
             Stroj
           </label>
@@ -997,10 +952,10 @@ function WorkOrderCard({
             }}
           >
             <select
-              value={
-                machine
-              }
-              onChange={(e) => {
+              value={machine}
+              onChange={(
+                e
+              ) => {
                 const selected =
                   e.target
                     .value;
@@ -1055,29 +1010,16 @@ function WorkOrderCard({
                     true
                   )
                 }
-                style={{
-                  width:
-                    "42px",
-                  height:
-                    "42px",
-                  border:
-                    "1px solid #cbd5e1",
-                  borderRadius:
-                    "8px",
-                  background:
-                    "#ffffff",
-                  color:
-                    "#2563eb",
-                  fontSize:
-                    "24px",
-                  cursor:
-                    "pointer",
-                }}
+                style={
+                  plusButtonStyle
+                }
               >
                 +
               </button>
             )}
           </div>
+
+          {/* DRUGI STROJ */}
 
           {showAdditionalMachine && (
             <div
@@ -1093,7 +1035,9 @@ function WorkOrderCard({
                 value={
                   additionalMachine
                 }
-                onChange={(e) =>
+                onChange={(
+                  e
+                ) =>
                   setAdditionalMachine(
                     e.target
                       .value
@@ -1143,24 +1087,9 @@ function WorkOrderCard({
                     ""
                   );
                 }}
-                style={{
-                  width:
-                    "42px",
-                  height:
-                    "42px",
-                  border:
-                    "1px solid #fecaca",
-                  borderRadius:
-                    "8px",
-                  background:
-                    "#ffffff",
-                  color:
-                    "#dc2626",
-                  fontSize:
-                    "24px",
-                  cursor:
-                    "pointer",
-                }}
+                style={
+                  minusButtonStyle
+                }
               >
                 −
               </button>
@@ -1169,261 +1098,262 @@ function WorkOrderCard({
         </div>
       </div>
 
+      {/* =================================================
+          MALICA
+
+          Napis je VEDNO enak.
+
+          NEoznačeno:
+          jedel zunaj
+
+          Označeno:
+          malico imel s seboj
+      ================================================= */}
+
       <div
         style={{
-          maxWidth:
-            "1080px",
-          margin:
-            "20px auto 0 auto",
-          display:
-            "flex",
-          alignItems:
-            "center",
-          gap:
-            "12px",
+          marginTop:
+            "25px",
         }}
       >
-        <input
-          id="meal-checkbox"
-          type="checkbox"
-          checked={
-            mealType ===
-            "outside"
-          }
-          onChange={(e) =>
-            setMealType(
-              e.target
-                .checked
-                ? "outside"
-                : "withMe"
-            )
-          }
-          style={{
-            width:
-              "18px",
-            height:
-              "18px",
-            cursor:
-              "pointer",
-          }}
-        />
+        <label
+          style={labelStyle}
+        >
+          Malica
+        </label>
 
         <label
-          htmlFor="meal-checkbox"
           style={{
-            fontSize:
-              "14px",
-            color:
-              "#475569",
+            display:
+              "flex",
+            alignItems:
+              "center",
+            gap: "10px",
             cursor:
               "pointer",
+            width:
+              "fit-content",
+            userSelect:
+              "none",
           }}
         >
-          {mealType ===
-          "outside"
-            ? "Malica zunaj"
-            : "Malica s seboj"}
+          <input
+            type="checkbox"
+            checked={meal}
+            onChange={(
+              e
+            ) =>
+              setMeal(
+                e.target
+                  .checked
+              )
+            }
+            style={{
+              width:
+                "20px",
+              height:
+                "20px",
+              cursor:
+                "pointer",
+            }}
+          />
+
+          <span
+            style={{
+              fontSize:
+                "15px",
+              color:
+                "#334155",
+            }}
+          >
+            Malico sem imel s seboj
+          </span>
         </label>
       </div>
 
+      {/* =================================================
+          OPIS DELA
+      ================================================= */}
+
       <div
         style={{
-          maxWidth:
-            "1080px",
-          margin:
-            "20px auto 0 auto",
+          marginTop:
+            "25px",
+          marginBottom:
+            "30px",
         }}
       >
         <label
-          style={
-            labelStyle
-          }
+          style={labelStyle}
         >
-          Opomba
+          Opis dela
         </label>
 
         <textarea
           value={note}
-          onChange={(e) =>
+          onChange={(
+            e
+          ) =>
             setNote(
-              e.target.value
+              e.target
+                .value
             )
           }
-          placeholder="Opomba..."
-          style={{
-            width:
-              "100%",
-            minHeight:
-              "80px",
-            resize:
-              "vertical",
-            border:
-              "1px solid #cbd5e1",
-            borderRadius:
-              "8px",
-            padding:
-              "10px 12px",
-            fontSize:
-              "14px",
-            boxSizing:
-              "border-box",
-            fontFamily:
-              "inherit",
-          }}
+          rows={4}
+          placeholder="Vnesite opis opravljenega dela..."
+          style={
+            textareaStyle
+          }
         />
       </div>
 
-      <div
-        style={{
-          maxWidth:
-            "1080px",
-          margin:
-            "25px auto 0 auto",
-          padding:
-            "15px 18px",
-          background:
-            "#f8fafc",
-          border:
-            "1px solid #e2e8f0",
-          borderRadius:
-            "10px",
-          fontSize:
-            "14px",
-          color:
-            "#475569",
-        }}
-      >
-        <strong>
-          Predogled:
-        </strong>{" "}
-
-        {crossesMidnight ? (
-          <>
-            delo bo
-            avtomatsko
-            razdeljeno
-            na{" "}
-            <strong>
-              2 delovna
-              naloga
-            </strong>
-            .
-            <br />
-
-            {previewOrders.map(
-              (
-                order,
-                index
-              ) => (
-                <span
-                  key={
-                    index
-                  }
-                >
-                  {index + 1}.{" "}
-                  {
-                    order.date
-                  }{" "}
-                  {
-                    order.startTime
-                  }{" "}
-                  –{" "}
-                  {
-                    order.endTime
-                  }{" "}
-                  (
-                  {
-                    order.hours
-                  }{" "}
-                  h)
-                  <br />
-                </span>
-              )
-            )}
-
-            Skupaj:{" "}
-            <strong>
-              {
-                totalPreviewHours
-              }{" "}
-              h
-            </strong>
-          </>
-        ) : (
-          `${hours} h`
-        )}
-      </div>
-
-      {additionalHours >
-        0 && (
-        <div
-          style={{
-            maxWidth:
-              "1080px",
-            margin:
-              "12px auto 0 auto",
-            fontSize:
-              "14px",
-            color:
-              "#64748b",
-          }}
-        >
-          Dodatne ure
-          zaradi dela
-          na dveh
-          strojih:{" "}
-          <strong>
-            {
-              additionalHours
-            }{" "}
-            h
-          </strong>
-        </div>
-      )}
+      {/* =================================================
+          GUMBI
+      ================================================= */}
 
       <div
         style={{
-          maxWidth:
-            "1080px",
-          margin:
-            "25px auto 0 auto",
           display:
             "flex",
           justifyContent:
             "flex-end",
+          gap: "15px",
         }}
       >
         <button
           type="button"
           onClick={
+            clearForm
+          }
+          style={
+            cancelButtonStyle
+          }
+        >
+          Počisti
+        </button>
+
+        <button
+          type="button"
+          onClick={
             handleAddWorkOrder
           }
-          style={{
-            height:
-              "44px",
-            padding:
-              "0 24px",
-            border:
-              "none",
-            borderRadius:
-              "8px",
-            background:
-              "#12344d",
-            color:
-              "#ffffff",
-            fontSize:
-              "14px",
-            fontWeight:
-              600,
-            cursor:
-              "pointer",
-          }}
+          style={
+            saveButtonStyle
+          }
         >
-          Dodaj delovni nalog
+          Dodaj nalog
         </button>
       </div>
     </div>
   );
 }
+
+/* =====================================================
+   STILI
+===================================================== */
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "8px",
+  fontSize: "14px",
+  fontWeight: 600,
+  color: "#334155",
+};
+
+const inputStyle = {
+  width: "100%",
+  height: "46px",
+  border:
+    "1px solid #d1d5db",
+  borderRadius: "10px",
+  padding: "0 14px",
+  fontSize: "15px",
+  outline: "none",
+  boxSizing:
+    "border-box" as const,
+  background:
+    "#ffffff",
+};
+
+const textareaStyle = {
+  width: "100%",
+  border:
+    "1px solid #d1d5db",
+  borderRadius: "10px",
+  padding: "14px",
+  fontSize: "15px",
+  outline: "none",
+  resize:
+    "none" as const,
+  boxSizing:
+    "border-box" as const,
+  fontFamily:
+    "inherit",
+};
+
+const plusButtonStyle = {
+  width: "46px",
+  height: "46px",
+  border:
+    "1px solid #d1d5db",
+  borderRadius: "10px",
+  background:
+    "#ffffff",
+  color:
+    "#2563eb",
+  fontSize: "24px",
+  cursor:
+    "pointer",
+};
+
+const minusButtonStyle = {
+  width: "46px",
+  height: "46px",
+  border:
+    "1px solid #d1d5db",
+  borderRadius: "10px",
+  background:
+    "#ffffff",
+  color:
+    "#dc2626",
+  fontSize: "24px",
+  cursor:
+    "pointer",
+};
+
+const cancelButtonStyle = {
+  height: "48px",
+  padding: "0 28px",
+  borderRadius:
+    "10px",
+  border:
+    "1px solid #cbd5e1",
+  background:
+    "#ffffff",
+  color:
+    "#334155",
+  fontSize: "15px",
+  fontWeight: 600,
+  cursor:
+    "pointer",
+};
+
+const saveButtonStyle = {
+  height: "48px",
+  padding: "0 30px",
+  border: "none",
+  borderRadius:
+    "10px",
+  background:
+    "#2563eb",
+  color:
+    "#ffffff",
+  fontSize: "15px",
+  fontWeight: 600,
+  cursor:
+    "pointer",
+  boxShadow:
+    "0 4px 10px rgba(37,99,235,0.25)",
+};
 
 export default WorkOrderCard;

@@ -18,11 +18,11 @@ type WorkOrderContextType = {
 
   addWorkOrder: (
     workOrder: WorkOrder
-  ) => void;
+  ) => Promise<void>;
 
   updateWorkOrder: (
     workOrder: WorkOrder
-  ) => void;
+  ) => Promise<void>;
 
   deleteWorkOrder: (
     id: number
@@ -80,11 +80,6 @@ function fromDatabase(
       row.additional_machine ??
       undefined,
 
-    quantity:
-      Number(
-        row.quantity ?? 0
-      ),
-
     date:
       row.date ?? "",
 
@@ -124,14 +119,20 @@ function fromDatabase(
         row.additional_hours ?? 0
       ),
 
-    mealType:
+    /*
+      MALICA
+
+      WorkOrder:
+      false = jedel zunaj
+      true  = imel malico s seboj
+
+      Supabase:
+      meal_type = "withMe" | "outside" | null
+    */
+
+    meal:
       row.meal_type ===
-      "outside"
-        ? "outside"
-        : row.meal_type ===
-          "withMe"
-        ? "withMe"
-        : undefined,
+      "withMe",
 
     note:
       row.note ?? "",
@@ -155,9 +156,6 @@ function toDatabase(
     additional_machine:
       workOrder.additionalMachine ??
       null,
-
-    quantity:
-      workOrder.quantity,
 
     date:
       workOrder.date,
@@ -186,9 +184,21 @@ function toDatabase(
     additional_hours:
       workOrder.additionalHours,
 
+    /*
+      MALICA
+
+      WorkOrder:
+      false = jedel zunaj
+      true  = imel malico s seboj
+
+      Supabase:
+      meal_type = "withMe" | "outside"
+    */
+
     meal_type:
-      workOrder.mealType ??
-      null,
+      workOrder.meal
+        ? "withMe"
+        : "outside",
 
     note:
       workOrder.note,
@@ -208,6 +218,10 @@ export function WorkOrderProvider({
   ] = useState<WorkOrder[]>(
     []
   );
+
+  /* =========================================
+     DATUMI
+  ========================================= */
 
   const today =
     new Date()
@@ -238,6 +252,10 @@ export function WorkOrderProvider({
     today
   );
 
+  /* =========================================
+     STATUSI DNI
+  ========================================= */
+
   const [
     dayStatuses,
     setDayStatuses,
@@ -255,7 +273,10 @@ export function WorkOrderProvider({
   useEffect(() => {
     const loadData =
       async () => {
-        /* DELovni NALOGI */
+
+        /* ---------------------------------
+           DELOVNI NALOGI
+        --------------------------------- */
 
         const {
           data:
@@ -294,7 +315,9 @@ export function WorkOrderProvider({
           );
         }
 
-        /* STATUSI DNI */
+        /* ---------------------------------
+           STATUSI DNI
+        --------------------------------- */
 
         const {
           data:
@@ -352,7 +375,7 @@ export function WorkOrderProvider({
   const addWorkOrder =
     async (
       workOrder: WorkOrder
-    ) => {
+    ): Promise<void> => {
       const {
         data,
         error,
@@ -401,7 +424,7 @@ export function WorkOrderProvider({
   const updateWorkOrder =
     async (
       updatedWorkOrder: WorkOrder
-    ) => {
+    ): Promise<void> => {
       const {
         data,
         error,
@@ -463,7 +486,7 @@ export function WorkOrderProvider({
   const deleteWorkOrder =
     async (
       id: number
-    ) => {
+    ): Promise<void> => {
       const {
         error,
       } =
@@ -515,7 +538,12 @@ export function WorkOrderProvider({
     async (
       date: string,
       status: DayStatus
-    ) => {
+    ): Promise<void> => {
+
+      /* ---------------------------------
+         IZBRIŠI STATUS
+      --------------------------------- */
+
       if (
         status === "none"
       ) {
@@ -564,6 +592,10 @@ export function WorkOrderProvider({
         return;
       }
 
+      /* ---------------------------------
+         SHRANI / POSODOBI STATUS
+      --------------------------------- */
+
       const {
         error,
       } =
@@ -605,6 +637,10 @@ export function WorkOrderProvider({
         })
       );
     };
+
+  /* =========================================
+     PROVIDER VALUE
+  ========================================= */
 
   return (
     <WorkOrderContext.Provider
