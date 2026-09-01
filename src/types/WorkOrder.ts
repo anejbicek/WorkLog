@@ -1,18 +1,22 @@
 export type DayStatus =
   | "none"
-  | "work"
-  | "sick"
-  | "vacation"
-  | "holiday";
-  
+  | "dopust"
+  | "bolniška"
+  | "praznik"
+  | "prost_dan";
+
 export type WorkOrder = {
   id: number;
+
+  userId?: string;
 
   project: string;
 
   machine: string;
 
   additionalMachine?: string;
+
+  quantity?: number;
 
   date: string;
 
@@ -32,12 +36,7 @@ export type WorkOrder = {
 
   additionalHours: number;
 
+  meal?: boolean;
+
   note: string;
-
-  /*
-    false = jedel zunaj
-    true  = imel malico s seboj
-  */
-
-  meal: boolean;
 };

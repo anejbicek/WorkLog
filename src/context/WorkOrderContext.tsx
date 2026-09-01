@@ -16,6 +16,12 @@ import { supabase } from "../services/supabase";
 type WorkOrderContextType = {
   workOrders: WorkOrder[];
 
+  allWorkOrders: WorkOrder[];
+
+  getWorkOrdersForUser: (
+    userId: string
+  ) => WorkOrder[];
+
   addWorkOrder: (
     workOrder: WorkOrder
   ) => Promise<void>;
@@ -70,6 +76,10 @@ function fromDatabase(
   return {
     id: Number(row.id),
 
+    userId:
+      row.user_id ??
+      undefined,
+
     project:
       row.project ?? "",
 
@@ -79,6 +89,11 @@ function fromDatabase(
     additionalMachine:
       row.additional_machine ??
       undefined,
+
+    quantity:
+      row.quantity != null
+        ? Number(row.quantity)
+        : undefined,
 
     date:
       row.date ?? "",
@@ -119,17 +134,6 @@ function fromDatabase(
         row.additional_hours ?? 0
       ),
 
-    /*
-      MALICA
-
-      WorkOrder:
-      false = jedel zunaj
-      true  = imel malico s seboj
-
-      Supabase:
-      meal_type = "withMe" | "outside" | null
-    */
-
     meal:
       row.meal_type ===
       "withMe",
@@ -144,9 +148,13 @@ function fromDatabase(
 ========================================= */
 
 function toDatabase(
-  workOrder: WorkOrder
+  workOrder: WorkOrder,
+  userId: string
 ) {
   return {
+    user_id:
+      userId,
+
     project:
       workOrder.project,
 
@@ -155,6 +163,10 @@ function toDatabase(
 
     additional_machine:
       workOrder.additionalMachine ??
+      null,
+
+    quantity:
+      workOrder.quantity ??
       null,
 
     date:
@@ -184,17 +196,6 @@ function toDatabase(
     additional_hours:
       workOrder.additionalHours,
 
-    /*
-      MALICA
-
-      WorkOrder:
-      false = jedel zunaj
-      true  = imel malico s seboj
-
-      Supabase:
-      meal_type = "withMe" | "outside"
-    */
-
     meal_type:
       workOrder.meal
         ? "withMe"
@@ -215,6 +216,13 @@ export function WorkOrderProvider({
   const [
     workOrders,
     setWorkOrders,
+  ] = useState<WorkOrder[]>(
+    []
+  );
+
+  const [
+    allWorkOrders,
+    setAllWorkOrders,
   ] = useState<WorkOrder[]>(
     []
   );
@@ -270,103 +278,207 @@ export function WorkOrderProvider({
      NALOŽI PODATKE
   ========================================= */
 
-  useEffect(() => {
-    const loadData =
-      async () => {
+  const loadData =
+    async () => {
+      const {
+        data: {
+          user,
+        },
+      } =
+        await supabase.auth.getUser();
 
-        /* ---------------------------------
-           DELOVNI NALOGI
-        --------------------------------- */
+      if (!user) {
+        setWorkOrders([]);
+        setAllWorkOrders([]);
+        setDayStatuses({});
+        return;
+      }
 
-        const {
-          data:
-            workOrderData,
-          error:
-            workOrderError,
-        } =
-          await supabase
-            .from(
-              "work_orders"
-            )
-            .select("*")
-            .order(
-              "created_at",
-              {
-                ascending:
-                  false,
-              }
-            );
+      /* ---------------------------------
+         DELOVNI NALOGI TRENUTNEGA UPORABNIKA
+      --------------------------------- */
 
-        if (
+      const {
+        data:
+          workOrderData,
+        error:
+          workOrderError,
+      } =
+        await supabase
+          .from(
+            "work_orders"
+          )
+          .select("*")
+          .eq(
+            "user_id",
+            user.id
+          )
+          .order(
+            "created_at",
+            {
+              ascending:
+                false,
+            }
+          );
+
+      if (
+        workOrderError
+      ) {
+        console.error(
+          "Napaka pri nalaganju delovnih nalogov:",
           workOrderError
-        ) {
-          console.error(
-            "Napaka pri nalaganju delovnih nalogov:",
-            workOrderError
+        );
+
+        setWorkOrders([]);
+      } else {
+        setWorkOrders(
+          (
+            workOrderData ??
+            []
+          ).map(
+            fromDatabase
+          )
+        );
+      }
+
+      /* ---------------------------------
+         VSI DELOVNI NALOGI
+
+         To je namenjeno administraciji.
+      --------------------------------- */
+
+      const {
+        data:
+          allWorkOrderData,
+        error:
+          allWorkOrderError,
+      } =
+        await supabase
+          .from(
+            "work_orders"
+          )
+          .select("*")
+          .order(
+            "created_at",
+            {
+              ascending:
+                false,
+            }
           );
-        } else {
-          setWorkOrders(
-            (
-              workOrderData ??
-              []
-            ).map(
-              fromDatabase
-            )
-          );
-        }
 
-        /* ---------------------------------
-           STATUSI DNI
-        --------------------------------- */
+      if (
+        allWorkOrderError
+      ) {
+        console.error(
+          "Napaka pri nalaganju vseh delovnih nalogov:",
+          allWorkOrderError
+        );
 
-        const {
-          data:
-            statusData,
-          error:
-            statusError,
-        } =
-          await supabase
-            .from(
-              "work_day_statuses"
-            )
-            .select("*");
+        setAllWorkOrders([]);
+      } else {
+        setAllWorkOrders(
+          (
+            allWorkOrderData ??
+            []
+          ).map(
+            fromDatabase
+          )
+        );
+      }
 
-        if (
+      /* ---------------------------------
+         STATUSI DNI
+
+         Zaenkrat ostane obstoječe
+         obnašanje.
+      --------------------------------- */
+
+      const {
+        data:
+          statusData,
+        error:
+          statusError,
+      } =
+        await supabase
+          .from(
+            "work_day_statuses"
+          )
+          .select("*");
+
+      if (
+        statusError
+      ) {
+        console.error(
+          "Napaka pri nalaganju statusov dni:",
           statusError
-        ) {
-          console.error(
-            "Napaka pri nalaganju statusov dni:",
-            statusError
-          );
+        );
 
-          return;
-        }
+        return;
+      }
 
-        const statuses:
-          Record<
-            string,
-            DayStatus
-          > = {};
+      const statuses:
+        Record<
+          string,
+          DayStatus
+        > = {};
 
+      (
+        statusData ??
+        []
+      ).forEach(
         (
-          statusData ??
-          []
-        ).forEach(
-          (row: any) => {
-            statuses[
-              row.date
-            ] =
-              row.status as DayStatus;
-          }
-        );
+          row: any
+        ) => {
+          statuses[
+            row.date
+          ] =
+            row.status as DayStatus;
+        }
+      );
 
-        setDayStatuses(
-          statuses
-        );
-      };
+      setDayStatuses(
+        statuses
+      );
+    };
 
+  /* =========================================
+     AUTH + NALOŽI PODATKE
+  ========================================= */
+
+  useEffect(() => {
     loadData();
+
+    const {
+      data:
+        authListener,
+    } =
+      supabase.auth.onAuthStateChange(
+        () => {
+          loadData();
+        }
+      );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
+
+  /* =========================================
+     PRIDOBI NALOGE UPORABNIKA
+  ========================================= */
+
+  const getWorkOrdersForUser =
+    (
+      userId: string
+    ): WorkOrder[] => {
+      return allWorkOrders.filter(
+        (
+          workOrder
+        ) =>
+          workOrder.userId ===
+          userId
+      );
+    };
 
   /* =========================================
      DODAJ DELOVNI NALOG
@@ -377,6 +489,21 @@ export function WorkOrderProvider({
       workOrder: WorkOrder
     ): Promise<void> => {
       const {
+        data: {
+          user,
+        },
+      } =
+        await supabase.auth.getUser();
+
+      if (!user) {
+        alert(
+          "Uporabnik ni prijavljen."
+        );
+
+        return;
+      }
+
+      const {
         data,
         error,
       } =
@@ -386,7 +513,8 @@ export function WorkOrderProvider({
           )
           .insert(
             toDatabase(
-              workOrder
+              workOrder,
+              user.id
             )
           )
           .select()
@@ -405,13 +533,25 @@ export function WorkOrderProvider({
         return;
       }
 
+      const savedWorkOrder =
+        fromDatabase(
+          data
+        );
+
       setWorkOrders(
         (
           previous
         ) => [
-          fromDatabase(
-            data
-          ),
+          savedWorkOrder,
+          ...previous,
+        ]
+      );
+
+      setAllWorkOrders(
+        (
+          previous
+        ) => [
+          savedWorkOrder,
           ...previous,
         ]
       );
@@ -426,6 +566,21 @@ export function WorkOrderProvider({
       updatedWorkOrder: WorkOrder
     ): Promise<void> => {
       const {
+        data: {
+          user,
+        },
+      } =
+        await supabase.auth.getUser();
+
+      if (!user) {
+        alert(
+          "Uporabnik ni prijavljen."
+        );
+
+        return;
+      }
+
+      const {
         data,
         error,
       } =
@@ -435,12 +590,17 @@ export function WorkOrderProvider({
           )
           .update(
             toDatabase(
-              updatedWorkOrder
+              updatedWorkOrder,
+              user.id
             )
           )
           .eq(
             "id",
             updatedWorkOrder.id
+          )
+          .eq(
+            "user_id",
+            user.id
           )
           .select()
           .single();
@@ -477,6 +637,21 @@ export function WorkOrderProvider({
                 : workOrder
           )
       );
+
+      setAllWorkOrders(
+        (
+          previous
+        ) =>
+          previous.map(
+            (
+              workOrder
+            ) =>
+              workOrder.id ===
+              savedWorkOrder.id
+                ? savedWorkOrder
+                : workOrder
+          )
+      );
     };
 
   /* =========================================
@@ -488,6 +663,21 @@ export function WorkOrderProvider({
       id: number
     ): Promise<void> => {
       const {
+        data: {
+          user,
+        },
+      } =
+        await supabase.auth.getUser();
+
+      if (!user) {
+        alert(
+          "Uporabnik ni prijavljen."
+        );
+
+        return;
+      }
+
+      const {
         error,
       } =
         await supabase
@@ -498,6 +688,10 @@ export function WorkOrderProvider({
           .eq(
             "id",
             id
+          )
+          .eq(
+            "user_id",
+            user.id
           );
 
       if (error) {
@@ -525,13 +719,23 @@ export function WorkOrderProvider({
               id
           )
       );
+
+      setAllWorkOrders(
+        (
+          previous
+        ) =>
+          previous.filter(
+            (
+              workOrder
+            ) =>
+              workOrder.id !==
+              id
+          )
+      );
     };
 
   /* =========================================
      STATUS DNEVA
-
-     none = izbriši status
-     ostalo = shrani v Supabase
   ========================================= */
 
   const setDayStatus =
@@ -539,13 +743,24 @@ export function WorkOrderProvider({
       date: string,
       status: DayStatus
     ): Promise<void> => {
+      const {
+        data: {
+          user,
+        },
+      } =
+        await supabase.auth.getUser();
 
-      /* ---------------------------------
-         IZBRIŠI STATUS
-      --------------------------------- */
+      if (!user) {
+        alert(
+          "Uporabnik ni prijavljen."
+        );
+
+        return;
+      }
 
       if (
-        status === "none"
+        status ===
+        "none"
       ) {
         const {
           error,
@@ -558,6 +773,10 @@ export function WorkOrderProvider({
             .eq(
               "date",
               date
+            )
+            .eq(
+              "user_id",
+              user.id
             );
 
         if (error) {
@@ -592,10 +811,6 @@ export function WorkOrderProvider({
         return;
       }
 
-      /* ---------------------------------
-         SHRANI / POSODOBI STATUS
-      --------------------------------- */
-
       const {
         error,
       } =
@@ -605,12 +820,16 @@ export function WorkOrderProvider({
           )
           .upsert(
             {
+              user_id:
+                user.id,
+
               date,
+
               status,
             },
             {
               onConflict:
-                "date",
+                "user_id,date",
             }
           );
 
@@ -632,6 +851,7 @@ export function WorkOrderProvider({
           previous
         ) => ({
           ...previous,
+
           [date]:
             status,
         })
@@ -646,6 +866,10 @@ export function WorkOrderProvider({
     <WorkOrderContext.Provider
       value={{
         workOrders,
+
+        allWorkOrders,
+
+        getWorkOrdersForUser,
 
         addWorkOrder,
 

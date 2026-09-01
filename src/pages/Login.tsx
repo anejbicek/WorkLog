@@ -1,60 +1,106 @@
 import { useState } from "react";
+
 import Logo from "../components/Logo";
+
 import { supabase } from "../services/supabase";
+
+import { useAdmin } from "../context/AdminContext";
 
 type LoginProps = {
   onLogin: () => void;
 };
 
-function Login({ onLogin }: LoginProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+function Login({
+  onLogin,
+}: LoginProps) {
+  const {
+    linkUserAuthId,
+  } = useAdmin();
 
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [
+    email,
+    setEmail,
+  ] = useState("");
 
-  const handleLogin = async () => {
-    setError("");
+  const [
+    password,
+    setPassword,
+  ] = useState("");
 
-    if (!email || !password) {
-      setError(
-        "Vnesite e-poštni naslov in geslo."
-      );
+  const [
+    error,
+    setError,
+  ] = useState("");
 
-      return;
-    }
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
 
-    setLoading(true);
+  const handleLogin =
+    async () => {
+      setError("");
 
-    const {
-      error: loginError,
-    } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      if (
+        !email ||
+        !password
+      ) {
+        setError(
+          "Vnesite e-poštni naslov in geslo."
+        );
 
-    setLoading(false);
+        return;
+      }
 
-    if (loginError) {
-      setError(
-        "Napačen e-poštni naslov ali geslo."
-      );
+      setLoading(true);
 
-      return;
-    }
+      const {
+        data,
+        error: loginError,
+      } =
+        await supabase.auth.signInWithPassword(
+          {
+            email,
+            password,
+          }
+        );
 
-    onLogin();
-  };
+      setLoading(false);
+
+      if (loginError) {
+        setError(
+          "Napačen e-poštni naslov ali geslo."
+        );
+
+        return;
+      }
+
+      /* =====================================================
+         POVEŽI PRIJAVLJENEGA UPORABNIKA Z ADMIN UPORABNIKOM
+      ===================================================== */
+
+      if (data.user) {
+        linkUserAuthId(
+          data.user.email ??
+            email,
+          data.user.id
+        );
+      }
+
+      onLogin();
+    };
 
   return (
     <div
       style={{
         minHeight: "100vh",
         display: "flex",
-        justifyContent: "center",
+        justifyContent:
+          "center",
         alignItems: "center",
 
-        backgroundColor: "#f5f8f5",
+        backgroundColor:
+          "#f5f8f5",
 
         backgroundImage: `
           radial-gradient(
@@ -80,12 +126,14 @@ function Login({ onLogin }: LoginProps) {
       <div
         style={{
           width: 560,
-          background: "#ffffff",
+          background:
+            "#ffffff",
           borderRadius: 30,
           padding: 60,
           boxShadow:
             "0 25px 70px rgba(30,60,45,.12)",
-          textAlign: "center",
+          textAlign:
+            "center",
         }}
       >
         {/* LOGO */}
@@ -93,11 +141,12 @@ function Login({ onLogin }: LoginProps) {
         <div
           style={{
             display: "flex",
-            justifyContent: "center",
+            justifyContent:
+              "center",
             marginBottom: 15,
           }}
         >
-        <Logo />
+          <Logo />
         </div>
 
         {/* NASLOV */}
@@ -118,7 +167,8 @@ function Login({ onLogin }: LoginProps) {
         <label
           style={{
             display: "block",
-            textAlign: "left",
+            textAlign:
+              "left",
             marginBottom: 8,
             fontWeight: 600,
             color: "#4c5c54",
@@ -131,10 +181,15 @@ function Login({ onLogin }: LoginProps) {
           type="email"
           value={email}
           onChange={(event) =>
-            setEmail(event.target.value)
+            setEmail(
+              event.target.value
+            )
           }
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (
+              event.key ===
+              "Enter"
+            ) {
               handleLogin();
             }
           }}
@@ -147,7 +202,8 @@ function Login({ onLogin }: LoginProps) {
               "1px solid #d9e5de",
             fontSize: 15,
             marginBottom: 24,
-            boxSizing: "border-box",
+            boxSizing:
+              "border-box",
             outline: "none",
           }}
         />
@@ -157,7 +213,8 @@ function Login({ onLogin }: LoginProps) {
         <label
           style={{
             display: "block",
-            textAlign: "left",
+            textAlign:
+              "left",
             marginBottom: 8,
             fontWeight: 600,
             color: "#4c5c54",
@@ -170,10 +227,15 @@ function Login({ onLogin }: LoginProps) {
           type="password"
           value={password}
           onChange={(event) =>
-            setPassword(event.target.value)
+            setPassword(
+              event.target.value
+            )
           }
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (
+              event.key ===
+              "Enter"
+            ) {
               handleLogin();
             }
           }}
@@ -185,7 +247,8 @@ function Login({ onLogin }: LoginProps) {
             border:
               "1px solid #d9e5de",
             fontSize: 15,
-            boxSizing: "border-box",
+            boxSizing:
+              "border-box",
             outline: "none",
           }}
         />
@@ -196,14 +259,18 @@ function Login({ onLogin }: LoginProps) {
           <div
             style={{
               marginTop: 18,
-              padding: "11px 14px",
+              padding:
+                "11px 14px",
               borderRadius: 10,
-              background: "#fff1f1",
+              background:
+                "#fff1f1",
               border:
                 "1px solid #ffd0d0",
-              color: "#c62828",
+              color:
+                "#c62828",
               fontSize: 14,
-              textAlign: "left",
+              textAlign:
+                "left",
             }}
           >
             {error}
@@ -213,22 +280,29 @@ function Login({ onLogin }: LoginProps) {
         {/* PRIJAVA */}
 
         <button
-          onClick={handleLogin}
-          disabled={loading}
+          onClick={
+            handleLogin
+          }
+          disabled={
+            loading
+          }
           style={{
             width: "100%",
             marginTop: 35,
             padding: "16px",
             borderRadius: 12,
             border: "none",
-            background: "#17465d",
+            background:
+              "#17465d",
             color: "white",
             fontSize: 16,
             fontWeight: 600,
             cursor: loading
               ? "default"
               : "pointer",
-            opacity: loading ? 0.7 : 1,
+            opacity: loading
+              ? 0.7
+              : 1,
           }}
         >
           {loading
@@ -245,7 +319,8 @@ function Login({ onLogin }: LoginProps) {
             fontSize: 13,
           }}
         >
-          © 2024 ŽustAI. Vse pravice pridržane.
+          © 2024 ŽustAI. Vse pravice
+          pridržane.
         </p>
       </div>
     </div>

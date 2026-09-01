@@ -1,5 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+} from "react";
+
 import type { WorkOrder } from "../../types/WorkOrder";
+
+import { useAdmin } from "../../context/AdminContext";
 
 type InputFieldProps = {
   label: string;
@@ -20,7 +27,9 @@ function InputField({
 }: InputFieldProps) {
   return (
     <div style={{ width }}>
-      <label style={labelStyle}>{label}</label>
+      <label style={labelStyle}>
+        {label}
+      </label>
 
       <input
         type={type}
@@ -43,7 +52,11 @@ function createTimeOptions() {
   const options: string[] = [];
 
   for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 15) {
+    for (
+      let minute = 0;
+      minute < 60;
+      minute += 15
+    ) {
       options.push(
         `${String(hour).padStart(
           2,
@@ -59,8 +72,7 @@ function createTimeOptions() {
   return options;
 }
 
-const timeOptions =
-  createTimeOptions();
+const timeOptions = createTimeOptions();
 
 /* =====================================================
    LASTEN SPUSTNI SEZNAM ZA URE
@@ -119,11 +131,9 @@ function TimeSelect({
             `[data-time="${value}"]`
           ) as HTMLElement | null;
 
-        selectedElement?.scrollIntoView(
-          {
-            block: "center",
-          }
-        );
+        selectedElement?.scrollIntoView({
+          block: "center",
+        });
       }, 0);
     }
   }, [open, value]);
@@ -174,8 +184,7 @@ function TimeSelect({
             left: 0,
             width: "100%",
             height: "252px",
-            background:
-              "#ffffff",
+            background: "#ffffff",
             border:
               "1px solid #d1d5db",
             borderRadius: "10px",
@@ -197,14 +206,11 @@ function TimeSelect({
                 style={{
                   height: "36px",
                   display: "flex",
-                  alignItems:
-                    "center",
-                  padding:
-                    "0 14px",
+                  alignItems: "center",
+                  padding: "0 14px",
                   boxSizing:
                     "border-box",
-                  cursor:
-                    "pointer",
+                  cursor: "pointer",
                   background:
                     time === value
                       ? "#eff6ff"
@@ -239,10 +245,9 @@ function timeToMinutes(
   const [
     hour,
     minute,
-  ] =
-    time
-      .split(":")
-      .map(Number);
+  ] = time
+    .split(":")
+    .map(Number);
 
   return (
     hour * 60 + minute
@@ -418,6 +423,275 @@ function isHoliday(
 }
 
 /* =====================================================
+   ISKANJE PROJEKTOV
+===================================================== */
+
+type ProjectSearchProps = {
+  value: string;
+  onChange: (
+    value: string
+  ) => void;
+};
+
+function ProjectSearch({
+  value,
+  onChange,
+}: ProjectSearchProps) {
+  const {
+    projects,
+  } = useAdmin();
+
+  const [
+    open,
+    setOpen,
+  ] = useState(false);
+
+  const containerRef =
+    useRef<HTMLDivElement>(
+      null
+    );
+
+  /*
+    Prikažemo samo aktivne projekte.
+  */
+
+  const activeProjects =
+    projects.filter(
+      (project) =>
+        project.active
+    );
+
+  /*
+    Iskanje je samo od začetka
+    imena projekta.
+
+    Primer:
+    "De" najde:
+    "Delo..."
+    "Demontaža..."
+
+    Ne najde pa:
+    "Izdelava dela"
+  */
+
+  const search =
+    value.trim().toLowerCase();
+
+  const filteredProjects =
+    search.length === 0
+      ? []
+      : activeProjects.filter(
+          (project) =>
+            project.name
+              .toLowerCase()
+              .startsWith(search)
+        );
+
+  useEffect(() => {
+    const handleClickOutside =
+      (event: MouseEvent) => {
+        if (
+          containerRef.current &&
+          !containerRef.current.contains(
+            event.target as Node
+          )
+        ) {
+          setOpen(false);
+        }
+      };
+
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+    };
+  }, []);
+
+  /*
+    Obarva/odebeli samo tisti del
+    imena projekta, ki ga je uporabnik
+    vpisal.
+  */
+
+  const renderProjectName = (
+    projectName: string
+  ) => {
+    const match =
+      projectName.substring(
+        0,
+        search.length
+      );
+
+    const rest =
+      projectName.substring(
+        search.length
+      );
+
+    return (
+      <>
+        <span
+          style={{
+            fontWeight: 700,
+            fontSize: "15px",
+            color: "#1e293b",
+          }}
+        >
+          {match}
+        </span>
+
+        <span
+          style={{
+            fontWeight: 400,
+            fontSize: "14px",
+            color: "#64748b",
+          }}
+        >
+          {rest}
+        </span>
+      </>
+    );
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "100%",
+      }}
+    >
+      <label
+        style={labelStyle}
+      >
+        Projekt
+      </label>
+
+      <input
+        type="text"
+        placeholder="Išči projekt..."
+        value={value}
+        onFocus={() => {
+          if (value.trim()) {
+            setOpen(true);
+          }
+        }}
+        onChange={(e) => {
+          onChange(
+            e.target.value
+          );
+
+          /*
+            Ko začne uporabnik pisati,
+            se seznam takoj odpre.
+          */
+
+          if (
+            e.target.value.trim()
+          ) {
+            setOpen(true);
+          } else {
+            setOpen(false);
+          }
+        }}
+        style={inputStyle}
+      />
+
+      {open &&
+        search.length > 0 &&
+        filteredProjects.length >
+          0 && (
+          <div
+            style={{
+              position: "absolute",
+              top:
+                "calc(100% + 4px)",
+              left: 0,
+              width: "100%",
+              maxHeight: "220px",
+              overflowY: "auto",
+              background:
+                "#ffffff",
+              border:
+                "1px solid #d1d5db",
+              borderRadius:
+                "10px",
+              boxShadow:
+                "0 10px 25px rgba(0,0,0,0.15)",
+              zIndex: 1100,
+            }}
+          >
+            {filteredProjects.map(
+              (project) => (
+                <div
+                  key={
+                    project.id
+                  }
+                  onMouseDown={(
+                    event
+                  ) => {
+                    /*
+                      Preprečimo, da klik
+                      najprej zapre input.
+                    */
+
+                    event.preventDefault();
+
+                    onChange(
+                      project.name
+                    );
+
+                    setOpen(
+                      false
+                    );
+                  }}
+                  style={{
+                    minHeight:
+                      "42px",
+                    display:
+                      "flex",
+                    alignItems:
+                      "center",
+                    padding:
+                      "0 14px",
+                    boxSizing:
+                      "border-box",
+                    cursor:
+                      "pointer",
+                    borderBottom:
+                      "1px solid #f1f5f9",
+                  }}
+                  onMouseEnter={(
+                    event
+                  ) => {
+                    event.currentTarget.style.background =
+                      "#eff6ff";
+                  }}
+                  onMouseLeave={(
+                    event
+                  ) => {
+                    event.currentTarget.style.background =
+                      "#ffffff";
+                  }}
+                >
+                  {renderProjectName(
+                    project.name
+                  )}
+                </div>
+              )
+            )}
+          </div>
+        )}
+    </div>
+  );
+}
+
+/* =====================================================
    WORK ORDER CARD
 ===================================================== */
 
@@ -430,6 +704,10 @@ type WorkOrderCardProps = {
 function WorkOrderCard({
   onAddWorkOrder,
 }: WorkOrderCardProps) {
+  const {
+    machines,
+  } = useAdmin();
+
   const today =
     new Date()
       .toISOString()
@@ -484,17 +762,71 @@ function WorkOrderCard({
     Napis je vedno enak:
     "Malico sem imel s seboj"
   */
+
   const [
     meal,
     setMeal,
   ] = useState(false);
 
-  const machineOptions = [
-    "OKUMA MB-56VB",
-    "OKUMA M460V-5AX",
-    "Žična erozija",
-    "Potopna erozija",
-  ];
+  /*
+    =================================================
+    AKTIVNI STROJI IZ ADMINISTRACIJE
+    =================================================
+
+    Če administrator stroj deaktivira,
+    ga tukaj ni več.
+
+    Če administrator doda nov stroj,
+    se bo tukaj samodejno pojavil.
+  */
+
+  const activeMachines =
+    machines.filter(
+      (item) =>
+        item.active
+    );
+
+  /*
+    Če administrator deaktivira
+    trenutno izbran stroj,
+    ga samodejno počistimo.
+  */
+
+  useEffect(() => {
+    if (
+      machine &&
+      !activeMachines.some(
+        (item) =>
+          item.name ===
+          machine
+      )
+    ) {
+      setMachine("");
+    }
+  }, [
+    machines,
+    machine,
+  ]);
+
+  /*
+    Enako za drugi stroj.
+  */
+
+  useEffect(() => {
+    if (
+      additionalMachine &&
+      !activeMachines.some(
+        (item) =>
+          item.name ===
+          additionalMachine
+      )
+    ) {
+      setAdditionalMachine("");
+    }
+  }, [
+    machines,
+    additionalMachine,
+  ]);
 
   /* =================================================
      IZRAČUN SKUPNIH UR
@@ -714,6 +1046,7 @@ function WorkOrderCard({
         Privzeto:
         jedel zunaj
       */
+
       setMeal(false);
     };
 
@@ -802,6 +1135,7 @@ function WorkOrderCard({
           false = zunaj
           true = s seboj
         */
+
         meal,
       };
 
@@ -821,10 +1155,13 @@ function WorkOrderCard({
           Ostala vsebina ostane
           popolnoma enaka.
         */
+
         width:
           "calc(100% - 40px)",
+
         maxWidth:
           "1400px",
+
         margin:
           "30px auto 0 auto",
 
@@ -860,8 +1197,10 @@ function WorkOrderCard({
         <h2
           style={{
             margin: 0,
-            fontSize: "28px",
-            fontWeight: 700,
+            fontSize:
+              "28px",
+            fontWeight:
+              700,
             color:
               "#12344d",
           }}
@@ -889,10 +1228,12 @@ function WorkOrderCard({
 
       <div
         style={{
-          display: "grid",
+          display:
+            "grid",
           gridTemplateColumns:
             "120px 120px 140px 1fr 240px",
-          gap: "18px",
+          gap:
+            "18px",
           alignItems:
             "start",
         }}
@@ -901,13 +1242,17 @@ function WorkOrderCard({
 
         <div>
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
             Začetek
           </label>
 
           <TimeSelect
-            value={startTime}
+            value={
+              startTime
+            }
             onChange={
               setStartTime
             }
@@ -918,13 +1263,17 @@ function WorkOrderCard({
 
         <div>
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
             Končano
           </label>
 
           <TimeSelect
-            value={endTime}
+            value={
+              endTime
+            }
             onChange={
               setEndTime
             }
@@ -945,10 +1294,10 @@ function WorkOrderCard({
 
         {/* PROJEKT */}
 
-        <InputField
-          label="Projekt"
-          placeholder="Izberi projekt"
-          value={project}
+        <ProjectSearch
+          value={
+            project
+          }
           onChange={
             setProject
           }
@@ -958,7 +1307,9 @@ function WorkOrderCard({
 
         <div>
           <label
-            style={labelStyle}
+            style={
+              labelStyle
+            }
           >
             Stroj
           </label>
@@ -967,11 +1318,14 @@ function WorkOrderCard({
             style={{
               display:
                 "flex",
-              gap: "8px",
+              gap:
+                "8px",
             }}
           >
             <select
-              value={machine}
+              value={
+                machine
+              }
               onChange={(
                 e
               ) => {
@@ -994,27 +1348,28 @@ function WorkOrderCard({
               }}
               style={{
                 ...inputStyle,
-                flex: 1,
+                flex:
+                  1,
               }}
             >
               <option value="">
                 Izberi stroj
               </option>
 
-              {machineOptions.map(
+              {activeMachines.map(
                 (
-                  machineName
+                  machineItem
                 ) => (
                   <option
                     key={
-                      machineName
+                      machineItem.id
                     }
                     value={
-                      machineName
+                      machineItem.name
                     }
                   >
                     {
-                      machineName
+                      machineItem.name
                     }
                   </option>
                 )
@@ -1045,7 +1400,8 @@ function WorkOrderCard({
               style={{
                 display:
                   "flex",
-                gap: "8px",
+                gap:
+                  "8px",
                 marginTop:
                   "8px",
               }}
@@ -1064,31 +1420,32 @@ function WorkOrderCard({
                 }
                 style={{
                   ...inputStyle,
-                  flex: 1,
+                  flex:
+                    1,
                 }}
               >
                 <option value="">
                   Izberi drugi stroj
                 </option>
 
-                {machineOptions.map(
+                {activeMachines.map(
                   (
-                    machineName
+                    machineItem
                   ) => (
                     <option
                       key={
-                        machineName
+                        machineItem.id
                       }
                       value={
-                        machineName
+                        machineItem.name
                       }
                       disabled={
-                        machineName ===
+                        machineItem.name ===
                         machine
                       }
                     >
                       {
-                        machineName
+                        machineItem.name
                       }
                     </option>
                   )
@@ -1136,7 +1493,9 @@ function WorkOrderCard({
         }}
       >
         <label
-          style={labelStyle}
+          style={
+            labelStyle
+          }
         >
           Malica
         </label>
@@ -1147,7 +1506,8 @@ function WorkOrderCard({
               "flex",
             alignItems:
               "center",
-            gap: "10px",
+            gap:
+              "10px",
             cursor:
               "pointer",
             width:
@@ -1158,7 +1518,9 @@ function WorkOrderCard({
         >
           <input
             type="checkbox"
-            checked={meal}
+            checked={
+              meal
+            }
             onChange={(
               e
             ) =>
@@ -1203,13 +1565,17 @@ function WorkOrderCard({
         }}
       >
         <label
-          style={labelStyle}
+          style={
+            labelStyle
+          }
         >
           Opis dela
         </label>
 
         <textarea
-          value={note}
+          value={
+            note
+          }
           onChange={(
             e
           ) =>
@@ -1236,7 +1602,8 @@ function WorkOrderCard({
             "flex",
           justifyContent:
             "flex-end",
-          gap: "15px",
+          gap:
+            "15px",
         }}
       >
         <button
@@ -1290,8 +1657,7 @@ const inputStyle = {
   outline: "none",
   boxSizing:
     "border-box" as const,
-  background:
-    "#ffffff",
+  background: "#ffffff",
 };
 
 const textareaStyle = {
@@ -1306,8 +1672,7 @@ const textareaStyle = {
     "none" as const,
   boxSizing:
     "border-box" as const,
-  fontFamily:
-    "inherit",
+  fontFamily: "inherit",
 };
 
 const plusButtonStyle = {
@@ -1316,13 +1681,10 @@ const plusButtonStyle = {
   border:
     "1px solid #d1d5db",
   borderRadius: "10px",
-  background:
-    "#ffffff",
-  color:
-    "#2563eb",
+  background: "#ffffff",
+  color: "#2563eb",
   fontSize: "24px",
-  cursor:
-    "pointer",
+  cursor: "pointer",
 };
 
 const minusButtonStyle = {
@@ -1331,46 +1693,35 @@ const minusButtonStyle = {
   border:
     "1px solid #d1d5db",
   borderRadius: "10px",
-  background:
-    "#ffffff",
-  color:
-    "#dc2626",
+  background: "#ffffff",
+  color: "#dc2626",
   fontSize: "24px",
-  cursor:
-    "pointer",
+  cursor: "pointer",
 };
 
 const cancelButtonStyle = {
   height: "48px",
   padding: "0 28px",
-  borderRadius:
-    "10px",
+  borderRadius: "10px",
   border:
     "1px solid #cbd5e1",
-  background:
-    "#ffffff",
-  color:
-    "#334155",
+  background: "#ffffff",
+  color: "#334155",
   fontSize: "15px",
   fontWeight: 600,
-  cursor:
-    "pointer",
+  cursor: "pointer",
 };
 
 const saveButtonStyle = {
   height: "48px",
   padding: "0 30px",
   border: "none",
-  borderRadius:
-    "10px",
-  background:
-    "#2563eb",
-  color:
-    "#ffffff",
+  borderRadius: "10px",
+  background: "#2563eb",
+  color: "#ffffff",
   fontSize: "15px",
   fontWeight: 600,
-  cursor:
-    "pointer",
+  cursor: "pointer",
   boxShadow:
     "0 4px 10px rgba(37,99,235,0.25)",
 };

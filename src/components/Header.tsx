@@ -1,10 +1,49 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Logo from "./Logo";
-import { Search, User, ChevronDown, LogOut } from "lucide-react";
+import {
+  Search,
+  User,
+  ChevronDown,
+  LogOut,
+} from "lucide-react";
 import { supabase } from "../services/supabase";
+import { useAdmin } from "../context/AdminContext";
 
 function Header() {
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] =
+    useState(false);
+
+  const [userName, setUserName] =
+    useState("Uporabnik");
+
+  const { users } = useAdmin();
+
+  useEffect(() => {
+    const loadUserName = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.email) {
+        setUserName("Uporabnik");
+        return;
+      }
+
+      const adminUser = users.find(
+        (adminUser) =>
+          adminUser.email.toLowerCase() ===
+          user.email!.toLowerCase()
+      );
+
+      if (adminUser) {
+        setUserName(adminUser.name);
+      } else {
+        setUserName(user.email);
+      }
+    };
+
+    loadUserName();
+  }, [users]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -18,7 +57,8 @@ function Header() {
         display: "flex",
         alignItems: "center",
         boxSizing: "border-box",
-        borderBottom: "1px solid #e2e8f0",
+        borderBottom:
+          "1px solid #e2e8f0",
       }}
     >
       <div
@@ -28,7 +68,8 @@ function Header() {
           padding: "0 25px",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent:
+            "space-between",
           boxSizing: "border-box",
         }}
       >
@@ -49,7 +90,8 @@ function Header() {
               height: "82px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
+              justifyContent:
+                "center",
               flexShrink: 0,
               marginTop: "17px",
             }}
@@ -63,8 +105,10 @@ function Header() {
             style={{
               marginLeft: "10px",
               display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
+              flexDirection:
+                "column",
+              justifyContent:
+                "center",
             }}
           >
             <div
@@ -73,7 +117,8 @@ function Header() {
                 lineHeight: "1",
                 fontWeight: 700,
                 color: "#17465d",
-                letterSpacing: "-0.5px",
+                letterSpacing:
+                  "-0.5px",
               }}
             >
               ŽustAI
@@ -158,7 +203,8 @@ function Header() {
                 alignItems: "center",
                 gap: "10px",
                 color: "#334155",
-                background: "transparent",
+                background:
+                  "transparent",
                 border: "none",
                 padding: 0,
                 cursor: "pointer",
@@ -171,10 +217,12 @@ function Header() {
                   width: "38px",
                   height: "38px",
                   borderRadius: "50%",
-                  background: "#e6eef2",
+                  background:
+                    "#e6eef2",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
+                  justifyContent:
+                    "center",
                 }}
               >
                 <User
@@ -197,7 +245,7 @@ function Header() {
                     color: "#334155",
                   }}
                 >
-                  Anej Biček
+                  {userName}
                 </div>
 
                 <div
@@ -225,11 +273,13 @@ function Header() {
             {userMenuOpen && (
               <div
                 style={{
-                  position: "absolute",
+                  position:
+                    "absolute",
                   top: "52px",
                   right: 0,
                   width: "180px",
-                  background: "#ffffff",
+                  background:
+                    "#ffffff",
                   border:
                     "1px solid #e2e8f0",
                   borderRadius: "10px",
@@ -240,11 +290,14 @@ function Header() {
                 }}
               >
                 <button
-                  onClick={handleLogout}
+                  onClick={
+                    handleLogout
+                  }
                   style={{
                     width: "100%",
                     display: "flex",
-                    alignItems: "center",
+                    alignItems:
+                      "center",
                     gap: "10px",
                     padding:
                       "13px 15px",
@@ -253,14 +306,20 @@ function Header() {
                       "#ffffff",
                     color: "#c62828",
                     fontSize: "14px",
-                    cursor: "pointer",
-                    textAlign: "left",
+                    cursor:
+                      "pointer",
+                    textAlign:
+                      "left",
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={(
+                    e
+                  ) => {
                     e.currentTarget.style.background =
                       "#fff5f5";
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={(
+                    e
+                  ) => {
                     e.currentTarget.style.background =
                       "#ffffff";
                   }}

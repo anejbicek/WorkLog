@@ -10,20 +10,30 @@ import Evidenca from "./pages/Evidenca";
 import Statistika from "./pages/Statistika";
 import PDF from "./pages/PDF";
 import Login from "./pages/Login";
+import Admin from "./pages/Admin";
 
 import { supabase } from "./services/supabase";
+
+import { useAdmin } from "./context/AdminContext";
 
 type Page =
   | "dashboard"
   | "evidenca"
   | "statistika"
-  | "pdf";
+  | "pdf"
+  | "admin";
 
 function App() {
+  const {
+    users,
+  } = useAdmin();
+
   const [
     currentPage,
     setCurrentPage,
-  ] = useState<Page>("dashboard");
+  ] = useState<Page>(
+    "dashboard"
+  );
 
   const [
     isLoggedIn,
@@ -35,41 +45,112 @@ function App() {
     setCheckingSession,
   ] = useState(true);
 
-  /* =========================================
-     PREVERI, ALI JE UPORABNIK ŽE PRIJAVLJEN
-  ========================================= */
+  const [
+    isAdmin,
+    setIsAdmin,
+  ] = useState(false);
+
+  /* =====================================================
+     PREVERI SEJO IN VLOGO UPORABNIKA
+  ===================================================== */
 
   useEffect(() => {
     const checkSession =
       async () => {
         const {
           data,
-        } = await supabase.auth.getSession();
+        } =
+          await supabase.auth.getSession();
+
+        const session =
+          data.session;
 
         setIsLoggedIn(
-          !!data.session
+          !!session
         );
 
-        setCheckingSession(false);
+        /* -----------------------------------------------
+           PREVERI VLOGO
+        ----------------------------------------------- */
+
+        if (
+          session?.user?.email
+        ) {
+          const currentUser =
+            users.find(
+              (user) =>
+                user.email.toLowerCase() ===
+                session.user.email!.toLowerCase()
+            );
+
+          setIsAdmin(
+            currentUser?.role ===
+              "admin"
+          );
+        } else {
+          setIsAdmin(false);
+        }
+
+        setCheckingSession(
+          false
+        );
       };
 
     checkSession();
-
-    /* =======================================
-       SPREMLJANJE SPREMEMB PRIJAVE
-    ======================================= */
 
     const {
       data: authListener,
     } =
       supabase.auth.onAuthStateChange(
-        (
+        async (
           _event,
           session
         ) => {
           setIsLoggedIn(
             !!session
           );
+
+          if (
+            session?.user?.email
+          ) {
+            const currentUser =
+              users.find(
+                (user) =>
+                  user.email.toLowerCase() ===
+                  session.user.email!.toLowerCase()
+              );
+
+            setIsAdmin(
+              currentUser?.role ===
+                "admin"
+            );
+          } else {
+            setIsAdmin(false);
+          }
+
+          /* ---------------------------------------------
+             Če uporabnik ni administrator,
+             ga nikoli ne pustimo na admin strani.
+          --------------------------------------------- */
+
+          if (
+            session &&
+            !users.some(
+              (user) =>
+                user.email.toLowerCase() ===
+                  session.user.email!.toLowerCase() &&
+                user.role ===
+                  "admin"
+            )
+          ) {
+            setCurrentPage(
+              (page) =>
+                page ===
+                "admin"
+                  ? "dashboard"
+                  : page
+            );
+          }
         }
       );
 
@@ -78,38 +159,79 @@ function App() {
         .subscription
         .unsubscribe();
     };
-  }, []);
+  }, [users]);
 
-  /* =========================================
+  /* =====================================================
+     PREPREČI DOSTOP DO ADMIN STRANI
+  ===================================================== */
+
+  useEffect(() => {
+    if (
+      currentPage ===
+        "admin" &&
+      !isAdmin
+    ) {
+      setCurrentPage(
+        "dashboard"
+      );
+    }
+  }, [
+    currentPage,
+    isAdmin,
+  ]);
+
+  /* =====================================================
      PREVERJANJE SEJE
-  ========================================= */
+  ===================================================== */
 
   if (checkingSession) {
     return null;
   }
 
-  /* =========================================
-     LOGIN
-  ========================================= */
+  /* =====================================================
+     NI PRIJAVLJEN
+  ===================================================== */
 
   if (!isLoggedIn) {
     return (
       <Login
         onLogin={() =>
-          setIsLoggedIn(true)
+          setIsLoggedIn(
+            true
+          )
         }
       />
     );
   }
 
-  /* =========================================
-     WORKLOG
-  ========================================= */
+  /* =====================================================
+     APLIKACIJA
+  ===================================================== */
 
   return (
     <MainLayout
-      currentPage={currentPage}
-      onNavigate={setCurrentPage}
+      currentPage={
+        currentPage
+      }
+      onNavigate={(
+        page
+      ) => {
+        /* -----------------------------------------------
+           DODATNA ZAŠČITA ADMINISTRACIJE
+        ----------------------------------------------- */
+
+        if (
+          page ===
+            "admin" &&
+          !isAdmin
+        ) {
+          return;
+        }
+
+        setCurrentPage(
+          page
+        );
+      }}
     >
       {currentPage ===
         "dashboard" && (
@@ -126,9 +248,16 @@ function App() {
         <Statistika />
       )}
 
-      {currentPage === "pdf" && (
+      {currentPage ===
+        "pdf" && (
         <PDF />
       )}
+
+      {currentPage ===
+        "admin" &&
+        isAdmin && (
+          <Admin />
+        )}
     </MainLayout>
   );
 }
