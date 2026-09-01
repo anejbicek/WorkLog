@@ -6,6 +6,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { supabase } from "../services/supabase";
+
 /* =========================================================
    TIPI
 ========================================================= */
@@ -312,20 +314,148 @@ export function AdminProvider({
   ======================================================= */
 
   const [users, setUsers] =
-    useState<AdminUser[]>(() => {
-      try {
-        const saved =
-          localStorage.getItem(
-            STORAGE_KEYS.users
-          );
+    useState<AdminUser[]>(defaultUsers);
 
-        return saved
-          ? JSON.parse(saved)
-          : defaultUsers;
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadUsers = async (authUser: { id: string; email?: string | null }) => {
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .order("id", { ascending: true });
+
+      if (error) {
+        console.error("Napaka pri nalaganju uporabnikov:", error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const mappedUsers: AdminUser[] = data.map((row) => ({
+          id: Number(row.id),
+          name: row.name,
+          email: row.email,
+          authUserId: row.auth_user_id ?? undefined,
+          role: row.role as UserRole,
+          active: row.active,
+        }));
+
+        const currentUser = mappedUsers.find(
+          (user) =>
+            user.email.toLowerCase() ===
+            authUser.email?.toLowerCase()
+        );
+
+        if (currentUser && currentUser.authUserId !== authUser.id) {
+          const { error: linkError } = await supabase
+            .from("users")
+            .update({ auth_user_id: authUser.id })
+            .eq("id", currentUser.id);
+
+          if (linkError) {
+            console.error(
+              "Napaka pri povezovanju WorkLog uporabnika z Auth uporabnikom:",
+              linkError
+            );
+          } else {
+            currentUser.authUserId = authUser.id;
+          }
+        }
+
+        if (!cancelled) {
+          setUsers(mappedUsers);
+        }
+
+        return;
+      }
+
+      /*
+       * PRVA MIGRACIJA:
+       * Če tabela users še nima uporabnikov, poskusimo prenesti
+       * obstoječe WorkLog uporabnike iz localStorage.
+       */
+      let localUsers: AdminUser[] = defaultUsers;
+
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.users);
+
+        if (saved) {
+          localUsers = JSON.parse(saved);
+        }
       } catch {
-        return defaultUsers;
+        localUsers = defaultUsers;
+      }
+
+      const rowsToInsert = localUsers.map((user) => ({
+        name: user.name,
+        email: user.email,
+        auth_user_id:
+          user.authUserId ??
+          (user.email.toLowerCase() ===
+          authUser.email?.toLowerCase()
+            ? authUser.id
+            : null),
+        role: user.role,
+        active: user.active,
+      }));
+
+      const { data: insertedUsers, error: insertError } =
+        await supabase
+          .from("users")
+          .insert(rowsToInsert)
+          .select("*");
+
+      if (insertError) {
+        console.error(
+          "Napaka pri prvi migraciji uporabnikov v Supabase:",
+          insertError
+        );
+        return;
+      }
+
+      const mappedInsertedUsers: AdminUser[] =
+        (insertedUsers ?? []).map((row) => ({
+          id: Number(row.id),
+          name: row.name,
+          email: row.email,
+          authUserId: row.auth_user_id ?? undefined,
+          role: row.role as UserRole,
+          active: row.active,
+        }));
+
+      if (!cancelled) {
+        setUsers(mappedInsertedUsers);
+      }
+    };
+
+    const initialize = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        await loadUsers(session.user);
+      }
+    };
+
+    void initialize();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        void loadUsers(session.user);
+      } else if (!cancelled) {
+        setUsers(defaultUsers);
       }
     });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   /* =======================================================
      PROJECTS
@@ -413,13 +543,6 @@ export function AdminProvider({
 
   useEffect(() => {
     localStorage.setItem(
-      STORAGE_KEYS.users,
-      JSON.stringify(users)
-    );
-  }, [users]);
-
-  useEffect(() => {
-    localStorage.setItem(
       STORAGE_KEYS.projects,
       JSON.stringify(projects)
     );
@@ -453,29 +576,79 @@ export function AdminProvider({
   const addUser = (
     user: Omit<AdminUser, "id">
   ) => {
-    setUsers((previous) => [
-      ...previous,
-      {
-        ...user,
-        id: Date.now(),
-      },
-    ]);
+    const saveUser = async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .insert({
+          name: user.name,
+          email: user.email,
+          auth_user_id: user.authUserId ?? null,
+          role: user.role,
+          active: user.active,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error("Napaka pri dodajanju uporabnika:", error);
+        return;
+      }
+
+      const newUser: AdminUser = {
+        id: Number(data.id),
+        name: data.name,
+        email: data.email,
+        authUserId: data.auth_user_id ?? undefined,
+        role: data.role as UserRole,
+        active: data.active,
+      };
+
+      setUsers((previous) => [...previous, newUser]);
+    };
+
+    void saveUser();
   };
 
   const updateUser = (
     id: number,
     user: Omit<AdminUser, "id">
   ) => {
-    setUsers((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? {
-              ...user,
-              id,
-            }
-          : item
-      )
-    );
+    const saveUser = async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .update({
+          name: user.name,
+          email: user.email,
+          auth_user_id: user.authUserId ?? null,
+          role: user.role,
+          active: user.active,
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error("Napaka pri urejanju uporabnika:", error);
+        return;
+      }
+
+      const updatedUser: AdminUser = {
+        id: Number(data.id),
+        name: data.name,
+        email: data.email,
+        authUserId: data.auth_user_id ?? undefined,
+        role: data.role as UserRole,
+        active: data.active,
+      };
+
+      setUsers((previous) =>
+        previous.map((item) =>
+          item.id === id ? updatedUser : item
+        )
+      );
+    };
+
+    void saveUser();
   };
 
   const deleteUser = (
@@ -485,26 +658,67 @@ export function AdminProvider({
       return;
     }
 
-    setUsers((previous) =>
-      previous.filter(
-        (user) => user.id !== id
-      )
-    );
+    const removeUser = async () => {
+      const { error } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("Napaka pri brisanju uporabnika:", error);
+        return;
+      }
+
+      setUsers((previous) =>
+        previous.filter(
+          (user) => user.id !== id
+        )
+      );
+    };
+
+    void removeUser();
   };
 
   const toggleUserActive = (
     id: number
   ) => {
-    setUsers((previous) =>
-      previous.map((user) =>
-        user.id === id
-          ? {
-              ...user,
-              active: !user.active,
-            }
-          : user
-      )
-    );
+    const toggleUser = async () => {
+      const currentUser = users.find(
+        (user) => user.id === id
+      );
+
+      if (!currentUser) {
+        return;
+      }
+
+      const newActive = !currentUser.active;
+
+      const { error } = await supabase
+        .from("users")
+        .update({ active: newActive })
+        .eq("id", id);
+
+      if (error) {
+        console.error(
+          "Napaka pri spreminjanju aktivnega stanja uporabnika:",
+          error
+        );
+        return;
+      }
+
+      setUsers((previous) =>
+        previous.map((user) =>
+          user.id === id
+            ? {
+                ...user,
+                active: newActive,
+              }
+            : user
+        )
+      );
+    };
+
+    void toggleUser();
   };
 
   /* =======================================================
@@ -515,17 +729,34 @@ export function AdminProvider({
     email: string,
     authUserId: string
   ) => {
-    setUsers((previous) =>
-      previous.map((user) =>
-        user.email.toLowerCase() ===
-        email.toLowerCase()
-          ? {
-              ...user,
-              authUserId,
-            }
-          : user
-      )
-    );
+    const linkUser = async () => {
+      const { error } = await supabase
+        .from("users")
+        .update({ auth_user_id: authUserId })
+        .eq("email", email);
+
+      if (error) {
+        console.error(
+          "Napaka pri povezovanju uporabnika z Auth računom:",
+          error
+        );
+        return;
+      }
+
+      setUsers((previous) =>
+        previous.map((user) =>
+          user.email.toLowerCase() ===
+          email.toLowerCase()
+            ? {
+                ...user,
+                authUserId,
+              }
+            : user
+        )
+      );
+    };
+
+    void linkUser();
   };
 
   /* =======================================================
