@@ -14,6 +14,13 @@ import type {
   WorkOrder,
 } from "../types/WorkOrder";
 
+type StatisticsDayStatus =
+  | DayStatus
+  | "work"
+  | "sick"
+  | "vacation"
+  | "holiday";
+
 function Statistika() {
   const {
     workOrders,
@@ -382,7 +389,7 @@ function Statistika() {
   const getStatusText =
     (
       status:
-        | DayStatus
+        | StatisticsDayStatus
         | undefined,
       data:
         | {
@@ -428,7 +435,9 @@ function Statistika() {
       const manualStatus =
         dayStatuses[
           dateString
-        ];
+        ] as
+          | StatisticsDayStatus
+          | undefined;
 
       if (
         manualStatus ===
@@ -538,7 +547,7 @@ function Statistika() {
 
   const handleStatusSave =
     async (
-      status: DayStatus
+      status: StatisticsDayStatus
     ) => {
       if (
         !statusDate
@@ -548,7 +557,7 @@ function Statistika() {
 
       await setDayStatus(
         statusDate,
-        status
+        status as DayStatus
       );
 
       setStatusDate(
@@ -907,7 +916,9 @@ function Statistika() {
               const manualStatus =
                 dayStatuses[
                   dateString
-                ];
+                ] as
+                  | StatisticsDayStatus
+                  | undefined;
 
               const colors =
                 getDayColors(
@@ -1273,10 +1284,10 @@ function Statistika() {
             statusDate
           }
           currentStatus={
-            dayStatuses[
+            (dayStatuses[
               statusDate
             ] ||
-            "none"
+              "none") as StatisticsDayStatus
           }
           onSave={
             handleStatusSave
@@ -1348,10 +1359,10 @@ function StatusModal({
   date: string;
 
   currentStatus:
-    DayStatus;
+    StatisticsDayStatus;
 
   onSave: (
-    status: DayStatus
+    status: StatisticsDayStatus
   ) => Promise<void>;
 
   onClose: () => void;
@@ -1360,12 +1371,12 @@ function StatusModal({
     status,
     setStatus,
   ] =
-    useState<DayStatus>(
+    useState<StatisticsDayStatus>(
       currentStatus
     );
 
   const options: {
-    value: DayStatus;
+    value: StatisticsDayStatus;
     label: string;
   }[] = [
     {
@@ -1487,7 +1498,7 @@ function StatusModal({
           ) =>
             setStatus(
               event.target
-                .value as DayStatus
+                .value as StatisticsDayStatus
             )
           }
           style={{

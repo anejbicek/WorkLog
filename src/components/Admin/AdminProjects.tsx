@@ -11,7 +11,7 @@ function AdminProjects() {
     addProject,
     updateProject,
     deleteProject,
-    toggleProject,
+    toggleProjectActive,
   } = useAdmin();
 
   const [
@@ -43,7 +43,10 @@ function AdminProjects() {
         return;
       }
 
-      addProject(name);
+      addProject({
+        name: name.trim(),
+        active: true,
+      });
 
       setName("");
     };
@@ -69,15 +72,15 @@ function AdminProjects() {
         return;
       }
 
-      updateProject({
-        ...editing,
-
-        name:
-          editName.trim(),
-
-        active:
-          editActive,
-      });
+      updateProject(
+        editing.id,
+        {
+          name:
+            editName.trim(),
+          active:
+            editActive,
+        }
+      );
 
       setEditing(null);
     };
@@ -262,7 +265,7 @@ function AdminProjects() {
                   <button
                     type="button"
                     onClick={() =>
-                      toggleProject(
+                      toggleProjectActive(
                         project.id
                       )
                     }

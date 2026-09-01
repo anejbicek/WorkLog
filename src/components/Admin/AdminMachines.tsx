@@ -11,7 +11,7 @@ function AdminMachines() {
     addMachine,
     updateMachine,
     deleteMachine,
-    toggleMachine,
+    toggleMachineActive,
   } = useAdmin();
 
   const [
@@ -43,7 +43,10 @@ function AdminMachines() {
         return;
       }
 
-      addMachine(name);
+      addMachine({
+        name: name.trim(),
+        active: true,
+      });
 
       setName("");
     };
@@ -71,15 +74,13 @@ function AdminMachines() {
         return;
       }
 
-      updateMachine({
-        ...editing,
-
-        name:
-          editName.trim(),
-
-        active:
-          editActive,
-      });
+      updateMachine(
+        editing.id,
+        {
+          name: editName.trim(),
+          active: editActive,
+        }
+      );
 
       setEditing(null);
     };
@@ -246,7 +247,7 @@ function AdminMachines() {
                 <button
                   type="button"
                   onClick={() =>
-                    toggleMachine(
+                    toggleMachineActive(
                       machine.id
                     )
                   }
