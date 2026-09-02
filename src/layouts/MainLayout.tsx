@@ -16,7 +16,8 @@ type Page =
   | "evidenca"
   | "statistika"
   | "pdf"
-  | "admin";
+  | "admin"
+  | "settings";
 
 type Props = {
   children: ReactNode;
@@ -89,11 +90,18 @@ function MainLayout({
           "#f5f7f6",
       }}
     >
-      <Header />
+      <Header
+        onNavigate={
+          onNavigate
+        }
+      />
 
       <Navbar
         currentPage={
-          currentPage
+          currentPage ===
+          "settings"
+            ? "dashboard"
+            : currentPage
         }
         onNavigate={
           onNavigate

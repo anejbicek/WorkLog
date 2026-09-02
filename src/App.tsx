@@ -11,17 +11,19 @@ import Statistika from "./pages/Statistika";
 import PDF from "./pages/PDF";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
+import UserSettings from "./pages/UserSettings";
 
 import { supabase } from "./services/supabase";
 
 import { useAdmin } from "./context/AdminContext";
 
-type Page =
+export type Page =
   | "dashboard"
   | "evidenca"
   | "statistika"
   | "pdf"
-  | "admin";
+  | "admin"
+  | "settings";
 
 function App() {
   const {
@@ -258,6 +260,11 @@ function App() {
         isAdmin && (
           <Admin />
         )}
+
+      {currentPage ===
+        "settings" && (
+        <UserSettings />
+      )}
     </MainLayout>
   );
 }

@@ -319,39 +319,68 @@ export function AdminProvider({
   useEffect(() => {
     let cancelled = false;
 
-    const loadUsers = async (authUser: { id: string; email?: string | null }) => {
-
-      const { data, error } = await supabase
+    const loadUsers = async (
+      authUser: {
+        id: string;
+        email?: string | null;
+      }
+    ) => {
+      const {
+        data,
+        error,
+      } = await supabase
         .from("users")
         .select("*")
-        .order("id", { ascending: true });
+        .order("id", {
+          ascending: true,
+        });
 
       if (error) {
-        console.error("Napaka pri nalaganju uporabnikov:", error);
+        console.error(
+          "Napaka pri nalaganju uporabnikov:",
+          error
+        );
         return;
       }
 
       if (data && data.length > 0) {
-        const mappedUsers: AdminUser[] = data.map((row) => ({
-          id: Number(row.id),
-          name: row.name,
-          email: row.email,
-          authUserId: row.auth_user_id ?? undefined,
-          role: row.role as UserRole,
-          active: row.active,
-        }));
+        const mappedUsers: AdminUser[] =
+          data.map((row) => ({
+            id: Number(row.id),
+            name: row.name,
+            email: row.email,
+            authUserId:
+              row.auth_user_id ??
+              undefined,
+            role:
+              row.role as UserRole,
+            active: row.active,
+          }));
 
-        const currentUser = mappedUsers.find(
-          (user) =>
-            user.email.toLowerCase() ===
-            authUser.email?.toLowerCase()
-        );
+        const currentUser =
+          mappedUsers.find(
+            (user) =>
+              user.email.toLowerCase() ===
+              authUser.email?.toLowerCase()
+          );
 
-        if (currentUser && currentUser.authUserId !== authUser.id) {
-          const { error: linkError } = await supabase
+        if (
+          currentUser &&
+          currentUser.authUserId !==
+            authUser.id
+        ) {
+          const {
+            error: linkError,
+          } = await supabase
             .from("users")
-            .update({ auth_user_id: authUser.id })
-            .eq("id", currentUser.id);
+            .update({
+              auth_user_id:
+                authUser.id,
+            })
+            .eq(
+              "id",
+              currentUser.id
+            );
 
           if (linkError) {
             console.error(
@@ -359,7 +388,8 @@ export function AdminProvider({
               linkError
             );
           } else {
-            currentUser.authUserId = authUser.id;
+            currentUser.authUserId =
+              authUser.id;
           }
         }
 
@@ -375,36 +405,48 @@ export function AdminProvider({
        * Če tabela users še nima uporabnikov, poskusimo prenesti
        * obstoječe WorkLog uporabnike iz localStorage.
        */
-      let localUsers: AdminUser[] = defaultUsers;
+
+      let localUsers: AdminUser[] =
+        defaultUsers;
 
       try {
-        const saved = localStorage.getItem(STORAGE_KEYS.users);
+        const saved =
+          localStorage.getItem(
+            STORAGE_KEYS.users
+          );
 
         if (saved) {
-          localUsers = JSON.parse(saved);
+          localUsers =
+            JSON.parse(saved);
         }
       } catch {
-        localUsers = defaultUsers;
+        localUsers =
+          defaultUsers;
       }
 
-      const rowsToInsert = localUsers.map((user) => ({
-        name: user.name,
-        email: user.email,
-        auth_user_id:
-          user.authUserId ??
-          (user.email.toLowerCase() ===
-          authUser.email?.toLowerCase()
-            ? authUser.id
-            : null),
-        role: user.role,
-        active: user.active,
-      }));
+      const rowsToInsert =
+        localUsers.map(
+          (user) => ({
+            name: user.name,
+            email: user.email,
+            auth_user_id:
+              user.authUserId ??
+              (user.email.toLowerCase() ===
+              authUser.email?.toLowerCase()
+                ? authUser.id
+                : null),
+            role: user.role,
+            active: user.active,
+          })
+        );
 
-      const { data: insertedUsers, error: insertError } =
-        await supabase
-          .from("users")
-          .insert(rowsToInsert)
-          .select("*");
+      const {
+        data: insertedUsers,
+        error: insertError,
+      } = await supabase
+        .from("users")
+        .insert(rowsToInsert)
+        .select("*");
 
       if (insertError) {
         console.error(
@@ -415,41 +457,71 @@ export function AdminProvider({
       }
 
       const mappedInsertedUsers: AdminUser[] =
-        (insertedUsers ?? []).map((row) => ({
-          id: Number(row.id),
-          name: row.name,
-          email: row.email,
-          authUserId: row.auth_user_id ?? undefined,
-          role: row.role as UserRole,
-          active: row.active,
-        }));
+        (
+          insertedUsers ??
+          []
+        ).map(
+          (row) => ({
+            id: Number(row.id),
+            name: row.name,
+            email: row.email,
+            authUserId:
+              row.auth_user_id ??
+              undefined,
+            role:
+              row.role as UserRole,
+            active: row.active,
+          })
+        );
 
       if (!cancelled) {
-        setUsers(mappedInsertedUsers);
+        setUsers(
+          mappedInsertedUsers
+        );
       }
     };
 
-    const initialize = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const initialize =
+      async () => {
+        const {
+          data: {
+            session,
+          },
+        } =
+          await supabase.auth.getSession();
 
-      if (session?.user) {
-        await loadUsers(session.user);
-      }
-    };
+        if (session?.user) {
+          await loadUsers(
+            session.user
+          );
+        }
+      };
 
     void initialize();
 
     const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        void loadUsers(session.user);
-      } else if (!cancelled) {
-        setUsers(defaultUsers);
-      }
-    });
+      data: {
+        subscription,
+      },
+    } =
+      supabase.auth.onAuthStateChange(
+        (
+          _event,
+          session
+        ) => {
+          if (session?.user) {
+            void loadUsers(
+              session.user
+            );
+          } else if (
+            !cancelled
+          ) {
+            setUsers(
+              defaultUsers
+            );
+          }
+        }
+      );
 
     return () => {
       cancelled = true;
@@ -462,20 +534,62 @@ export function AdminProvider({
   ======================================================= */
 
   const [projects, setProjects] =
-    useState<AdminProject[]>(() => {
-      try {
-        const saved =
-          localStorage.getItem(
-            STORAGE_KEYS.projects
+    useState<AdminProject[]>(
+      defaultProjects
+    );
+
+  /*
+   * Naloži projekte iz Supabase.
+   */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProjects =
+      async () => {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("projects")
+          .select("*")
+          .order("id", {
+            ascending: true,
+          });
+
+        if (error) {
+          console.error(
+            "Napaka pri nalaganju projektov:",
+            error
+          );
+          return;
+        }
+
+        const mappedProjects: AdminProject[] =
+          (
+            data ??
+            []
+          ).map(
+            (row) => ({
+              id: Number(row.id),
+              name: row.name,
+              active: row.active,
+            })
           );
 
-        return saved
-          ? JSON.parse(saved)
-          : defaultProjects;
-      } catch {
-        return defaultProjects;
-      }
-    });
+        if (!cancelled) {
+          setProjects(
+            mappedProjects
+          );
+        }
+      };
+
+    void loadProjects();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /* =======================================================
      MACHINES
@@ -543,13 +657,6 @@ export function AdminProvider({
 
   useEffect(() => {
     localStorage.setItem(
-      STORAGE_KEYS.projects,
-      JSON.stringify(projects)
-    );
-  }, [projects]);
-
-  useEffect(() => {
-    localStorage.setItem(
       STORAGE_KEYS.machines,
       JSON.stringify(machines)
     );
@@ -577,12 +684,17 @@ export function AdminProvider({
     user: Omit<AdminUser, "id">
   ) => {
     const saveUser = async () => {
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from("users")
         .insert({
           name: user.name,
           email: user.email,
-          auth_user_id: user.authUserId ?? null,
+          auth_user_id:
+            user.authUserId ??
+            null,
           role: user.role,
           active: user.active,
         })
@@ -590,20 +702,32 @@ export function AdminProvider({
         .single();
 
       if (error) {
-        console.error("Napaka pri dodajanju uporabnika:", error);
+        console.error(
+          "Napaka pri dodajanju uporabnika:",
+          error
+        );
         return;
       }
 
-      const newUser: AdminUser = {
-        id: Number(data.id),
-        name: data.name,
-        email: data.email,
-        authUserId: data.auth_user_id ?? undefined,
-        role: data.role as UserRole,
-        active: data.active,
-      };
+      const newUser: AdminUser =
+        {
+          id: Number(data.id),
+          name: data.name,
+          email: data.email,
+          authUserId:
+            data.auth_user_id ??
+            undefined,
+          role:
+            data.role as UserRole,
+          active: data.active,
+        };
 
-      setUsers((previous) => [...previous, newUser]);
+      setUsers(
+        (previous) => [
+          ...previous,
+          newUser,
+        ]
+      );
     };
 
     void saveUser();
@@ -613,40 +737,60 @@ export function AdminProvider({
     id: number,
     user: Omit<AdminUser, "id">
   ) => {
-    const saveUser = async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .update({
-          name: user.name,
-          email: user.email,
-          auth_user_id: user.authUserId ?? null,
-          role: user.role,
-          active: user.active,
-        })
-        .eq("id", id)
-        .select("*")
-        .single();
+    const saveUser =
+      async () => {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("users")
+          .update({
+            name: user.name,
+            email: user.email,
+            auth_user_id:
+              user.authUserId ??
+              null,
+            role: user.role,
+            active: user.active,
+          })
+          .eq(
+            "id",
+            id
+          )
+          .select("*")
+          .single();
 
-      if (error) {
-        console.error("Napaka pri urejanju uporabnika:", error);
-        return;
-      }
+        if (error) {
+          console.error(
+            "Napaka pri urejanju uporabnika:",
+            error
+          );
+          return;
+        }
 
-      const updatedUser: AdminUser = {
-        id: Number(data.id),
-        name: data.name,
-        email: data.email,
-        authUserId: data.auth_user_id ?? undefined,
-        role: data.role as UserRole,
-        active: data.active,
+        const updatedUser: AdminUser =
+          {
+            id: Number(data.id),
+            name: data.name,
+            email: data.email,
+            authUserId:
+              data.auth_user_id ??
+              undefined,
+            role:
+              data.role as UserRole,
+            active: data.active,
+          };
+
+        setUsers(
+          (previous) =>
+            previous.map(
+              (item) =>
+                item.id === id
+                  ? updatedUser
+                  : item
+            )
+        );
       };
-
-      setUsers((previous) =>
-        previous.map((item) =>
-          item.id === id ? updatedUser : item
-        )
-      );
-    };
 
     void saveUser();
   };
@@ -658,23 +802,34 @@ export function AdminProvider({
       return;
     }
 
-    const removeUser = async () => {
-      const { error } = await supabase
-        .from("users")
-        .delete()
-        .eq("id", id);
+    const removeUser =
+      async () => {
+        const {
+          error,
+        } = await supabase
+          .from("users")
+          .delete()
+          .eq(
+            "id",
+            id
+          );
 
-      if (error) {
-        console.error("Napaka pri brisanju uporabnika:", error);
-        return;
-      }
+        if (error) {
+          console.error(
+            "Napaka pri brisanju uporabnika:",
+            error
+          );
+          return;
+        }
 
-      setUsers((previous) =>
-        previous.filter(
-          (user) => user.id !== id
-        )
-      );
-    };
+        setUsers(
+          (previous) =>
+            previous.filter(
+              (user) =>
+                user.id !== id
+            )
+        );
+      };
 
     void removeUser();
   };
@@ -682,41 +837,56 @@ export function AdminProvider({
   const toggleUserActive = (
     id: number
   ) => {
-    const toggleUser = async () => {
-      const currentUser = users.find(
-        (user) => user.id === id
-      );
+    const toggleUser =
+      async () => {
+        const currentUser =
+          users.find(
+            (user) =>
+              user.id === id
+          );
 
-      if (!currentUser) {
-        return;
-      }
+        if (!currentUser) {
+          return;
+        }
 
-      const newActive = !currentUser.active;
+        const newActive =
+          !currentUser.active;
 
-      const { error } = await supabase
-        .from("users")
-        .update({ active: newActive })
-        .eq("id", id);
+        const {
+          error,
+        } = await supabase
+          .from("users")
+          .update({
+            active:
+              newActive,
+          })
+          .eq(
+            "id",
+            id
+          );
 
-      if (error) {
-        console.error(
-          "Napaka pri spreminjanju aktivnega stanja uporabnika:",
-          error
+        if (error) {
+          console.error(
+            "Napaka pri spreminjanju aktivnega stanja uporabnika:",
+            error
+          );
+          return;
+        }
+
+        setUsers(
+          (previous) =>
+            previous.map(
+              (user) =>
+                user.id === id
+                  ? {
+                      ...user,
+                      active:
+                        newActive,
+                    }
+                  : user
+            )
         );
-        return;
-      }
-
-      setUsers((previous) =>
-        previous.map((user) =>
-          user.id === id
-            ? {
-                ...user,
-                active: newActive,
-              }
-            : user
-        )
-      );
-    };
+      };
 
     void toggleUser();
   };
@@ -729,32 +899,43 @@ export function AdminProvider({
     email: string,
     authUserId: string
   ) => {
-    const linkUser = async () => {
-      const { error } = await supabase
-        .from("users")
-        .update({ auth_user_id: authUserId })
-        .eq("email", email);
+    const linkUser =
+      async () => {
+        const {
+          error,
+        } = await supabase
+          .from("users")
+          .update({
+            auth_user_id:
+              authUserId,
+          })
+          .eq(
+            "email",
+            email
+          );
 
-      if (error) {
-        console.error(
-          "Napaka pri povezovanju uporabnika z Auth računom:",
-          error
+        if (error) {
+          console.error(
+            "Napaka pri povezovanju uporabnika z Auth računom:",
+            error
+          );
+          return;
+        }
+
+        setUsers(
+          (previous) =>
+            previous.map(
+              (user) =>
+                user.email.toLowerCase() ===
+                email.toLowerCase()
+                  ? {
+                      ...user,
+                      authUserId,
+                    }
+                  : user
+            )
         );
-        return;
-      }
-
-      setUsers((previous) =>
-        previous.map((user) =>
-          user.email.toLowerCase() ===
-          email.toLowerCase()
-            ? {
-                ...user,
-                authUserId,
-              }
-            : user
-        )
-      );
-    };
+      };
 
     void linkUser();
   };
@@ -766,55 +947,188 @@ export function AdminProvider({
   const addProject = (
     project: Omit<AdminProject, "id">
   ) => {
-    setProjects((previous) => [
-      ...previous,
-      {
-        ...project,
-        id: Date.now(),
-      },
-    ]);
+    const saveProject =
+      async () => {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("projects")
+          .insert({
+            name: project.name,
+            active: project.active,
+          })
+          .select("*")
+          .single();
+
+        if (error) {
+          console.error(
+            "Napaka pri dodajanju projekta:",
+            error
+          );
+          return;
+        }
+
+        const newProject: AdminProject =
+          {
+            id: Number(data.id),
+            name: data.name,
+            active: data.active,
+          };
+
+        setProjects(
+          (previous) => [
+            ...previous,
+            newProject,
+          ]
+        );
+      };
+
+    void saveProject();
   };
 
   const updateProject = (
     id: number,
     project: Omit<AdminProject, "id">
   ) => {
-    setProjects((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? {
-              ...project,
-              id,
-            }
-          : item
-      )
-    );
+    const saveProject =
+      async () => {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("projects")
+          .update({
+            name: project.name,
+            active:
+              project.active,
+          })
+          .eq(
+            "id",
+            id
+          )
+          .select("*")
+          .single();
+
+        if (error) {
+          console.error(
+            "Napaka pri urejanju projekta:",
+            error
+          );
+          return;
+        }
+
+        const updatedProject: AdminProject =
+          {
+            id: Number(data.id),
+            name: data.name,
+            active: data.active,
+          };
+
+        setProjects(
+          (previous) =>
+            previous.map(
+              (item) =>
+                item.id === id
+                  ? updatedProject
+                  : item
+            )
+        );
+      };
+
+    void saveProject();
   };
 
   const deleteProject = (
     id: number
   ) => {
-    setProjects((previous) =>
-      previous.filter(
-        (project) =>
-          project.id !== id
-      )
-    );
+    const removeProject =
+      async () => {
+        const {
+          error,
+        } = await supabase
+          .from("projects")
+          .delete()
+          .eq(
+            "id",
+            id
+          );
+
+        if (error) {
+          console.error(
+            "Napaka pri brisanju projekta:",
+            error
+          );
+          return;
+        }
+
+        setProjects(
+          (previous) =>
+            previous.filter(
+              (project) =>
+                project.id !== id
+            )
+        );
+      };
+
+    void removeProject();
   };
 
   const toggleProjectActive = (
     id: number
   ) => {
-    setProjects((previous) =>
-      previous.map((project) =>
-        project.id === id
-          ? {
-              ...project,
-              active: !project.active,
-            }
-          : project
-      )
-    );
+    const toggleProject =
+      async () => {
+        const currentProject =
+          projects.find(
+            (project) =>
+              project.id === id
+          );
+
+        if (!currentProject) {
+          return;
+        }
+
+        const newActive =
+          !currentProject.active;
+
+        const {
+          error,
+        } = await supabase
+          .from("projects")
+          .update({
+            active:
+              newActive,
+          })
+          .eq(
+            "id",
+            id
+          );
+
+        if (error) {
+          console.error(
+            "Napaka pri spreminjanju aktivnega stanja projekta:",
+            error
+          );
+          return;
+        }
+
+        setProjects(
+          (previous) =>
+            previous.map(
+              (project) =>
+                project.id === id
+                  ? {
+                      ...project,
+                      active:
+                        newActive,
+                    }
+                  : project
+            )
+        );
+      };
+
+    void toggleProject();
   };
 
   /* =======================================================
@@ -824,54 +1138,62 @@ export function AdminProvider({
   const addMachine = (
     machine: Omit<AdminMachine, "id">
   ) => {
-    setMachines((previous) => [
-      ...previous,
-      {
-        ...machine,
-        id: Date.now(),
-      },
-    ]);
+    setMachines(
+      (previous) => [
+        ...previous,
+        {
+          ...machine,
+          id: Date.now(),
+        },
+      ]
+    );
   };
 
   const updateMachine = (
     id: number,
     machine: Omit<AdminMachine, "id">
   ) => {
-    setMachines((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? {
-              ...machine,
-              id,
-            }
-          : item
-      )
+    setMachines(
+      (previous) =>
+        previous.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...machine,
+                  id,
+                }
+              : item
+        )
     );
   };
 
   const deleteMachine = (
     id: number
   ) => {
-    setMachines((previous) =>
-      previous.filter(
-        (machine) =>
-          machine.id !== id
-      )
+    setMachines(
+      (previous) =>
+        previous.filter(
+          (machine) =>
+            machine.id !== id
+        )
     );
   };
 
   const toggleMachineActive = (
     id: number
   ) => {
-    setMachines((previous) =>
-      previous.map((machine) =>
-        machine.id === id
-          ? {
-              ...machine,
-              active: !machine.active,
-            }
-          : machine
-      )
+    setMachines(
+      (previous) =>
+        previous.map(
+          (machine) =>
+            machine.id === id
+              ? {
+                  ...machine,
+                  active:
+                    !machine.active,
+                }
+              : machine
+        )
     );
   };
 
@@ -882,39 +1204,44 @@ export function AdminProvider({
   const addHoliday = (
     holiday: Omit<AdminHoliday, "id">
   ) => {
-    setHolidays((previous) => [
-      ...previous,
-      {
-        ...holiday,
-        id: Date.now(),
-      },
-    ]);
+    setHolidays(
+      (previous) => [
+        ...previous,
+        {
+          ...holiday,
+          id: Date.now(),
+        },
+      ]
+    );
   };
 
   const updateHoliday = (
     id: number,
     holiday: Omit<AdminHoliday, "id">
   ) => {
-    setHolidays((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? {
-              ...holiday,
-              id,
-            }
-          : item
-      )
+    setHolidays(
+      (previous) =>
+        previous.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...holiday,
+                  id,
+                }
+              : item
+        )
     );
   };
 
   const deleteHoliday = (
     id: number
   ) => {
-    setHolidays((previous) =>
-      previous.filter(
-        (holiday) =>
-          holiday.id !== id
-      )
+    setHolidays(
+      (previous) =>
+        previous.filter(
+          (holiday) =>
+            holiday.id !== id
+        )
     );
   };
 
@@ -925,7 +1252,9 @@ export function AdminProvider({
   const updateSettings = (
     nextSettings: AdminSettings
   ) => {
-    setSettings(nextSettings);
+    setSettings(
+      nextSettings
+    );
   };
 
   /* =======================================================

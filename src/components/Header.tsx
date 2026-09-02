@@ -5,11 +5,26 @@ import {
   User,
   ChevronDown,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { supabase } from "../services/supabase";
 import { useAdmin } from "../context/AdminContext";
 
-function Header() {
+type Page =
+  | "dashboard"
+  | "evidenca"
+  | "statistika"
+  | "pdf"
+  | "admin"
+  | "settings";
+
+type HeaderProps = {
+  onNavigate: (page: Page) => void;
+};
+
+function Header({
+  onNavigate,
+}: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] =
     useState(false);
 
@@ -47,6 +62,11 @@ function Header() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleSettings = () => {
+    setUserMenuOpen(false);
+    onNavigate("settings");
   };
 
   return (
@@ -277,7 +297,7 @@ function Header() {
                     "absolute",
                   top: "52px",
                   right: 0,
-                  width: "180px",
+                  width: "210px",
                   background:
                     "#ffffff",
                   border:
@@ -289,6 +309,52 @@ function Header() {
                   zIndex: 1000,
                 }}
               >
+                {/* NASTAVITVE */}
+
+                <button
+                  onClick={
+                    handleSettings
+                  }
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems:
+                      "center",
+                    gap: "10px",
+                    padding:
+                      "13px 15px",
+                    border: "none",
+                    background:
+                      "#ffffff",
+                    color: "#334155",
+                    fontSize: "14px",
+                    cursor:
+                      "pointer",
+                    textAlign:
+                      "left",
+                  }}
+                  onMouseEnter={(
+                    e
+                  ) => {
+                    e.currentTarget.style.background =
+                      "#f5f7f6";
+                  }}
+                  onMouseLeave={(
+                    e
+                  ) => {
+                    e.currentTarget.style.background =
+                      "#ffffff";
+                  }}
+                >
+                  <Settings size={18} />
+
+                  <span>
+                    Nastavitve
+                  </span>
+                </button>
+
+                {/* ODJAVA */}
+
                 <button
                   onClick={
                     handleLogout
