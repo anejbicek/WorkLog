@@ -90,11 +90,6 @@ function fromDatabase(
       row.additional_machine ??
       undefined,
 
-    quantity:
-      row.quantity != null
-        ? Number(row.quantity)
-        : undefined,
-
     date:
       row.date ?? "",
 
@@ -163,10 +158,6 @@ function toDatabase(
 
     additional_machine:
       workOrder.additionalMachine ??
-      null,
-
-    quantity:
-      workOrder.quantity ??
       null,
 
     date:
