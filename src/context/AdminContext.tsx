@@ -68,8 +68,9 @@ type AdminContextType = {
   settings: AdminSettings;
 
   addUser: (
-    user: Omit<AdminUser, "id">
-  ) => void;
+    user: Omit<AdminUser, "id" | "authUserId">,
+    initialPassword: string
+  ) => Promise<boolean>;
 
   updateUser: (
     id: number,
@@ -607,20 +608,79 @@ export function AdminProvider({
   ======================================================= */
 
   const [machines, setMachines] =
-    useState<AdminMachine[]>(() => {
-      try {
-        const saved =
-          localStorage.getItem(
-            STORAGE_KEYS.machines
-          );
+    useState<AdminMachine[]>(defaultMachines);
 
-        return saved
-          ? JSON.parse(saved)
-          : defaultMachines;
-      } catch {
-        return defaultMachines;
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMachines = async () => {
+      const { data, error } = await supabase
+        .from("machines")
+        .select("*")
+        .order("id", { ascending: true });
+
+      if (error) {
+        console.error(
+          "Napaka pri nalaganju strojev:",
+          error
+        );
+
+        if (!cancelled) {
+          setMachines(defaultMachines);
+        }
+        return;
       }
-    });
+
+      if (!data || data.length === 0) {
+        const { data: inserted, error: insertError } =
+          await supabase
+            .from("machines")
+            .insert(
+              defaultMachines.map((machine) => ({
+                name: machine.name,
+                active: machine.active,
+              }))
+            )
+            .select("*");
+
+        if (insertError) {
+          console.error(
+            "Napaka pri začetnem vnosu strojev:",
+            insertError
+          );
+          if (!cancelled) setMachines(defaultMachines);
+          return;
+        }
+
+        if (!cancelled) {
+          setMachines(
+            (inserted ?? []).map((row) => ({
+              id: Number(row.id),
+              name: row.name,
+              active: row.active,
+            }))
+          );
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setMachines(
+          data.map((row) => ({
+            id: Number(row.id),
+            name: row.name,
+            active: row.active,
+          }))
+        );
+      }
+    };
+
+    void loadMachines();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /* =======================================================
      PRAZNIKI
@@ -668,13 +728,6 @@ export function AdminProvider({
 
   useEffect(() => {
     localStorage.setItem(
-      STORAGE_KEYS.machines,
-      JSON.stringify(machines)
-    );
-  }, [machines]);
-
-  useEffect(() => {
-    localStorage.setItem(
       STORAGE_KEYS.holidays,
       JSON.stringify(holidays)
     );
@@ -692,66 +745,65 @@ export function AdminProvider({
   ======================================================= */
 
   const addUser = (
-    user: Omit<AdminUser, "id">
-  ) => {
-    const saveUser = async () => {
+    user: Omit<AdminUser, "id" | "authUserId">,
+    initialPassword: string
+  ): Promise<boolean> => {
+    const createUser = async () => {
       const normalizedUsername =
-        user.username
-          .trim()
-          .toLowerCase();
+        user.username.trim().toLowerCase();
 
-      const {
-        data,
-        error,
-      } = await supabase
-        .from("users")
-        .insert({
-          name: user.name,
-          email: user.email,
-          username:
-            normalizedUsername,
-          auth_user_id:
-            user.authUserId ??
-            null,
-          role: user.role,
-          active: user.active,
-        })
-        .select("*")
-        .single();
+      try {
+        const { data, error } =
+          await supabase.functions.invoke("create-user", {
+            body: {
+              name: user.name.trim(),
+              email: user.email.trim().toLowerCase(),
+              username: normalizedUsername,
+              password: initialPassword,
+              role: user.role,
+              active: user.active,
+            },
+          });
 
-      if (error) {
-        console.error(
-          "Napaka pri dodajanju uporabnika:",
-          error
-        );
+        if (error) {
+          console.error(
+            "Napaka pri ustvarjanju uporabnika:",
+            error
+          );
+          return false;
+        }
 
-        return;
-      }
+        if (!data?.user) {
+          console.error(
+            "Supabase ni vrnil ustvarjenega uporabnika:",
+            data
+          );
+          return false;
+        }
 
-      const newUser: AdminUser =
-        {
-          id: Number(data.id),
-          name: data.name,
-          email: data.email,
-          username:
-            data.username ?? "",
-          authUserId:
-            data.auth_user_id ??
-            undefined,
-          role:
-            data.role as UserRole,
-          active: data.active,
+        const created = data.user;
+        const newUser: AdminUser = {
+          id: Number(created.id),
+          name: created.name,
+          email: created.email,
+          username: created.username ?? "",
+          authUserId: created.auth_user_id ?? undefined,
+          role: created.role as UserRole,
+          active: created.active,
         };
 
-      setUsers(
-        (previous) => [
-          ...previous,
-          newUser,
-        ]
-      );
+        setUsers((previous) => [...previous, newUser]);
+        return true;
+      } catch (exception) {
+        console.error(
+          "Napaka pri ustvarjanju uporabnika:",
+          exception
+        );
+        return false;
+      }
     };
 
-    void saveUser();
+    return createUser();
   };
 
   const updateUser = (
@@ -1179,63 +1231,132 @@ export function AdminProvider({
   const addMachine = (
     machine: Omit<AdminMachine, "id">
   ) => {
-    setMachines(
-      (previous) => [
+    const saveMachine = async () => {
+      const { data, error } = await supabase
+        .from("machines")
+        .insert({
+          name: machine.name.trim(),
+          active: machine.active,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error(
+          "Napaka pri dodajanju stroja:",
+          error
+        );
+        return;
+      }
+
+      setMachines((previous) => [
         ...previous,
         {
-          ...machine,
-          id: Date.now(),
+          id: Number(data.id),
+          name: data.name,
+          active: data.active,
         },
-      ]
-    );
+      ]);
+    };
+
+    void saveMachine();
   };
 
   const updateMachine = (
     id: number,
     machine: Omit<AdminMachine, "id">
   ) => {
-    setMachines(
-      (previous) =>
-        previous.map(
-          (item) =>
-            item.id === id
-              ? {
-                  ...machine,
-                  id,
-                }
-              : item
+    const saveMachine = async () => {
+      const { data, error } = await supabase
+        .from("machines")
+        .update({
+          name: machine.name.trim(),
+          active: machine.active,
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error(
+          "Napaka pri urejanju stroja:",
+          error
+        );
+        return;
+      }
+
+      setMachines((previous) =>
+        previous.map((item) =>
+          item.id === id
+            ? {
+                id: Number(data.id),
+                name: data.name,
+                active: data.active,
+              }
+            : item
         )
-    );
+      );
+    };
+
+    void saveMachine();
   };
 
-  const deleteMachine = (
-    id: number
-  ) => {
-    setMachines(
-      (previous) =>
-        previous.filter(
-          (machine) =>
-            machine.id !== id
-        )
-    );
+  const deleteMachine = (id: number) => {
+    const removeMachine = async () => {
+      const { error } = await supabase
+        .from("machines")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error(
+          "Napaka pri brisanju stroja:",
+          error
+        );
+        return;
+      }
+
+      setMachines((previous) =>
+        previous.filter((machine) => machine.id !== id)
+      );
+    };
+
+    void removeMachine();
   };
 
-  const toggleMachineActive = (
-    id: number
-  ) => {
-    setMachines(
-      (previous) =>
-        previous.map(
-          (machine) =>
-            machine.id === id
-              ? {
-                  ...machine,
-                  active:
-                    !machine.active,
-                }
-              : machine
+  const toggleMachineActive = (id: number) => {
+    const toggleMachine = async () => {
+      const currentMachine = machines.find(
+        (machine) => machine.id === id
+      );
+
+      if (!currentMachine) return;
+
+      const newActive = !currentMachine.active;
+
+      const { error } = await supabase
+        .from("machines")
+        .update({ active: newActive })
+        .eq("id", id);
+
+      if (error) {
+        console.error(
+          "Napaka pri spreminjanju aktivnega stanja stroja:",
+          error
+        );
+        return;
+      }
+
+      setMachines((previous) =>
+        previous.map((machine) =>
+          machine.id === id
+            ? { ...machine, active: newActive }
+            : machine
         )
-    );
+      );
+    };
+
+    void toggleMachine();
   };
 
   /* =======================================================

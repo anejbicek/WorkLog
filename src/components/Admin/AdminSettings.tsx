@@ -1,965 +1,606 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
+import { useAdmin } from "../../context/AdminContext";
 
-import {
-  Lock,
-  User,
-  Mail,
-  Save,
-} from "lucide-react";
+export default function AdminSettings() {
+  const {
+    settings,
+    updateSettings,
+    holidays,
+    addHoliday,
+    updateHoliday,
+    deleteHoliday,
+  } = useAdmin();
 
-import { supabase } from "../../services/supabase";
+  const [form, setForm] = useState(settings);
+  const [saved, setSaved] = useState(false);
 
-function UserSettings() {
-  const [
-    userEmail,
-    setUserEmail,
-  ] = useState("");
-
-  const [
-    userName,
-    setUserName,
-  ] = useState("");
-
-  const [
-    newPassword,
-    setNewPassword,
-  ] = useState("");
-
-  const [
-    confirmPassword,
-    setConfirmPassword,
-  ] = useState("");
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
-
-  const [
-    saving,
-    setSaving,
-  ] = useState(false);
-
-  const [
-    message,
-    setMessage,
-  ] = useState("");
-
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-  /* =========================================================
-     NALOŽI UPORABNIKA
-  ========================================================= */
+  const [holidayDate, setHolidayDate] = useState("");
+  const [holidayName, setHolidayName] = useState("");
 
   useEffect(() => {
-    const loadUser =
-      async () => {
-        const {
-          data: {
-            user,
-          },
-        } =
-          await supabase.auth.getUser();
+    setForm(settings);
+  }, [settings]);
 
-        if (!user) {
-          setLoading(false);
-          return;
-        }
+  const handleChange = (
+    field: keyof typeof form,
+    value: string | boolean
+  ) => {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
 
-        const email =
-          user.email ?? "";
+    setSaved(false);
+  };
 
-        setUserEmail(
-          email
-        );
+  const handleSave = () => {
+    updateSettings(form);
+    setSaved(true);
 
-        const {
-          data: profile,
-          error: profileError,
-        } =
-          await supabase
-            .from("users")
-            .select("username")
-            .eq(
-              "auth_user_id",
-              user.id
-            )
-            .maybeSingle();
+    window.setTimeout(() => {
+      setSaved(false);
+    }, 2500);
+  };
 
-        if (
-          !profileError &&
-          profile?.username
-        ) {
-          setUserName(
-            profile.username
-          );
-        } else if (email) {
-          const {
-            data: emailProfile,
-          } =
-            await supabase
-              .from("users")
-              .select("username")
-              .eq(
-                "email",
-                email
-              )
-              .maybeSingle();
+  const handleAddHoliday = () => {
+    const date = holidayDate.trim();
+    const name = holidayName.trim();
 
-          setUserName(
-            emailProfile?.username ??
-              ""
-          );
-        }
+    if (!date || !name) {
+      return;
+    }
 
-        setLoading(false);
-      };
+    addHoliday({
+      date,
+      name,
+    });
 
-    void loadUser();
-  }, []);
+    setHolidayDate("");
+    setHolidayName("");
+  };
 
-  /* =========================================================
-     SHRANI
-  ========================================================= */
-
-  const handleSave =
-    async () => {
-      setError("");
-      setMessage("");
-
-      if (!userName.trim()) {
-        setError(
-          "Uporabniško ime je obvezno."
-        );
-
-        return;
-      }
-
-      if (
-        newPassword ||
-        confirmPassword
-      ) {
-        if (
-          newPassword.length <
-          4
-        ) {
-          setError(
-            "Geslo mora imeti najmanj 4 znake."
-          );
-
-          return;
-        }
-
-        if (
-          newPassword !==
-          confirmPassword
-        ) {
-          setError(
-            "Gesli se ne ujemata."
-          );
-
-          return;
-        }
-      }
-
-      setSaving(true);
-
-      try {
-        const {
-          data: {
-            user,
-          },
-        } =
-          await supabase.auth.getUser();
-
-        if (!user) {
-          setError(
-            "Uporabnik ni prijavljen."
-          );
-
-          setSaving(false);
-          return;
-        }
-
-        const normalizedUsername =
-          userName
-            .trim()
-            .toLowerCase();
-
-        /* ===================================================
-           SHRANI UPORABNIŠKO IME
-        =================================================== */
-
-        const {
-          data: updatedProfiles,
-          error: profileError,
-        } =
-          await supabase
-            .from("users")
-            .update({
-              username:
-                normalizedUsername,
-            })
-            .eq(
-              "auth_user_id",
-              user.id
-            )
-            .select("id");
-
-        if (profileError) {
-          if (
-            profileError.code ===
-            "23505"
-          ) {
-            setError(
-              "To uporabniško ime je že zasedeno."
-            );
-
-            setSaving(false);
-            return;
-          }
-
-          setError(
-            profileError.message
-          );
-
-          setSaving(false);
-          return;
-        }
-
-        /*
-         * Če uporabnik še nima povezave z auth_user_id,
-         * poiščemo zapis po e-pošti.
-         */
-
-        if (
-          !updatedProfiles ||
-          updatedProfiles.length === 0
-        ) {
-          const {
-            error:
-              emailProfileError,
-          } =
-            await supabase
-              .from("users")
-              .update({
-                username:
-                  normalizedUsername,
-                auth_user_id:
-                  user.id,
-              })
-              .eq(
-                "email",
-                user.email ?? ""
-              );
-
-          if (
-            emailProfileError
-          ) {
-            if (
-              emailProfileError.code ===
-              "23505"
-            ) {
-              setError(
-                "To uporabniško ime je že zasedeno."
-              );
-            } else {
-              setError(
-                emailProfileError.message
-              );
-            }
-
-            setSaving(false);
-            return;
-          }
-        }
-
-        /* ===================================================
-           SPREMEMBA GESLA
-        =================================================== */
-
-        if (newPassword) {
-          const {
-            error:
-              passwordError,
-          } =
-            await supabase.auth.updateUser(
-              {
-                password:
-                  newPassword,
-              }
-            );
-
-          if (
-            passwordError
-          ) {
-            setError(
-              passwordError.message
-            );
-
-            setSaving(false);
-            return;
-          }
-        }
-
-        setUserName(
-          normalizedUsername
-        );
-
-        setNewPassword("");
-        setConfirmPassword("");
-
-        setMessage(
-          "Nastavitve so bile uspešno shranjene."
-        );
-      } catch {
-        setError(
-          "Nastavitev ni bilo mogoče shraniti."
-        );
-      }
-
-      setSaving(false);
-    };
-
-  /* =========================================================
-     LOADING
-  ========================================================= */
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          padding:
-            "40px",
-          color:
-            "#64748b",
-        }}
-      >
-        Nalaganje nastavitev...
-      </div>
+  const handleHolidayNameChange = (
+    id: number,
+    name: string
+  ) => {
+    const holiday = holidays.find(
+      (item) => item.id === id
     );
-  }
+
+    if (!holiday) {
+      return;
+    }
+
+    updateHoliday(id, {
+      date: holiday.date,
+      name,
+    });
+  };
+
+  const handleHolidayDateChange = (
+    id: number,
+    date: string
+  ) => {
+    const holiday = holidays.find(
+      (item) => item.id === id
+    );
+
+    if (!holiday) {
+      return;
+    }
+
+    updateHoliday(id, {
+      date,
+      name: holiday.name,
+    });
+  };
 
   return (
-    <div
-      style={{
-        maxWidth:
-          "760px",
-        margin:
-          "0 auto",
-      }}
-    >
-      {/* NASLOV */}
+    <div className="space-y-6">
+      {/* =====================================================
+          NASLOV
+      ===================================================== */}
 
-      <div
-        style={{
-          display:
-            "flex",
-          alignItems:
-            "center",
-          gap:
-            "14px",
-          marginBottom:
-            "30px",
-        }}
-      >
-        <div
-          style={{
-            width:
-              "46px",
-            height:
-              "46px",
-            borderRadius:
-              "12px",
-            background:
-              "#e6eef2",
-            display:
-              "flex",
-            alignItems:
-              "center",
-            justifyContent:
-              "center",
-          }}
-        >
-          <User
-            size={24}
-            color="#17465d"
-          />
-        </div>
+      <div>
+        <h2 className="text-2xl font-semibold text-gray-900">
+          Nastavitve WorkLoga
+        </h2>
 
-        <div>
-          <h1
-            style={{
-              margin:
-                0,
-              fontSize:
-                "28px",
-              fontWeight:
-                700,
-              color:
-                "#17465d",
-            }}
-          >
-            Nastavitve uporabnika
-          </h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Tukaj administrator določa nastavitve, ki vplivajo
+          na delovanje sistema ŽustAI WorkLog.
+        </p>
+      </div>
 
-          <p
-            style={{
-              margin:
-                "5px 0 0",
-              color:
-                "#64748b",
-              fontSize:
-                "14px",
-            }}
-          >
-            Upravljaj svoje podatke za prijavo v WorkLog.
+      {/* =====================================================
+          OSNOVNE NASTAVITVE
+      ===================================================== */}
+
+      <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Osnovne nastavitve
+          </h3>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Osnovne nastavitve delovnega časa in podjetja.
           </p>
         </div>
-      </div>
 
-      {/* OSEBNI PODATKI */}
-
-      <div
-        style={{
-          background:
-            "#ffffff",
-          border:
-            "1px solid #e2e8f0",
-          borderRadius:
-            "14px",
-          padding:
-            "28px",
-          marginBottom:
-            "20px",
-          boxShadow:
-            "0 4px 15px rgba(0,0,0,0.04)",
-        }}
-      >
-        <h2
-          style={{
-            margin:
-              "0 0 22px",
-            fontSize:
-              "18px",
-            color:
-              "#334155",
-          }}
-        >
-          Podatki uporabnika
-        </h2>
-
-        {/* UPORABNIŠKO IME */}
-
-        <div
-          style={{
-            marginBottom:
-              "20px",
-          }}
-        >
-          <label
-            style={{
-              display:
-                "block",
-              marginBottom:
-                "8px",
-              fontSize:
-                "14px",
-              fontWeight:
-                600,
-              color:
-                "#334155",
-            }}
-          >
-            Uporabniško ime
-          </label>
-
-          <div
-            style={{
-              position:
-                "relative",
-            }}
-          >
-            <User
-              size={18}
-              color="#64748b"
-              style={{
-                position:
-                  "absolute",
-                left:
-                  "13px",
-                top:
-                  "50%",
-                transform:
-                  "translateY(-50%)",
-              }}
-            />
+        <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+          <div>
+            <label
+              htmlFor="companyName"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Ime podjetja
+            </label>
 
             <input
+              id="companyName"
               type="text"
-              value={
-                userName
-              }
-              onChange={(
-                e
-              ) =>
-                setUserName(
-                  e.target.value
+              value={form.companyName}
+              onChange={(event) =>
+                handleChange(
+                  "companyName",
+                  event.target.value
                 )
               }
-              placeholder="Uporabniško ime"
-              style={{
-                width:
-                  "100%",
-                height:
-                  "44px",
-                boxSizing:
-                  "border-box",
-                padding:
-                  "0 14px 0 42px",
-                border:
-                  "1px solid #d1d5db",
-                borderRadius:
-                  "9px",
-                outline:
-                  "none",
-                fontSize:
-                  "14px",
-                color:
-                  "#334155",
-              }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+              placeholder="Ime podjetja"
             />
           </div>
 
-          <div
-            style={{
-              marginTop:
-                "7px",
-              fontSize:
-                "12px",
-              color:
-                "#94a3b8",
-            }}
-          >
-            S tem uporabniškim imenom se lahko prijaviš v WorkLog.
+          <div>
+            <label
+              htmlFor="workDayHours"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Dolžina delovnega dne
+            </label>
+
+            <div className="relative">
+              <input
+                id="workDayHours"
+                type="number"
+                min="0"
+                step="0.5"
+                value={form.workDayHours}
+                onChange={(event) =>
+                  handleChange(
+                    "workDayHours",
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-16 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+              />
+
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                ur
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="breakMinutes"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Odmor
+            </label>
+
+            <div className="relative">
+              <input
+                id="breakMinutes"
+                type="number"
+                min="0"
+                step="5"
+                value={form.breakMinutes}
+                onChange={(event) =>
+                  handleChange(
+                    "breakMinutes",
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-20 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+              />
+
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                minut
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="overtimeAfter"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Nadure po
+            </label>
+
+            <div className="relative">
+              <input
+                id="overtimeAfter"
+                type="number"
+                min="0"
+                step="0.5"
+                value={form.overtimeAfter}
+                onChange={(event) =>
+                  handleChange(
+                    "overtimeAfter",
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-16 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+              />
+
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                urah
+              </span>
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={form.autoBreak}
+                onChange={(event) =>
+                  handleChange(
+                    "autoBreak",
+                    event.target.checked
+                  )
+                }
+                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+              />
+
+              <span>
+                <span className="block text-sm font-medium text-gray-700">
+                  Samodejno odštevanje odmora
+                </span>
+
+                <span className="block text-xs text-gray-500">
+                  WorkLog bo pri izračunu delovnega časa
+                  samodejno odštel nastavljen odmor.
+                </span>
+              </span>
+            </label>
           </div>
         </div>
+      </section>
 
-        {/* E-POŠTA */}
+      {/* =====================================================
+          NOČNO DELO
+      ===================================================== */}
 
-        <div>
-          <label
-            style={{
-              display:
-                "block",
-              marginBottom:
-                "8px",
-              fontSize:
-                "14px",
-              fontWeight:
-                600,
-              color:
-                "#334155",
-            }}
-          >
-            E-pošta
-          </label>
+      <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Nočno delo
+          </h3>
 
-          <div
-            style={{
-              position:
-                "relative",
-            }}
-          >
-            <Mail
-              size={18}
-              color="#64748b"
-              style={{
-                position:
-                  "absolute",
-                left:
-                  "13px",
-                top:
-                  "50%",
-                transform:
-                  "translateY(-50%)",
-              }}
-            />
-
-            <input
-              type="email"
-              value={
-                userEmail
-              }
-              disabled
-              style={{
-                width:
-                  "100%",
-                height:
-                  "44px",
-                boxSizing:
-                  "border-box",
-                padding:
-                  "0 14px 0 42px",
-                border:
-                  "1px solid #e2e8f0",
-                borderRadius:
-                  "9px",
-                outline:
-                  "none",
-                fontSize:
-                  "14px",
-                color:
-                  "#64748b",
-                background:
-                  "#f8fafc",
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              marginTop:
-                "7px",
-              fontSize:
-                "12px",
-              color:
-                "#94a3b8",
-            }}
-          >
-            E-poštni naslov se uporablja za prijavo in obnovitev gesla.
-          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            Določitev časovnega obdobja, ki ga WorkLog
+            obravnava kot nočno delo.
+          </p>
         </div>
-      </div>
 
-      {/* GESLO */}
-
-      <div
-        style={{
-          background:
-            "#ffffff",
-          border:
-            "1px solid #e2e8f0",
-          borderRadius:
-            "14px",
-          padding:
-            "28px",
-          marginBottom:
-            "20px",
-          boxShadow:
-            "0 4px 15px rgba(0,0,0,0.04)",
-        }}
-      >
-        <h2
-          style={{
-            margin:
-              "0 0 8px",
-            fontSize:
-              "18px",
-            color:
-              "#334155",
-          }}
-        >
-          Sprememba gesla
-        </h2>
-
-        <p
-          style={{
-            margin:
-              "0 0 22px",
-            fontSize:
-              "13px",
-            color:
-              "#64748b",
-          }}
-        >
-          Če želiš spremeniti geslo, vpiši novo geslo in ga potrdi.
-        </p>
-
-        {/* NOVO GESLO */}
-
-        <div
-          style={{
-            marginBottom:
-              "20px",
-          }}
-        >
-          <label
-            style={{
-              display:
-                "block",
-              marginBottom:
-                "8px",
-              fontSize:
-                "14px",
-              fontWeight:
-                600,
-              color:
-                "#334155",
-            }}
-          >
-            Novo geslo
-          </label>
-
-          <div
-            style={{
-              position:
-                "relative",
-            }}
-          >
-            <Lock
-              size={18}
-              color="#64748b"
-              style={{
-                position:
-                  "absolute",
-                left:
-                  "13px",
-                top:
-                  "50%",
-                transform:
-                  "translateY(-50%)",
-              }}
-            />
+        <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+          <div>
+            <label
+              htmlFor="nightStart"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Začetek nočnega dela
+            </label>
 
             <input
-              type="password"
-              value={
-                newPassword
-              }
-              onChange={(
-                e
-              ) =>
-                setNewPassword(
-                  e.target.value
+              id="nightStart"
+              type="time"
+              value={form.nightStart}
+              onChange={(event) =>
+                handleChange(
+                  "nightStart",
+                  event.target.value
                 )
               }
-              placeholder="Vpiši novo geslo"
-              style={{
-                width:
-                  "100%",
-                height:
-                  "44px",
-                boxSizing:
-                  "border-box",
-                padding:
-                  "0 14px 0 42px",
-                border:
-                  "1px solid #d1d5db",
-                borderRadius:
-                  "9px",
-                outline:
-                  "none",
-                fontSize:
-                  "14px",
-                color:
-                  "#334155",
-              }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
             />
           </div>
-        </div>
 
-        {/* POTRDITEV GESLA */}
-
-        <div>
-          <label
-            style={{
-              display:
-                "block",
-              marginBottom:
-                "8px",
-              fontSize:
-                "14px",
-              fontWeight:
-                600,
-              color:
-                "#334155",
-            }}
-          >
-            Ponovi novo geslo
-          </label>
-
-          <div
-            style={{
-              position:
-                "relative",
-            }}
-          >
-            <Lock
-              size={18}
-              color="#64748b"
-              style={{
-                position:
-                  "absolute",
-                left:
-                  "13px",
-                top:
-                  "50%",
-                transform:
-                  "translateY(-50%)",
-              }}
-            />
+          <div>
+            <label
+              htmlFor="nightEnd"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Konec nočnega dela
+            </label>
 
             <input
-              type="password"
-              value={
-                confirmPassword
-              }
-              onChange={(
-                e
-              ) =>
-                setConfirmPassword(
-                  e.target.value
+              id="nightEnd"
+              type="time"
+              value={form.nightEnd}
+              onChange={(event) =>
+                handleChange(
+                  "nightEnd",
+                  event.target.value
                 )
               }
-              placeholder="Ponovi novo geslo"
-              style={{
-                width:
-                  "100%",
-                height:
-                  "44px",
-                boxSizing:
-                  "border-box",
-                padding:
-                  "0 14px 0 42px",
-                border:
-                  "1px solid #d1d5db",
-                borderRadius:
-                  "9px",
-                outline:
-                  "none",
-                fontSize:
-                  "14px",
-                color:
-                  "#334155",
-              }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          PDF POROČILA
+      ===================================================== */}
+
+      <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            PDF poročila
+          </h3>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Podatki, ki se uporabljajo pri izdelavi PDF
+            poročil.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+          <div>
+            <label
+              htmlFor="pdfCompanyName"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Ime podjetja na PDF poročilu
+            </label>
+
+            <input
+              id="pdfCompanyName"
+              type="text"
+              value={form.pdfCompanyName}
+              onChange={(event) =>
+                handleChange(
+                  "pdfCompanyName",
+                  event.target.value
+                )
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+              placeholder="Ime podjetja"
             />
           </div>
 
-          <div
-            style={{
-              marginTop:
-                "7px",
-              fontSize:
-                "12px",
-              color:
-                "#94a3b8",
-            }}
-          >
-            Geslo mora vsebovati najmanj 4 znake.
+          <div>
+            <label
+              htmlFor="pdfResponsiblePerson"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Odgovorna oseba
+            </label>
+
+            <input
+              id="pdfResponsiblePerson"
+              type="text"
+              value={form.pdfResponsiblePerson}
+              onChange={(event) =>
+                handleChange(
+                  "pdfResponsiblePerson",
+                  event.target.value
+                )
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+              placeholder="Ime in priimek"
+            />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* SPOROČILA */}
+      {/* =====================================================
+          OBVESTILA
+      ===================================================== */}
 
-      {error && (
-        <div
-          style={{
-            marginBottom:
-              "15px",
-            padding:
-              "12px 15px",
-            borderRadius:
-              "9px",
-            background:
-              "#fff5f5",
-            border:
-              "1px solid #fecaca",
-            color:
-              "#c62828",
-            fontSize:
-              "14px",
-          }}
-        >
-          {error}
+      <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Obvestila
+          </h3>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Nastavitve sistemskih obvestil WorkLoga.
+          </p>
         </div>
-      )}
 
-      {message && (
-        <div
-          style={{
-            marginBottom:
-              "15px",
-            padding:
-              "12px 15px",
-            borderRadius:
-              "9px",
-            background:
-              "#f0fdf4",
-            border:
-              "1px solid #bbf7d0",
-            color:
-              "#166534",
-            fontSize:
-              "14px",
-          }}
-        >
-          {message}
+        <div className="space-y-5 p-6">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={form.notificationsService}
+              onChange={(event) =>
+                handleChange(
+                  "notificationsService",
+                  event.target.checked
+                )
+              }
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+            />
+
+            <span>
+              <span className="block text-sm font-medium text-gray-700">
+                Obvestila o servisu
+              </span>
+
+              <span className="block text-xs text-gray-500">
+                Omogoči sistemska obvestila, povezana s
+                servisom in vzdrževanjem.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={
+                form.notificationsMissingWorkOrders
+              }
+              onChange={(event) =>
+                handleChange(
+                  "notificationsMissingWorkOrders",
+                  event.target.checked
+                )
+              }
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+            />
+
+            <span>
+              <span className="block text-sm font-medium text-gray-700">
+                Opozorila za manjkajoče delovne naloge
+              </span>
+
+              <span className="block text-xs text-gray-500">
+                WorkLog lahko opozori administratorja, kadar
+                manjkajo delovni nalogi.
+              </span>
+            </span>
+          </label>
         </div>
-      )}
+      </section>
 
-      {/* SHRANI */}
+      {/* =====================================================
+          PRAZNIKI
+      ===================================================== */}
 
-      <div
-        style={{
-          display:
-            "flex",
-          justifyContent:
-            "flex-end",
-        }}
-      >
+      <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Prazniki
+          </h3>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Seznam praznikov, ki jih WorkLog upošteva pri
+            obračunu delovnega časa.
+          </p>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-6 rounded-lg bg-gray-50 p-4">
+            <h4 className="mb-3 text-sm font-semibold text-gray-800">
+              Dodaj praznik
+            </h4>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[180px_1fr_auto]">
+              <input
+                type="date"
+                value={holidayDate}
+                onChange={(event) =>
+                  setHolidayDate(
+                    event.target.value
+                  )
+                }
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+              />
+
+              <input
+                type="text"
+                value={holidayName}
+                onChange={(event) =>
+                  setHolidayName(
+                    event.target.value
+                  )
+                }
+                placeholder="Ime praznika"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+              />
+
+              <button
+                type="button"
+                onClick={handleAddHoliday}
+                className="rounded-lg bg-green-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-green-700"
+              >
+                Dodaj
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {holidays.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                Trenutno ni vnesenih praznikov.
+              </div>
+            ) : (
+              holidays
+                .slice()
+                .sort((a, b) =>
+                  a.date.localeCompare(b.date)
+                )
+                .map((holiday) => (
+                  <div
+                    key={holiday.id}
+                    className="grid grid-cols-1 items-center gap-3 rounded-lg border border-gray-200 p-3 md:grid-cols-[180px_1fr_auto]"
+                  >
+                    <input
+                      type="date"
+                      value={holiday.date}
+                      onChange={(event) =>
+                        handleHolidayDateChange(
+                          holiday.id,
+                          event.target.value
+                        )
+                      }
+                      className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                    />
+
+                    <input
+                      type="text"
+                      value={holiday.name}
+                      onChange={(event) =>
+                        handleHolidayNameChange(
+                          holiday.id,
+                          event.target.value
+                        )
+                      }
+                      className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        deleteHoliday(
+                          holiday.id
+                        )
+                      }
+                      className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                    >
+                      Izbriši
+                    </button>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          SHRANI
+      ===================================================== */}
+
+      <div className="flex items-center justify-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        {saved && (
+          <span className="text-sm font-medium text-green-600">
+            Nastavitve so shranjene.
+          </span>
+        )}
+
         <button
-          onClick={
-            handleSave
-          }
-          disabled={
-            saving
-          }
-          style={{
-            display:
-              "flex",
-            alignItems:
-              "center",
-            gap:
-              "9px",
-            padding:
-              "12px 20px",
-            border:
-              "none",
-            borderRadius:
-              "9px",
-            background:
-              saving
-                ? "#94a3b8"
-                : "#17465d",
-            color:
-              "#ffffff",
-            fontSize:
-              "14px",
-            fontWeight:
-              600,
-            cursor:
-              saving
-                ? "default"
-                : "pointer",
-          }}
+          type="button"
+          onClick={handleSave}
+          className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
         >
-          <Save size={17} />
-
-          {saving
-            ? "Shranjevanje..."
-            : "Shrani spremembe"}
+          Shrani nastavitve
         </button>
       </div>
     </div>
   );
 }
-
-export default UserSettings;

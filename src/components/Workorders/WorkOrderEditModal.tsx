@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { WorkOrder } from "../../types/WorkOrder";
+import { useAdmin } from "../../context/AdminContext";
 
 type WorkOrderEditModalProps = {
   workOrder: WorkOrder;
@@ -146,6 +147,8 @@ function WorkOrderEditModal({
   onSave,
   onClose,
 }: WorkOrderEditModalProps) {
+  const { machines: adminMachines } = useAdmin();
+
   const [project, setProject] =
     useState(workOrder.project);
 
@@ -188,12 +191,14 @@ function WorkOrderEditModal({
   const [meal, setMeal] =
     useState(Boolean(workOrder.meal));
 
-  const machines = [
-    "OKUMA MB-56VB",
-    "OKUMA M460V-5AX",
-    "Žična erozija",
-    "Potošna erozija",
-  ];
+  const machines = adminMachines
+    .filter(
+      (item) =>
+        item.active ||
+        item.name === machine ||
+        item.name === additionalMachine
+    )
+    .map((item) => item.name);
 
   /* =====================================================
      IZRAČUN UR
