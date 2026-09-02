@@ -18,8 +18,8 @@ function Login({
   } = useAdmin();
 
   const [
-    email,
-    setEmail,
+    loginValue,
+    setLoginValue,
   ] = useState("");
 
   const [
@@ -41,12 +41,25 @@ function Login({
     async () => {
       setError("");
 
+      const trimmedLogin =
+        loginValue.trim();
+
       if (
-        !email ||
+        !trimmedLogin ||
         !password
       ) {
         setError(
-          "Vnesite e-poštni naslov in geslo."
+          "Vnesite e-pošto ali uporabniško ime in geslo."
+        );
+
+        return;
+      }
+
+      if (
+        password.length < 4
+      ) {
+        setError(
+          "Geslo mora vsebovati najmanj 4 znake."
         );
 
         return;
@@ -54,40 +67,99 @@ function Login({
 
       setLoading(true);
 
-      const {
-        data,
-        error: loginError,
-      } =
-        await supabase.auth.signInWithPassword(
+      try {
+        /* =====================================================
+           POIŠČI E-POŠTO UPORABNIKA
+
+           RPC sprejme:
+           - e-pošto
+           - ali uporabniško ime
+
+           in vrne e-pošto samo aktivnega uporabnika.
+        ===================================================== */
+
+        const {
+          data: loginEmail,
+          error: lookupError,
+        } = await supabase.rpc(
+          "get_login_email",
           {
-            email,
-            password,
+            login_value:
+              trimmedLogin,
           }
         );
 
-      setLoading(false);
+        if (
+          lookupError ||
+          !loginEmail
+        ) {
+          setError(
+            "Napačen e-poštni naslov, uporabniško ime ali geslo."
+          );
 
-      if (loginError) {
+          setLoading(false);
+
+          return;
+        }
+
+        const email =
+          String(loginEmail);
+
+        /* =====================================================
+           PRIJAVA V SUPABASE AUTH
+        ===================================================== */
+
+        const {
+          data,
+          error: loginError,
+        } =
+          await supabase.auth.signInWithPassword(
+            {
+              email,
+              password,
+            }
+          );
+
+        if (loginError) {
+          setError(
+            "Napačen e-poštni naslov, uporabniško ime ali geslo."
+          );
+
+          setLoading(false);
+
+          return;
+        }
+
+        /* =====================================================
+           POVEŽI PRIJAVLJENEGA UPORABNIKA
+           Z WORKLOG UPORABNIKOM
+        ===================================================== */
+
+        if (data.user) {
+          linkUserAuthId(
+            data.user.email ??
+              email,
+            data.user.id
+          );
+        }
+
+        setLoading(false);
+
+        onLogin();
+      } catch (
+        loginException
+      ) {
+        console.error(
+          "Napaka pri prijavi:",
+          loginException
+        );
+
         setError(
-          "Napačen e-poštni naslov ali geslo."
+          "Prijava ni uspela. Poskusite ponovno."
         );
 
-        return;
+        setLoading(false);
       }
-
-      /* =====================================================
-         POVEŽI PRIJAVLJENEGA UPORABNIKA Z ADMIN UPORABNIKOM
-      ===================================================== */
-
-      if (data.user) {
-        linkUserAuthId(
-          data.user.email ??
-            email,
-          data.user.id
-        );
-      }
-
-      onLogin();
     };
 
   return (
@@ -162,7 +234,7 @@ function Login({
           WorkLog
         </p>
 
-        {/* E-POŠTA */}
+        {/* E-POŠTA ALI UPORABNIŠKO IME */}
 
         <label
           style={{
@@ -174,26 +246,33 @@ function Login({
             color: "#4c5c54",
           }}
         >
-          E-poštni naslov
+          E-pošta ali uporabniško ime
         </label>
 
         <input
-          type="email"
-          value={email}
-          onChange={(event) =>
-            setEmail(
+          type="text"
+          value={
+            loginValue
+          }
+          onChange={(
+            event
+          ) =>
+            setLoginValue(
               event.target.value
             )
           }
-          onKeyDown={(event) => {
+          onKeyDown={(
+            event
+          ) => {
             if (
               event.key ===
               "Enter"
             ) {
-              handleLogin();
+              void handleLogin();
             }
           }}
-          placeholder="Vnesite e-poštni naslov"
+          placeholder="Vnesite e-pošto ali uporabniško ime"
+          autoComplete="username"
           style={{
             width: "100%",
             padding: "15px",
@@ -225,21 +304,28 @@ function Login({
 
         <input
           type="password"
-          value={password}
-          onChange={(event) =>
+          value={
+            password
+          }
+          onChange={(
+            event
+          ) =>
             setPassword(
               event.target.value
             )
           }
-          onKeyDown={(event) => {
+          onKeyDown={(
+            event
+          ) => {
             if (
               event.key ===
               "Enter"
             ) {
-              handleLogin();
+              void handleLogin();
             }
           }}
           placeholder="Vnesite geslo"
+          autoComplete="current-password"
           style={{
             width: "100%",
             padding: "15px",
@@ -280,8 +366,8 @@ function Login({
         {/* PRIJAVA */}
 
         <button
-          onClick={
-            handleLogin
+          onClick={() =>
+            void handleLogin()
           }
           disabled={
             loading

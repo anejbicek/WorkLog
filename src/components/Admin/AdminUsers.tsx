@@ -56,8 +56,8 @@ function AdminUsers() {
   ] = useState("");
 
   const [
-    password,
-    setPassword,
+    username,
+    setUsername,
   ] = useState("");
 
   const [
@@ -77,16 +77,6 @@ function AdminUsers() {
     active,
     setActive,
   ] = useState(true);
-
-  const [
-    saving,
-    setSaving,
-  ] = useState(false);
-
-  const [
-    formError,
-    setFormError,
-  ] = useState("");
 
   /* =========================================================
      SAMODEJNA POVEZAVA S SUPABASE UPORABNIKOM
@@ -134,7 +124,7 @@ function AdminUsers() {
         }
       };
 
-    connectCurrentUser();
+    void connectCurrentUser();
   }, [
     users,
     linkUserAuthId,
@@ -148,12 +138,10 @@ function AdminUsers() {
     () => {
       setName("");
       setEmail("");
-      setPassword("");
+      setUsername("");
       setAuthUserId("");
       setRole("worker");
       setActive(true);
-      setFormError("");
-      setSaving(false);
 
       setShowForm(false);
       setEditingUser(null);
@@ -178,7 +166,9 @@ function AdminUsers() {
       user.email
     );
 
-    setPassword("");
+    setUsername(
+      user.username ?? ""
+    );
 
     setAuthUserId(
       user.authUserId ?? ""
@@ -192,8 +182,6 @@ function AdminUsers() {
       user.active
     );
 
-    setFormError("");
-
     setShowForm(true);
   };
 
@@ -202,187 +190,52 @@ function AdminUsers() {
   ========================================================= */
 
   const saveUser =
-    async () => {
-      setFormError("");
-
+    () => {
       if (
         !name.trim() ||
-        !email.trim()
+        !email.trim() ||
+        !username.trim()
       ) {
-        setFormError(
-          "Ime in e-poštni naslov sta obvezna."
-        );
-
         return;
       }
 
-      /* =====================================================
-         UREJANJE OBSTOJEČEGA UPORABNIKA
-      ===================================================== */
-
-      if (editingUser) {
-        const userData: Omit<
+      const userData:
+        Omit<
           AdminUser,
           "id"
         > = {
-          name:
-            name.trim(),
+        name:
+          name.trim(),
 
-          email:
-            email.trim(),
+        email:
+          email.trim(),
 
-          authUserId:
-            authUserId.trim() ||
-            undefined,
+        username:
+          username
+            .trim()
+            .toLowerCase(),
 
-          role,
+        authUserId:
+          authUserId.trim() ||
+          undefined,
 
-          active,
-        };
+        role,
 
+        active,
+      };
+
+      if (editingUser) {
         updateUser(
           editingUser.id,
           userData
         );
-
-        resetForm();
-
-        return;
-      }
-
-      /* =====================================================
-         NOV UPORABNIK
-      ===================================================== */
-
-      if (!password) {
-        setFormError(
-          "Za novega uporabnika moraš vnesti geslo."
-        );
-
-        return;
-      }
-
-      if (
-        password.length < 6
-      ) {
-        setFormError(
-          "Geslo mora vsebovati najmanj 6 znakov."
-        );
-
-        return;
-      }
-
-      setSaving(true);
-
-      try {
-        /* ===================================================
-           USTVARI SUPABASE AUTH UPORABNIKA
-        =================================================== */
-
-        const {
-          data,
-          error,
-        } =
-          await supabase.functions.invoke(
-            "create-user",
-            {
-              body: {
-                name:
-                  name.trim(),
-
-                email:
-                  email.trim(),
-
-                password,
-              },
-            }
-          );
-
-        if (error) {
-          let message =
-            error.message ||
-            "Uporabnika ni bilo mogoče ustvariti.";
-
-          try {
-            const context =
-              (
-                error as {
-                  context?: Response;
-                }
-              ).context;
-
-            if (context) {
-              const responseData =
-                await context.json();
-
-              if (
-                responseData?.error
-              ) {
-                message =
-                  responseData.error;
-              }
-            }
-          } catch {
-            // Uporabi osnovno sporočilo napake.
-          }
-
-          setFormError(
-            message
-          );
-
-          return;
-        }
-
-        if (
-          !data?.success ||
-          !data?.user?.id
-        ) {
-          setFormError(
-            "Supabase uporabnik ni bil pravilno ustvarjen."
-          );
-
-          return;
-        }
-
-        /* ===================================================
-           DODAJ UPORABNIKA V WORKLOG
-        =================================================== */
-
-        const userData: Omit<
-          AdminUser,
-          "id"
-        > = {
-          name:
-            name.trim(),
-
-          email:
-            email.trim(),
-
-          authUserId:
-            data.user.id,
-
-          role,
-
-          active,
-        };
-
+      } else {
         addUser(
           userData
         );
-
-        resetForm();
-      } catch (error) {
-        console.error(
-          "Napaka pri ustvarjanju uporabnika:",
-          error
-        );
-
-        setFormError(
-          "Pri ustvarjanju uporabnika je prišlo do napake."
-        );
-      } finally {
-        setSaving(false);
       }
+
+      resetForm();
     };
 
   /* =========================================================
@@ -484,25 +337,16 @@ function AdminUsers() {
               display:
                 "grid",
               gridTemplateColumns:
-                editingUser
-                  ? "1fr 1fr 1fr 180px 150px"
-                  : "1fr 1fr 1fr 180px 150px",
+                "1fr 1fr 1fr 1fr 180px 150px",
               gap: "12px",
             }}
           >
-            {/* IME */}
-
             <Field label="Ime in priimek">
               <input
-                value={
-                  name
-                }
-                onChange={(
-                  event
-                ) =>
+                value={name}
+                onChange={(event) =>
                   setName(
-                    event.target
-                      .value
+                    event.target.value
                   )
                 }
                 placeholder="Ime in priimek"
@@ -512,20 +356,30 @@ function AdminUsers() {
               />
             </Field>
 
-            {/* E-POŠTA */}
+            <Field label="Uporabniško ime">
+              <input
+                value={
+                  username
+                }
+                onChange={(event) =>
+                  setUsername(
+                    event.target.value
+                  )
+                }
+                placeholder="Uporabniško ime"
+                style={
+                  inputStyle
+                }
+              />
+            </Field>
 
             <Field label="E-naslov">
               <input
                 type="email"
-                value={
-                  email
-                }
-                onChange={(
-                  event
-                ) =>
+                value={email}
+                onChange={(event) =>
                   setEmail(
-                    event.target
-                      .value
+                    event.target.value
                   )
                 }
                 placeholder="E-naslov"
@@ -535,61 +389,29 @@ function AdminUsers() {
               />
             </Field>
 
-            {/* GESLO */}
-
-            {!editingUser ? (
-              <Field label="Začetno geslo">
-                <input
-                  type="password"
-                  value={
-                    password
-                  }
-                  onChange={(
-                    event
-                  ) =>
-                    setPassword(
-                      event.target
-                        .value
-                    )
-                  }
-                  placeholder="Najmanj 6 znakov"
-                  style={
-                    inputStyle
-                  }
-                />
-              </Field>
-            ) : (
-              <Field label="Supabase User ID">
-                <input
-                  value={
-                    authUserId
-                  }
-                  readOnly
-                  placeholder="UUID uporabnika"
-                  style={{
-                    ...inputStyle,
-                    background:
-                      "#f8fafc",
-                    color:
-                      "#64748b",
-                  }}
-                />
-              </Field>
-            )}
-
-            {/* VLOGA */}
+            <Field label="Supabase User ID">
+              <input
+                value={
+                  authUserId
+                }
+                onChange={(event) =>
+                  setAuthUserId(
+                    event.target.value
+                  )
+                }
+                placeholder="UUID uporabnika"
+                style={
+                  inputStyle
+                }
+              />
+            </Field>
 
             <Field label="Vloga">
               <select
-                value={
-                  role
-                }
-                onChange={(
-                  event
-                ) =>
+                value={role}
+                onChange={(event) =>
                   setRole(
-                    event.target
-                      .value as UserRole
+                    event.target.value as UserRole
                   )
                 }
                 style={
@@ -606,8 +428,6 @@ function AdminUsers() {
               </select>
             </Field>
 
-            {/* STATUS */}
-
             <Field label="Status">
               <select
                 value={
@@ -615,12 +435,9 @@ function AdminUsers() {
                     ? "active"
                     : "inactive"
                 }
-                onChange={(
-                  event
-                ) =>
+                onChange={(event) =>
                   setActive(
-                    event.target
-                      .value ===
+                    event.target.value ===
                       "active"
                   )
                 }
@@ -639,8 +456,6 @@ function AdminUsers() {
             </Field>
           </div>
 
-          {/* POMOČNO BESEDILO */}
-
           <div
             style={{
               marginTop:
@@ -651,37 +466,10 @@ function AdminUsers() {
                 "12px",
             }}
           >
-            {editingUser
-              ? "Supabase User ID je UUID uporabnika iz Supabase Authentication."
-              : "Začetno geslo bo uporabljeno za prvo prijavo uporabnika."}
+            Uporabniško ime se uporablja za
+            prijavo. Supabase User ID je UUID
+            uporabnika iz Supabase Authentication.
           </div>
-
-          {/* NAPAKA */}
-
-          {formError && (
-            <div
-              style={{
-                marginTop:
-                  "14px",
-                padding:
-                  "11px 14px",
-                borderRadius:
-                  "10px",
-                background:
-                  "#fff1f1",
-                border:
-                  "1px solid #ffd0d0",
-                color:
-                  "#c62828",
-                fontSize:
-                  "14px",
-              }}
-            >
-              {formError}
-            </div>
-          )}
-
-          {/* GUMBI */}
 
           <div
             style={{
@@ -699,16 +487,9 @@ function AdminUsers() {
               onClick={
                 resetForm
               }
-              disabled={
-                saving
+              style={
+                secondaryButtonStyle
               }
-              style={{
-                ...secondaryButtonStyle,
-                opacity:
-                  saving
-                    ? 0.6
-                    : 1,
-              }}
             >
               Prekliči
             </button>
@@ -718,24 +499,11 @@ function AdminUsers() {
               onClick={
                 saveUser
               }
-              disabled={
-                saving
+              style={
+                primaryButtonStyle
               }
-              style={{
-                ...primaryButtonStyle,
-                opacity:
-                  saving
-                    ? 0.7
-                    : 1,
-                cursor:
-                  saving
-                    ? "default"
-                    : "pointer",
-              }}
             >
-              {saving
-                ? "Ustvarjanje..."
-                : "Shrani"}
+              Shrani
             </button>
           </div>
         </div>
@@ -785,6 +553,24 @@ function AdminUsers() {
                     user.name
                   }
                 </strong>
+              </div>
+
+              {/* UPORABNIŠKO IME */}
+
+              <div
+                style={{
+                  color:
+                    "#334155",
+                  fontSize:
+                    "14px",
+                  fontWeight:
+                    600,
+                }}
+              >
+                {
+                  user.username ||
+                  "—"
+                }
               </div>
 
               {/* E-MAIL */}
@@ -1014,7 +800,7 @@ const tableStyle = {
 const rowStyle = {
   display: "grid",
   gridTemplateColumns:
-    "1.2fr 1.5fr 170px 100px 250px",
+    "1.1fr 1.2fr 1.4fr 170px 100px 250px",
   alignItems:
     "center",
   gap: "15px",

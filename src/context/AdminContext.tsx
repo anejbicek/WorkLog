@@ -18,6 +18,7 @@ export type AdminUser = {
   id: number;
   name: string;
   email: string;
+  username: string;
   authUserId?: string;
   role: UserRole;
   active: boolean;
@@ -161,6 +162,7 @@ const defaultUsers: AdminUser[] = [
     id: 1,
     name: "Anej Biček",
     email: "anej.bicek@gmail.com",
+    username: "anej",
     role: "admin",
     active: true,
   },
@@ -340,6 +342,7 @@ export function AdminProvider({
           "Napaka pri nalaganju uporabnikov:",
           error
         );
+
         return;
       }
 
@@ -349,6 +352,7 @@ export function AdminProvider({
             id: Number(row.id),
             name: row.name,
             email: row.email,
+            username: row.username ?? "",
             authUserId:
               row.auth_user_id ??
               undefined,
@@ -429,12 +433,17 @@ export function AdminProvider({
           (user) => ({
             name: user.name,
             email: user.email,
+            username:
+              user.username?.trim().toLowerCase() ||
+              null,
             auth_user_id:
               user.authUserId ??
-              (user.email.toLowerCase() ===
-              authUser.email?.toLowerCase()
-                ? authUser.id
-                : null),
+              (
+                user.email.toLowerCase() ===
+                authUser.email?.toLowerCase()
+                  ? authUser.id
+                  : null
+              ),
             role: user.role,
             active: user.active,
           })
@@ -453,10 +462,12 @@ export function AdminProvider({
           "Napaka pri prvi migraciji uporabnikov v Supabase:",
           insertError
         );
+
         return;
       }
 
-      const mappedInsertedUsers: AdminUser[] =
+      const mappedInsertedUsers:
+        AdminUser[] =
         (
           insertedUsers ??
           []
@@ -465,6 +476,8 @@ export function AdminProvider({
             id: Number(row.id),
             name: row.name,
             email: row.email,
+            username:
+              row.username ?? "",
             authUserId:
               row.auth_user_id ??
               undefined,
@@ -538,10 +551,6 @@ export function AdminProvider({
       defaultProjects
     );
 
-  /*
-   * Naloži projekte iz Supabase.
-   */
-
   useEffect(() => {
     let cancelled = false;
 
@@ -562,10 +571,12 @@ export function AdminProvider({
             "Napaka pri nalaganju projektov:",
             error
           );
+
           return;
         }
 
-        const mappedProjects: AdminProject[] =
+        const mappedProjects:
+          AdminProject[] =
           (
             data ??
             []
@@ -684,6 +695,11 @@ export function AdminProvider({
     user: Omit<AdminUser, "id">
   ) => {
     const saveUser = async () => {
+      const normalizedUsername =
+        user.username
+          .trim()
+          .toLowerCase();
+
       const {
         data,
         error,
@@ -692,6 +708,8 @@ export function AdminProvider({
         .insert({
           name: user.name,
           email: user.email,
+          username:
+            normalizedUsername,
           auth_user_id:
             user.authUserId ??
             null,
@@ -706,6 +724,7 @@ export function AdminProvider({
           "Napaka pri dodajanju uporabnika:",
           error
         );
+
         return;
       }
 
@@ -714,6 +733,8 @@ export function AdminProvider({
           id: Number(data.id),
           name: data.name,
           email: data.email,
+          username:
+            data.username ?? "",
           authUserId:
             data.auth_user_id ??
             undefined,
@@ -739,6 +760,11 @@ export function AdminProvider({
   ) => {
     const saveUser =
       async () => {
+        const normalizedUsername =
+          user.username
+            .trim()
+            .toLowerCase();
+
         const {
           data,
           error,
@@ -747,6 +773,8 @@ export function AdminProvider({
           .update({
             name: user.name,
             email: user.email,
+            username:
+              normalizedUsername,
             auth_user_id:
               user.authUserId ??
               null,
@@ -765,14 +793,18 @@ export function AdminProvider({
             "Napaka pri urejanju uporabnika:",
             error
           );
+
           return;
         }
 
-        const updatedUser: AdminUser =
+        const updatedUser:
+          AdminUser =
           {
             id: Number(data.id),
             name: data.name,
             email: data.email,
+            username:
+              data.username ?? "",
             authUserId:
               data.auth_user_id ??
               undefined,
@@ -819,6 +851,7 @@ export function AdminProvider({
             "Napaka pri brisanju uporabnika:",
             error
           );
+
           return;
         }
 
@@ -870,6 +903,7 @@ export function AdminProvider({
             "Napaka pri spreminjanju aktivnega stanja uporabnika:",
             error
           );
+
           return;
         }
 
@@ -919,6 +953,7 @@ export function AdminProvider({
             "Napaka pri povezovanju uporabnika z Auth računom:",
             error
           );
+
           return;
         }
 
@@ -966,10 +1001,12 @@ export function AdminProvider({
             "Napaka pri dodajanju projekta:",
             error
           );
+
           return;
         }
 
-        const newProject: AdminProject =
+        const newProject:
+          AdminProject =
           {
             id: Number(data.id),
             name: data.name,
@@ -1015,10 +1052,12 @@ export function AdminProvider({
             "Napaka pri urejanju projekta:",
             error
           );
+
           return;
         }
 
-        const updatedProject: AdminProject =
+        const updatedProject:
+          AdminProject =
           {
             id: Number(data.id),
             name: data.name,
@@ -1059,6 +1098,7 @@ export function AdminProvider({
             "Napaka pri brisanju projekta:",
             error
           );
+
           return;
         }
 
@@ -1110,6 +1150,7 @@ export function AdminProvider({
             "Napaka pri spreminjanju aktivnega stanja projekta:",
             error
           );
+
           return;
         }
 
