@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -10,6 +11,8 @@ import html2canvas from "html2canvas";
 import {
   useWorkOrders,
 } from "../context/WorkOrderContext";
+
+import { supabase } from "../services/supabase";
 
 /* =====================================================
    KONSTANTE
@@ -25,6 +28,38 @@ function PDF() {
   const {
     workOrders,
   } = useWorkOrders();
+
+  const [userName, setUserName] = useState("Uporabnik");
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user || !mounted) {
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("name")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+
+      if (mounted && profile?.name) {
+        setUserName(profile.name);
+      }
+    };
+
+    loadCurrentUser();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const today =
     new Date();
@@ -96,7 +131,7 @@ function PDF() {
         sum +
         Number(
           workOrder.regularHours ||
-            0
+          0
         ),
       0
     );
@@ -110,7 +145,7 @@ function PDF() {
         sum +
         Number(
           workOrder.nightHours ||
-            0
+          0
         ),
       0
     );
@@ -124,7 +159,7 @@ function PDF() {
         sum +
         Number(
           workOrder.holidayHours ||
-            0
+          0
         ),
       0
     );
@@ -138,7 +173,7 @@ function PDF() {
         sum +
         Number(
           workOrder.additionalHours ||
-            0
+          0
         ),
       0
     );
@@ -152,7 +187,7 @@ function PDF() {
         sum +
         Number(
           workOrder.overtimeHours ||
-            0
+          0
         ),
       0
     );
@@ -616,7 +651,7 @@ function PDF() {
                         "#12344d",
                     }}
                   >
-                    Anej Biček
+                    {userName}
                   </div>
                 </div>
               </div>
