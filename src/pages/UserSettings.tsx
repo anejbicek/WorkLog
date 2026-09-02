@@ -8,7 +8,6 @@ import {
   User,
   Mail,
   Save,
-  ArrowLeft,
 } from "lucide-react";
 
 import { supabase } from "../services/supabase";
@@ -60,8 +59,7 @@ function UserSettings() {
         data: {
           user,
         },
-      } =
-        await supabase.auth.getUser();
+      } = await supabase.auth.getUser();
 
       if (!user) {
         setLoading(false);
