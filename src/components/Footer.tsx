@@ -17,7 +17,7 @@ function Footer() {
     >
       <span>© 2026 ŽustAI WorkLog</span>
 
-      <span>Verzija 1. 1. 0</span>
+      <span>Verzija 2. 1. 0</span>
     </footer>
   );
 }

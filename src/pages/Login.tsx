@@ -405,7 +405,7 @@ function Login({
             fontSize: 13,
           }}
         >
-          © 2024 ŽustAI. Vse pravice
+          © 2026ŽustAI. Vse pravice
           pridržane.
         </p>
       </div>
