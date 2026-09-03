@@ -138,7 +138,7 @@ function Projects() {
   }, []);
 
   /* =========================================================
-     AKTIVNI PROJEKTI IN STROJI
+     AKTIVNI PROJEKTI
   ========================================================= */
 
   const activeProjects =
@@ -187,6 +187,10 @@ function Projects() {
         getProjectProducedQuantity,
       ]
     );
+
+  /* =========================================================
+     AKTIVNI STROJI
+  ========================================================= */
 
   const activeMachines =
     useMemo(
@@ -303,7 +307,7 @@ function Projects() {
       .split("T")[0];
 
   /* =========================================================
-     STANJE MODALOV
+     STANJE
   ========================================================= */
 
   const [
@@ -324,10 +328,6 @@ function Projects() {
   ] = useState<
     number | null
   >(null);
-
-  /* =========================================================
-     STANJE VNOSA IZDELAVE
-  ========================================================= */
 
   const [
     entryDate,
@@ -360,7 +360,7 @@ function Projects() {
   ] = useState(false);
 
   /* =========================================================
-     IZBRANI PROJEKT ZA VNOS
+     IZBRANI PROJEKT
   ========================================================= */
 
   const selectedProject =
@@ -374,7 +374,7 @@ function Projects() {
       : null;
 
   /* =========================================================
-     PROJEKT ZA PODROBNOSTI
+     PODROBNOSTI PROJEKTA
   ========================================================= */
 
   const detailsProject =
@@ -387,7 +387,7 @@ function Projects() {
       : null;
 
   /* =========================================================
-     ODPRE VNOS IZDELAVE
+     ODPRE VNOS
   ========================================================= */
 
   const openEntryForm = (
@@ -432,53 +432,32 @@ function Projects() {
       project.id
     );
 
-    setEntryDate(
-      today
-    );
-
-    setStartTime(
-      "07:00"
-    );
-
-    setEndTime(
-      "15:00"
-    );
+    setEntryDate(today);
+    setStartTime("07:00");
+    setEndTime("15:00");
 
     setSelectedMachine(
       activeMachines[0]?.name ??
         ""
     );
 
-    setQuantity(
-      "0"
-    );
-
-    setShowEntryForm(
-      true
-    );
+    setQuantity("0");
+    setShowEntryForm(true);
   };
 
   /* =========================================================
-     ZAPRE VNOS IZDELAVE
+     ZAPRE VNOS
   ========================================================= */
 
   const closeEntryForm =
     () => {
-      setShowEntryForm(
-        false
-      );
-
-      setSelectedProjectId(
-        ""
-      );
-
-      setQuantity(
-        "0"
-      );
+      setShowEntryForm(false);
+      setSelectedProjectId("");
+      setQuantity("0");
     };
 
   /* =========================================================
-     ODPRE PODROBNOSTI PROJEKTA
+     PODROBNOSTI
   ========================================================= */
 
   const openProjectDetails =
@@ -490,19 +469,13 @@ function Projects() {
       );
     };
 
-  /* =========================================================
-     ZAPRE PODROBNOSTI PROJEKTA
-  ========================================================= */
-
   const closeProjectDetails =
     () => {
-      setDetailsProjectId(
-        null
-      );
+      setDetailsProjectId(null);
     };
 
   /* =========================================================
-     SHRANI VNOS IZDELAVE
+     SHRANI VNOS
   ========================================================= */
 
   const saveEntry =
@@ -574,24 +547,18 @@ function Projects() {
         await addEntry({
           projectId:
             selectedProject.id,
-
           date:
             entryDate,
-
           startTime:
             startTime,
-
           endTime:
             endTime,
-
           machine:
             selectedMachine,
-
           quantity:
             Math.round(
               parsedQuantity
             ),
-
           workerName:
             currentWorker,
         });
@@ -605,7 +572,7 @@ function Projects() {
     };
 
   /* =========================================================
-     IZBRIS VNOSA IZDELAVE
+     IZBRIS VNOSA
   ========================================================= */
 
   const handleDeleteEntry =
@@ -629,7 +596,7 @@ function Projects() {
     };
 
   /* =========================================================
-     PODATKI ZA PROJEKT
+     PODATKI ZA PODROBNOSTI
   ========================================================= */
 
   const getProjectData = (
@@ -675,26 +642,17 @@ function Projects() {
     return {
       entries:
         projectEntries,
-
-      requiredQuantity:
-        requiredQuantity,
-
-      producedQuantity:
-        producedQuantity,
-
-      hours:
-        hours,
-
-      workers:
-        workers,
-
+      requiredQuantity,
+      producedQuantity,
+      hours,
+      workers,
       machines:
         projectMachines,
     };
   };
 
   /* =========================================================
-     PREVERJANJE ADMINISTRATORJA
+     PREVERJANJE ADMINA
   ========================================================= */
 
   if (checkingAdmin) {
@@ -702,21 +660,16 @@ function Projects() {
       <div
         style={{
           width: "100%",
-          minHeight:
-            "300px",
+          minHeight: "300px",
           display: "flex",
-          alignItems:
-            "center",
-          justifyContent:
-            "center",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <div
           style={{
-            color:
-              "#64748b",
-            fontSize:
-              "14px",
+            color: "#64748b",
+            fontSize: "14px",
           }}
         >
           Nalagam...
@@ -726,7 +679,7 @@ function Projects() {
   }
 
   /* =========================================================
-     ADMINISTRATOR – UPRAVLJANJE PROJEKTOV
+     ADMINISTRATOR
   ========================================================= */
 
   if (isAdmin) {
@@ -751,18 +704,13 @@ function Projects() {
       >
         <div
           style={{
-            background:
-              "#ffffff",
+            background: "#ffffff",
             border:
               "1px solid #e2e8f0",
-            borderRadius:
-              "14px",
-            padding:
-              "40px",
-            textAlign:
-              "center",
-            color:
-              "#64748b",
+            borderRadius: "14px",
+            padding: "40px",
+            textAlign: "center",
+            color: "#64748b",
           }}
         >
           Nalagam projekte ...
@@ -787,30 +735,23 @@ function Projects() {
       >
         <div
           style={{
-            background:
-              "#ffffff",
+            background: "#ffffff",
             border:
               "1px solid #fecaca",
-            borderRadius:
-              "14px",
-            padding:
-              "30px",
-            color:
-              "#b91c1c",
+            borderRadius: "14px",
+            padding: "30px",
+            color: "#b91c1c",
           }}
         >
           <strong>
-            Napaka pri
-            nalaganju
+            Napaka pri nalaganju
             projektov
           </strong>
 
           <div
             style={{
-              marginTop:
-                "8px",
-              fontSize:
-                "14px",
+              marginTop: "8px",
+              fontSize: "14px",
             }}
           >
             {error}
@@ -826,6 +767,53 @@ function Projects() {
 
   return (
     <>
+      <style>
+        {`
+          .worklog-project-grid {
+            display: grid;
+            grid-template-columns: repeat(
+              2,
+              440px
+            );
+            justify-content: center;
+            align-items: start;
+            gap: 20px;
+            width: 100%;
+          }
+
+          .worklog-project-card-wrapper {
+            width: 440px;
+            max-width: 440px;
+          }
+
+          @media (max-width: 950px) {
+            .worklog-project-grid {
+              grid-template-columns: 440px;
+            }
+
+            .worklog-project-card-wrapper {
+              width: 440px;
+              max-width: 440px;
+            }
+          }
+
+          @media (max-width: 500px) {
+            .worklog-project-grid {
+              grid-template-columns: minmax(
+                0,
+                1fr
+              );
+            }
+
+            .worklog-project-card-wrapper {
+              width: 100%;
+              max-width: 440px;
+              margin: 0 auto;
+            }
+          }
+        `}
+      </style>
+
       <div
         style={{
           width: "100%",
@@ -839,14 +827,12 @@ function Projects() {
 
         <div
           style={{
-            display:
-              "flex",
+            display: "flex",
             justifyContent:
               "space-between",
             alignItems:
               "flex-start",
-            gap:
-              "20px",
+            gap: "20px",
             marginBottom:
               "30px",
           }}
@@ -855,12 +841,9 @@ function Projects() {
             <h1
               style={{
                 margin: 0,
-                fontSize:
-                  "32px",
-                fontWeight:
-                  700,
-                color:
-                  "#12344d",
+                fontSize: "32px",
+                fontWeight: 700,
+                color: "#12344d",
               }}
             >
               Projekti
@@ -868,14 +851,10 @@ function Projects() {
 
             <p
               style={{
-                marginTop:
-                  "8px",
-                marginBottom:
-                  0,
-                fontSize:
-                  "15px",
-                color:
-                  "#64748b",
+                marginTop: "8px",
+                marginBottom: 0,
+                fontSize: "15px",
+                color: "#64748b",
               }}
             >
               Spremljanje
@@ -896,10 +875,8 @@ function Projects() {
               0
             }
             style={{
-              border:
-                "none",
-              borderRadius:
-                "10px",
+              border: "none",
+              borderRadius: "10px",
               padding:
                 "11px 18px",
               background:
@@ -907,12 +884,9 @@ function Projects() {
                 0
                   ? "#cbd5e1"
                   : "#1d526b",
-              color:
-                "#ffffff",
-              fontSize:
-                "14px",
-              fontWeight:
-                700,
+              color: "#ffffff",
+              fontSize: "14px",
+              fontWeight: 700,
               cursor:
                 activeProjects.length ===
                 0
@@ -948,12 +922,9 @@ function Projects() {
           >
             <div
               style={{
-                fontSize:
-                  "18px",
-                fontWeight:
-                  700,
-                color:
-                  "#12344d",
+                fontSize: "18px",
+                fontWeight: 700,
+                color: "#12344d",
                 marginBottom:
                   "8px",
               }}
@@ -965,140 +936,91 @@ function Projects() {
 
             <div
               style={{
-                fontSize:
-                  "14px",
-                color:
-                  "#64748b",
+                fontSize: "14px",
+                color: "#64748b",
               }}
             >
               Trenutno ni
-              projektov, ki
-              bi bili na voljo
-              za izdelavo.
+              projektov, ki bi
+              bili na voljo za
+              izdelavo.
             </div>
           </div>
         ) : (
-          <>
-            {/* ===============================================
-                PROJEKTNE KARTICE
-            =============================================== */}
+          /* =================================================
+             KARTICE PROJEKTOV
+          ================================================= */
 
-            <div
-              style={{
-                display:
-                  "grid",
+          <div
+            className="worklog-project-grid"
+          >
+            {activeProjects.map(
+              (project) => {
+                const requiredQuantity =
+                  project.requiredQuantity;
 
-                /*
-                 * EN PROJEKT:
-                 * 10 cm prostora na vsaki strani.
-                 *
-                 * DVA PROJEKTA:
-                 * oba sta v isti vrstici.
-                 */
-                gridTemplateColumns:
-                  activeProjects.length ===
-                  1
-                    ? "minmax(0, 1fr)"
-                    : "repeat(2, minmax(0, 1fr))",
-
-                gap:
-                  "20px",
-
-                alignItems:
-                  "stretch",
-
-                width:
-                  activeProjects.length ===
-                  1
-                    ? "calc(100% - 20cm)"
-                    : "100%",
-
-                margin:
-                  "0 auto",
-              }}
-            >
-              {activeProjects.map(
-                (
-                  project
-                ) => {
-                  const requiredQuantity =
-                    project.requiredQuantity;
-
-                  const producedQuantity =
-                    getProjectProducedQuantity(
-                      project.id
-                    );
-
-                  const hours =
-                    getProjectHours(
-                      project.id
-                    );
-
-                  const workers =
-                    getProjectWorkers(
-                      project.id
-                    );
-
-                  const projectMachines =
-                    getProjectMachines(
-                      project.id
-                    );
-
-                  return (
-                    <div
-                      key={
-                        project.id
-                      }
-                      style={{
-                        width:
-                          "100%",
-                        minHeight:
-                          "230px",
-                      }}
-                    >
-                      <ProjectCard
-                        project={
-                          project
-                        }
-
-                        requiredQuantity={
-                          requiredQuantity
-                        }
-
-                        producedQuantity={
-                          producedQuantity
-                        }
-
-                        hours={
-                          hours
-                        }
-
-                        workerCount={
-                          workers.length
-                        }
-
-                        machineCount={
-                          projectMachines.length
-                        }
-
-                        onDetails={() =>
-                          openProjectDetails(
-                            project.id
-                          )
-                        }
-
-                        onAddEntry={() =>
-                          openEntryForm(
-                            project.id
-                          )
-                        }
-                      />
-                    </div>
+                const producedQuantity =
+                  getProjectProducedQuantity(
+                    project.id
                   );
-                }
-              )}
-            </div>
-          </>
+
+                const hours =
+                  getProjectHours(
+                    project.id
+                  );
+
+                const workers =
+                  getProjectWorkers(
+                    project.id
+                  );
+
+                const projectMachines =
+                  getProjectMachines(
+                    project.id
+                  );
+
+                return (
+                  <div
+                    key={
+                      project.id
+                    }
+                    className="worklog-project-card-wrapper"
+                  >
+                    <ProjectCard
+                      project={
+                        project
+                      }
+                      requiredQuantity={
+                        requiredQuantity
+                      }
+                      producedQuantity={
+                        producedQuantity
+                      }
+                      hours={
+                        hours
+                      }
+                      workerCount={
+                        workers.length
+                      }
+                      machineCount={
+                        projectMachines.length
+                      }
+                      onDetails={() =>
+                        openProjectDetails(
+                          project.id
+                        )
+                      }
+                      onAddEntry={() =>
+                        openEntryForm(
+                          project.id
+                        )
+                      }
+                    />
+                  </div>
+                );
+              }
+            )}
+          </div>
         )}
       </div>
 
@@ -1118,31 +1040,24 @@ function Projects() {
               project={
                 detailsProject
               }
-
               entries={
                 data.entries
               }
-
               requiredQuantity={
                 data.requiredQuantity
               }
-
               producedQuantity={
                 data.producedQuantity
               }
-
               hours={
                 data.hours
               }
-
               workers={
                 data.workers
               }
-
               machines={
                 data.machines
               }
-
               onAddEntry={() => {
                 const requiredQuantity =
                   Number(
@@ -1178,11 +1093,9 @@ function Projects() {
                   detailsProject.id
                 );
               }}
-
               onDeleteEntry={
                 handleDeleteEntry
               }
-
               onClose={
                 closeProjectDetails
               }
@@ -1199,43 +1112,33 @@ function Projects() {
           projects={
             activeProjects
           }
-
           machines={
             activeMachines
           }
-
           selectedProjectId={
             selectedProjectId
           }
-
           date={
             entryDate
           }
-
           startTime={
             startTime
           }
-
           endTime={
             endTime
           }
-
           machine={
             selectedMachine
           }
-
           quantity={
             quantity
           }
-
           currentWorker={
             currentWorker
           }
-
           saving={
             saving
           }
-
           onProjectChange={(
             value
           ) => {
@@ -1245,7 +1148,6 @@ function Projects() {
               setSelectedProjectId(
                 ""
               );
-
               return;
             }
 
@@ -1253,31 +1155,24 @@ function Projects() {
               Number(value)
             );
           }}
-
           onDateChange={
             setEntryDate
           }
-
           onStartTimeChange={
             setStartTime
           }
-
           onEndTimeChange={
             setEndTime
           }
-
           onMachineChange={
             setSelectedMachine
           }
-
           onQuantityChange={
             setQuantity
           }
-
           onSave={
             saveEntry
           }
-
           onClose={
             closeEntryForm
           }
