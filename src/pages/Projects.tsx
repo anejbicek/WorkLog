@@ -41,7 +41,7 @@ function Projects() {
   } = useProjects();
 
   /* =========================================================
-     PREVERJANJE ADMINISTRATORSKE VLOGE
+     ADMINISTRATOR
   ========================================================= */
 
   const [
@@ -83,14 +83,15 @@ function Projects() {
           const {
             data: profile,
             error: profileError,
-          } = await supabase
-            .from("users")
-            .select("role")
-            .eq(
-              "auth_user_id",
-              user.id
-            )
-            .maybeSingle();
+          } =
+            await supabase
+              .from("users")
+              .select("role")
+              .eq(
+                "auth_user_id",
+                user.id
+              )
+              .maybeSingle();
 
           if (profileError) {
             console.error(
@@ -145,9 +146,7 @@ function Projects() {
       () =>
         projects.filter(
           (project) => {
-            if (
-              !project.active
-            ) {
+            if (!project.active) {
               return false;
             }
 
@@ -240,14 +239,15 @@ function Projects() {
           const {
             data: profile,
             error: profileError,
-          } = await supabase
-            .from("users")
-            .select("name")
-            .eq(
-              "auth_user_id",
-              user.id
-            )
-            .maybeSingle();
+          } =
+            await supabase
+              .from("users")
+              .select("name")
+              .eq(
+                "auth_user_id",
+                user.id
+              )
+              .maybeSingle();
 
           if (profileError) {
             console.error(
@@ -394,8 +394,7 @@ function Projects() {
     projectId?: number
   ) => {
     const project =
-      projectId !==
-      undefined
+      projectId !== undefined
         ? activeProjects.find(
             (item) =>
               item.id ===
@@ -695,7 +694,7 @@ function Projects() {
   };
 
   /* =========================================================
-     PREVERJANJE ADMINA
+     PREVERJANJE ADMINISTRATORJA
   ========================================================= */
 
   if (checkingAdmin) {
@@ -703,38 +702,31 @@ function Projects() {
       <div
         style={{
           width: "100%",
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "20px 0",
+          minHeight:
+            "300px",
+          display: "flex",
+          alignItems:
+            "center",
+          justifyContent:
+            "center",
         }}
       >
         <div
           style={{
-            background:
-              "#ffffff",
-            border:
-              "1px solid #e2e8f0",
-            borderRadius:
-              "14px",
-            padding:
-              "40px",
-            textAlign:
-              "center",
             color:
               "#64748b",
+            fontSize:
+              "14px",
           }}
         >
-          Nalagam ...
+          Nalagam...
         </div>
       </div>
     );
   }
 
   /* =========================================================
-     ADMINISTRATOR
-     
-     Administrator dobi svoj poseben sistem za upravljanje
-     projektov z levim menijem.
+     ADMINISTRATOR – UPRAVLJANJE PROJEKTOV
   ========================================================= */
 
   if (isAdmin) {
@@ -744,7 +736,7 @@ function Projects() {
   }
 
   /* =========================================================
-     NALAGANJE ZA DELAVCA
+     NALAGANJE
   ========================================================= */
 
   if (loading) {
@@ -808,7 +800,8 @@ function Projects() {
           }}
         >
           <strong>
-            Napaka pri nalaganju
+            Napaka pri
+            nalaganju
             projektov
           </strong>
 
@@ -828,7 +821,7 @@ function Projects() {
   }
 
   /* =========================================================
-     GLAVNI PRIKAZ DELAVCA
+     GLAVNI PRIKAZ
   ========================================================= */
 
   return (
@@ -979,17 +972,15 @@ function Projects() {
               }}
             >
               Trenutno ni
-              projektov, ki bi
-              bili na voljo za
-              izdelavo.
+              projektov, ki
+              bi bili na voljo
+              za izdelavo.
             </div>
           </div>
         ) : (
           <>
             {/* ===============================================
                 PROJEKTNE KARTICE
-
-                2 kartici v eni vrstici.
             =============================================== */}
 
             <div
@@ -997,14 +988,33 @@ function Projects() {
                 display:
                   "grid",
 
+                /*
+                 * EN PROJEKT:
+                 * 10 cm prostora na vsaki strani.
+                 *
+                 * DVA PROJEKTA:
+                 * oba sta v isti vrstici.
+                 */
                 gridTemplateColumns:
-                  "repeat(2, minmax(0, 1fr))",
+                  activeProjects.length ===
+                  1
+                    ? "minmax(0, 1fr)"
+                    : "repeat(2, minmax(0, 1fr))",
 
                 gap:
                   "20px",
 
                 alignItems:
                   "stretch",
+
+                width:
+                  activeProjects.length ===
+                  1
+                    ? "calc(100% - 20cm)"
+                    : "100%",
+
+                margin:
+                  "0 auto",
               }}
             >
               {activeProjects.map(
@@ -1035,47 +1045,55 @@ function Projects() {
                     );
 
                   return (
-                    <ProjectCard
+                    <div
                       key={
                         project.id
                       }
+                      style={{
+                        width:
+                          "100%",
+                        minHeight:
+                          "230px",
+                      }}
+                    >
+                      <ProjectCard
+                        project={
+                          project
+                        }
 
-                      project={
-                        project
-                      }
+                        requiredQuantity={
+                          requiredQuantity
+                        }
 
-                      requiredQuantity={
-                        requiredQuantity
-                      }
+                        producedQuantity={
+                          producedQuantity
+                        }
 
-                      producedQuantity={
-                        producedQuantity
-                      }
+                        hours={
+                          hours
+                        }
 
-                      hours={
-                        hours
-                      }
+                        workerCount={
+                          workers.length
+                        }
 
-                      workerCount={
-                        workers.length
-                      }
+                        machineCount={
+                          projectMachines.length
+                        }
 
-                      machineCount={
-                        projectMachines.length
-                      }
+                        onDetails={() =>
+                          openProjectDetails(
+                            project.id
+                          )
+                        }
 
-                      onDetails={() =>
-                        openProjectDetails(
-                          project.id
-                        )
-                      }
-
-                      onAddEntry={() =>
-                        openEntryForm(
-                          project.id
-                        )
-                      }
-                    />
+                        onAddEntry={() =>
+                          openEntryForm(
+                            project.id
+                          )
+                        }
+                      />
+                    </div>
                   );
                 }
               )}
@@ -1146,7 +1164,8 @@ function Projects() {
                 }
 
                 if (
-                  requiredQuantity > 0 &&
+                  requiredQuantity >
+                    0 &&
                   producedQuantity >=
                     requiredQuantity
                 ) {
