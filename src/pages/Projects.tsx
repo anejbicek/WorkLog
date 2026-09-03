@@ -19,6 +19,7 @@ import {
 import ProjectCard from "../components/Projects/ProjectCard";
 import ProjectDetails from "../components/Projects/ProjectDetails";
 import ProjectEntryForm from "../components/Projects/ProjectEntryForm";
+import AdminProjectManagement from "../components/Admin/AdminProjectManagement";
 
 function Projects() {
   const {
@@ -40,56 +41,163 @@ function Projects() {
   } = useProjects();
 
   /* =========================================================
+     PREVERJANJE ADMINISTRATORSKE VLOGE
+  ========================================================= */
+
+  const [
+    isAdmin,
+    setIsAdmin,
+  ] = useState(false);
+
+  const [
+    checkingAdmin,
+    setCheckingAdmin,
+  ] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkAdminRole =
+      async () => {
+        try {
+          const {
+            data: {
+              user,
+            },
+            error: authError,
+          } =
+            await supabase.auth.getUser();
+
+          if (
+            authError ||
+            !user
+          ) {
+            if (!cancelled) {
+              setIsAdmin(false);
+              setCheckingAdmin(false);
+            }
+
+            return;
+          }
+
+          const {
+            data: profile,
+            error: profileError,
+          } = await supabase
+            .from("users")
+            .select("role")
+            .eq(
+              "auth_user_id",
+              user.id
+            )
+            .maybeSingle();
+
+          if (profileError) {
+            console.error(
+              "Napaka pri preverjanju administratorske vloge:",
+              profileError
+            );
+
+            if (!cancelled) {
+              setIsAdmin(false);
+              setCheckingAdmin(false);
+            }
+
+            return;
+          }
+
+          if (!cancelled) {
+            setIsAdmin(
+              profile?.role ===
+                "admin"
+            );
+
+            setCheckingAdmin(
+              false
+            );
+          }
+        } catch (exception) {
+          console.error(
+            "Napaka pri preverjanju administratorske vloge:",
+            exception
+          );
+
+          if (!cancelled) {
+            setIsAdmin(false);
+            setCheckingAdmin(false);
+          }
+        }
+      };
+
+    void checkAdminRole();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* =========================================================
      AKTIVNI PROJEKTI IN STROJI
   ========================================================= */
 
-  const activeProjects = useMemo(
-    () =>
-      projects.filter((project) => {
-        if (!project.active) {
-          return false;
-        }
+  const activeProjects =
+    useMemo(
+      () =>
+        projects.filter(
+          (project) => {
+            if (
+              !project.active
+            ) {
+              return false;
+            }
 
-        if (
-          project.status &&
-          project.status !== "active"
-        ) {
-          return false;
-        }
+            if (
+              project.status &&
+              project.status !==
+                "active"
+            ) {
+              return false;
+            }
 
-        const requiredQuantity =
-          Number(
-            project.requiredQuantity ?? 0
-          );
+            const requiredQuantity =
+              Number(
+                project.requiredQuantity ??
+                  0
+              );
 
-        if (requiredQuantity <= 0) {
-          return true;
-        }
+            if (
+              requiredQuantity <=
+              0
+            ) {
+              return true;
+            }
 
-        const producedQuantity =
-          getProjectProducedQuantity(
-            project.id
-          );
+            const producedQuantity =
+              getProjectProducedQuantity(
+                project.id
+              );
 
-        return (
-          producedQuantity <
-          requiredQuantity
-        );
-      }),
-    [
-      projects,
-      getProjectProducedQuantity,
-    ]
-  );
+            return (
+              producedQuantity <
+              requiredQuantity
+            );
+          }
+        ),
+      [
+        projects,
+        getProjectProducedQuantity,
+      ]
+    );
 
-  const activeMachines = useMemo(
-    () =>
-      machines.filter(
-        (machine) =>
-          machine.active
-      ),
-    [machines]
-  );
+  const activeMachines =
+    useMemo(
+      () =>
+        machines.filter(
+          (machine) =>
+            machine.active
+        ),
+      [machines]
+    );
 
   /* =========================================================
      PRIJAVLJENI UPORABNIK
@@ -286,7 +394,8 @@ function Projects() {
     projectId?: number
   ) => {
     const project =
-      projectId !== undefined
+      projectId !==
+      undefined
         ? activeProjects.find(
             (item) =>
               item.id ===
@@ -300,7 +409,8 @@ function Projects() {
 
     const requiredQuantity =
       Number(
-        project.requiredQuantity ?? 0
+        project.requiredQuantity ??
+          0
       );
 
     if (
@@ -585,7 +695,56 @@ function Projects() {
   };
 
   /* =========================================================
-     NALAGANJE
+     PREVERJANJE ADMINA
+  ========================================================= */
+
+  if (checkingAdmin) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "20px 0",
+        }}
+      >
+        <div
+          style={{
+            background:
+              "#ffffff",
+            border:
+              "1px solid #e2e8f0",
+            borderRadius:
+              "14px",
+            padding:
+              "40px",
+            textAlign:
+              "center",
+            color:
+              "#64748b",
+          }}
+        >
+          Nalagam ...
+        </div>
+      </div>
+    );
+  }
+
+  /* =========================================================
+     ADMINISTRATOR
+     
+     Administrator dobi svoj poseben sistem za upravljanje
+     projektov z levim menijem.
+  ========================================================= */
+
+  if (isAdmin) {
+    return (
+      <AdminProjectManagement />
+    );
+  }
+
+  /* =========================================================
+     NALAGANJE ZA DELAVCA
   ========================================================= */
 
   if (loading) {
@@ -669,7 +828,7 @@ function Projects() {
   }
 
   /* =========================================================
-     GLAVNI PRIKAZ
+     GLAVNI PRIKAZ DELAVCA
   ========================================================= */
 
   return (
@@ -829,6 +988,8 @@ function Projects() {
           <>
             {/* ===============================================
                 PROJEKTNE KARTICE
+
+                2 kartici v eni vrstici.
             =============================================== */}
 
             <div
@@ -836,12 +997,6 @@ function Projects() {
                 display:
                   "grid",
 
-                /*
-                 * 2 kartici v eni vrstici.
-                 * Kartice so zato krajše in višje,
-                 * namesto da bi se ena raztegnila
-                 * čez celo širino.
-                 */
                 gridTemplateColumns:
                   "repeat(2, minmax(0, 1fr))",
 
