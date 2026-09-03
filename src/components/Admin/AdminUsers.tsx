@@ -108,10 +108,6 @@ function AdminUsers() {
       return;
     }
 
-    /*
-     * Pri ustvarjanju novega uporabnika
-     * mora administrator določiti začetno geslo.
-     */
     if (!editingUser) {
       if (!initialPassword.trim()) {
         setFormError(
@@ -142,26 +138,13 @@ function AdminUsers() {
     setSaving(true);
 
     try {
-      /*
-       * UREJANJE OBSTOJEČEGA UPORABNIKA
-       */
       if (editingUser) {
         updateUser(editingUser.id, {
           ...userData,
           authUserId:
             editingUser.authUserId,
         });
-      }
-
-      /*
-       * USTVARJANJE NOVEGA UPORABNIKA
-       *
-       * Supabase ID se tukaj NE vpisuje.
-       * Supabase ga ustvari sam.
-       *
-       * Administrator določi samo začetno geslo.
-       */
-      else {
+      } else {
         const created = await addUser(
           userData,
           initialPassword
@@ -257,8 +240,6 @@ function AdminUsers() {
               gap: "12px",
             }}
           >
-            {/* IME */}
-
             <Field label="Ime in priimek">
               <input
                 value={name}
@@ -271,8 +252,6 @@ function AdminUsers() {
                 style={inputStyle}
               />
             </Field>
-
-            {/* UPORABNIŠKO IME */}
 
             <Field label="Uporabniško ime">
               <input
@@ -287,8 +266,6 @@ function AdminUsers() {
               />
             </Field>
 
-            {/* E-POŠTA */}
-
             <Field label="E-naslov">
               <input
                 type="email"
@@ -302,8 +279,6 @@ function AdminUsers() {
                 style={inputStyle}
               />
             </Field>
-
-            {/* ZAČETNO GESLO */}
 
             {!editingUser && (
               <Field label="Začetno geslo">
@@ -321,8 +296,6 @@ function AdminUsers() {
                 />
               </Field>
             )}
-
-            {/* VLOGA */}
 
             <Field label="Vloga">
               <select
@@ -343,8 +316,6 @@ function AdminUsers() {
                 </option>
               </select>
             </Field>
-
-            {/* STATUS */}
 
             <Field label="Status">
               <select
@@ -372,8 +343,6 @@ function AdminUsers() {
             </Field>
           </div>
 
-          {/* OPIS ZAČETNEGA GESLA */}
-
           {!editingUser && (
             <div
               style={{
@@ -393,15 +362,11 @@ function AdminUsers() {
             </div>
           )}
 
-          {/* NAPAKA */}
-
           {formError && (
             <div style={errorBoxStyle}>
               {formError}
             </div>
           )}
-
-          {/* GUMBI */}
 
           <div
             style={{
@@ -442,175 +407,183 @@ function AdminUsers() {
       )}
 
       {/* =====================================================
-          TABELA UPORABNIKOV
+          UPORABNIKI
       ===================================================== */}
 
-      <div style={tableStyle}>
-        {users.map(
-          (user, index) => (
-            <div
-              key={user.id}
-              style={{
-                ...rowStyle,
-                borderBottom:
-                  index ===
-                  users.length - 1
-                    ? "none"
-                    : "1px solid #e5e7eb",
-              }}
-            >
-              {/* IME */}
+      <div style={tableWrapperStyle}>
+        <div style={tableStyle}>
+          {users.map(
+            (user, index) => (
+              <div
+                key={user.id}
+                style={{
+                  ...rowStyle,
+                  borderBottom:
+                    index ===
+                    users.length - 1
+                      ? "none"
+                      : "1px solid #e5e7eb",
+                }}
+              >
+                {/* IME */}
 
-              <div>
-                <strong
+                <div
+                  style={cellStyle}
+                >
+                  <strong
+                    style={{
+                      color: "#12344d",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {user.name}
+                  </strong>
+                </div>
+
+                {/* UPORABNIŠKO IME */}
+
+                <div
                   style={{
-                    color: "#12344d",
+                    ...cellStyle,
+                    color: "#334155",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {user.username || "—"}
+                </div>
+
+                {/* E-MAIL */}
+
+                <div
+                  style={{
+                    ...cellStyle,
+                    color: "#64748b",
                     fontSize: "14px",
                   }}
                 >
-                  {user.name}
-                </strong>
-              </div>
+                  {user.email}
+                </div>
 
-              {/* UPORABNIŠKO IME */}
+                {/* VLOGA */}
 
-              <div
-                style={{
-                  color: "#334155",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                }}
-              >
-                {user.username || "—"}
-              </div>
-
-              {/* E-MAIL */}
-
-              <div
-                style={{
-                  color: "#64748b",
-                  fontSize: "14px",
-                }}
-              >
-                {user.email}
-              </div>
-
-              {/* VLOGA */}
-
-              <div>
-                <span style={badgeStyle}>
-                  {user.role === "admin"
-                    ? "Administrator"
-                    : "Delavec"}
-                </span>
-              </div>
-
-              {/* STATUS */}
-
-              <div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    toggleUserActive(
-                      user.id
-                    )
-                  }
-                  style={{
-                    border: "none",
-                    background:
-                      "transparent",
-                    color:
-                      user.active
-                        ? "#15803d"
-                        : "#dc2626",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                <div
+                  style={cellStyle}
                 >
-                  {user.active
-                    ? "Aktiven"
-                    : "Neaktiven"}
-                </button>
-              </div>
+                  <span style={badgeStyle}>
+                    {user.role === "admin"
+                      ? "Administrator"
+                      : "Delavec"}
+                  </span>
+                </div>
 
-              {/* AKCIJE */}
+                {/* STATUS */}
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent:
-                    "flex-end",
-                  gap: "8px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedStatisticsUser(
-                      user
-                    )
-                  }
-                  style={
-                    statisticsButtonStyle
-                  }
+                <div
+                  style={cellStyle}
                 >
-                  Prikaži statistiko
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    startEdit(user)
-                  }
-                  style={
-                    secondaryButtonStyle
-                  }
-                >
-                  Uredi
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    toggleUserActive(
-                      user.id
-                    )
-                  }
-                  style={
-                    secondaryButtonStyle
-                  }
-                >
-                  {user.active
-                    ? "Deaktiviraj"
-                    : "Aktiviraj"}
-                </button>
-
-                {user.id !== 1 && (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          "Ali želiš izbrisati uporabnika?"
-                        )
-                      ) {
-                        deleteUser(
-                          user.id
-                        );
-                      }
+                    onClick={() =>
+                      toggleUserActive(
+                        user.id
+                      )
+                    }
+                    style={{
+                      ...statusButtonStyle,
+                      color:
+                        user.active
+                          ? "#15803d"
+                          : "#dc2626",
                     }}
+                  >
+                    {user.active
+                      ? "Aktiven"
+                      : "Neaktiven"}
+                  </button>
+                </div>
+
+                {/* AKCIJE */}
+
+                <div
+                  style={actionsStyle}
+                >
+                  {/* 1. STATISTIKA */}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedStatisticsUser(
+                        user
+                      )
+                    }
                     style={
-                      deleteButtonStyle
+                      statisticsButtonStyle
                     }
                   >
-                    Izbriši
+                    Prikaži statistiko
                   </button>
-                )}
+
+                  {/* 2. DEAKTIVIRAJ */}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toggleUserActive(
+                        user.id
+                      )
+                    }
+                    style={
+                      secondaryButtonStyle
+                    }
+                  >
+                    {user.active
+                      ? "Deaktiviraj"
+                      : "Aktiviraj"}
+                  </button>
+
+                  {/* 3. UREDI */}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      startEdit(user)
+                    }
+                    style={
+                      secondaryButtonStyle
+                    }
+                  >
+                    Uredi
+                  </button>
+
+                  {/* 4. IZBRIŠI */}
+
+                  {user.id !== 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "Ali želiš izbrisati uporabnika?"
+                          )
+                        ) {
+                          deleteUser(
+                            user.id
+                          );
+                        }
+                      }}
+                      style={
+                        deleteButtonStyle
+                      }
+                    >
+                      Izbriši
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          )
-        )}
+            )
+          )}
+        </div>
       </div>
     </div>
   );
@@ -669,7 +642,14 @@ const panelStyle = {
   marginBottom: "18px",
 };
 
+const tableWrapperStyle = {
+  width: "100%",
+  overflowX: "auto" as const,
+  borderRadius: "14px",
+};
+
 const tableStyle = {
+  minWidth: "1180px",
   background: "#ffffff",
   border: "1px solid #e5e7eb",
   borderRadius: "14px",
@@ -679,10 +659,38 @@ const tableStyle = {
 const rowStyle = {
   display: "grid",
   gridTemplateColumns:
-    "1.1fr 1.2fr 1.4fr 170px 100px 250px",
+    "1.1fr 1.2fr 1.4fr 160px 100px 360px",
   alignItems: "center",
   gap: "15px",
   padding: "16px 20px",
+  minWidth: "1180px",
+  boxSizing: "border-box" as const,
+};
+
+const cellStyle = {
+  minWidth: 0,
+  whiteSpace: "nowrap" as const,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const actionsStyle = {
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  gap: "8px",
+  flexWrap: "nowrap" as const,
+  whiteSpace: "nowrap" as const,
+};
+
+const statusButtonStyle = {
+  border: "none",
+  background: "transparent",
+  fontWeight: 600,
+  cursor: "pointer",
+  padding: 0,
+  fontSize: "13px",
+  whiteSpace: "nowrap" as const,
 };
 
 const labelStyle = {
@@ -714,6 +722,7 @@ const primaryButtonStyle = {
   fontSize: "14px",
   fontWeight: 600,
   cursor: "pointer",
+  whiteSpace: "nowrap" as const,
 };
 
 const secondaryButtonStyle = {
@@ -726,6 +735,7 @@ const secondaryButtonStyle = {
   fontSize: "12px",
   fontWeight: 600,
   cursor: "pointer",
+  whiteSpace: "nowrap" as const,
 };
 
 const statisticsButtonStyle = {

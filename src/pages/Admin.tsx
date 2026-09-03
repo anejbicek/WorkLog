@@ -69,7 +69,7 @@ function Admin() {
 
 const pageStyle = {
   width: "100%",
-  maxWidth: "1080px",
+  maxWidth: "1500px",
   margin: "0 auto",
 };
 
