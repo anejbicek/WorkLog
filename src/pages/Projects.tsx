@@ -19,6 +19,7 @@ import {
 import ProjectCard from "../components/Projects/ProjectCard";
 import ProjectDetails from "../components/Projects/ProjectDetails";
 import ProjectEntryForm from "../components/Projects/ProjectEntryForm";
+import AdminProjectManagement from "../components/Admin/AdminProjectManagement";
 
 function Projects() {
   const {
@@ -40,43 +41,214 @@ function Projects() {
   } = useProjects();
 
   /* =========================================================
+     PREVERJANJE ADMINISTRATORSKE VLOGE
+  ========================================================= */
+
+  const [
+    isAdmin,
+    setIsAdmin,
+  ] = useState(false);
+
+  const [
+    checkingAdmin,
+    setCheckingAdmin,
+  ] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkAdminRole =
+      async () => {
+        try {
+          const {
+            data: {
+              user,
+            },
+            error: authError,
+          } =
+            await supabase.auth.getUser();
+
+          if (
+            authError ||
+            !user
+          ) {
+            if (!cancelled) {
+              setIsAdmin(false);
+              setCheckingAdmin(false);
+            }
+
+            return;
+          }
+
+          const {
+            data: profile,
+            error: profileError,
+          } = await supabase
+            .from("users")
+            .select("role")
+            .eq(
+              "auth_user_id",
+              user.id
+            )
+            .maybeSingle();
+
+          if (
+            profileError
+          ) {
+            console.error(
+              "Napaka pri preverjanju administratorske vloge:",
+              profileError
+            );
+
+            if (!cancelled) {
+              setIsAdmin(false);
+              setCheckingAdmin(false);
+            }
+
+            return;
+          }
+
+          if (!cancelled) {
+            setIsAdmin(
+              profile?.role ===
+                "admin"
+            );
+
+            setCheckingAdmin(
+              false
+            );
+          }
+        } catch (
+          exception
+        ) {
+          console.error(
+            "Napaka pri preverjanju administratorske vloge:",
+            exception
+          );
+
+          if (!cancelled) {
+            setIsAdmin(false);
+            setCheckingAdmin(false);
+          }
+        }
+      };
+
+    void checkAdminRole();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* =========================================================
+     ADMINISTRATORSKI PRIKAZ
+     
+     Administrator uporablja posebno različico Projekti,
+     delavec pa nadaljuje v spodnji obstoječi različici.
+  ========================================================= */
+
+  if (
+    checkingAdmin
+  ) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "20px 0",
+        }}
+      >
+        <div
+          style={{
+            background:
+              "#ffffff",
+            border:
+              "1px solid #e2e8f0",
+            borderRadius:
+              "14px",
+            padding:
+              "40px",
+            textAlign:
+              "center",
+            color:
+              "#64748b",
+          }}
+        >
+          Nalagam projekte ...
+        </div>
+      </div>
+    );
+  }
+
+  if (isAdmin) {
+    return (
+      <AdminProjectManagement />
+    );
+  }
+
+  /* =========================================================
      AKTIVNI PROJEKTI IN STROJI
   ========================================================= */
 
-  const activeProjects = useMemo(
-    () =>
-      projects.filter((project) => {
-        if (!project.active) {
-          return false;
-        }
+  const activeProjects =
+    useMemo(
+      () =>
+        projects.filter(
+          (project) => {
+            if (
+              !project.active
+            ) {
+              return false;
+            }
 
-        if (project.status && project.status !== "active") {
-          return false;
-        }
+            if (
+              project.status &&
+              project.status !==
+                "active"
+            ) {
+              return false;
+            }
 
-        const requiredQuantity =
-          Number(project.requiredQuantity ?? 0);
+            const requiredQuantity =
+              Number(
+                project.requiredQuantity ??
+                  0
+              );
 
-        if (requiredQuantity <= 0) {
-          return true;
-        }
+            if (
+              requiredQuantity <=
+              0
+            ) {
+              return true;
+            }
 
-        const producedQuantity =
-          getProjectProducedQuantity(project.id);
+            const producedQuantity =
+              getProjectProducedQuantity(
+                project.id
+              );
 
-        return producedQuantity < requiredQuantity;
-      }),
-    [projects, getProjectProducedQuantity]
-  );
+            return (
+              producedQuantity <
+              requiredQuantity
+            );
+          }
+        ),
+      [
+        projects,
+        getProjectProducedQuantity,
+      ]
+    );
 
-  const activeMachines = useMemo(
-    () =>
-      machines.filter(
-        (machine) =>
-          machine.active
-      ),
-    [machines]
-  );
+  const activeMachines =
+    useMemo(
+      () =>
+        machines.filter(
+          (machine) =>
+            machine.active
+        ),
+      [machines]
+    );
 
   /* =========================================================
      PRIJAVLJENI UPORABNIK
@@ -85,7 +257,9 @@ function Projects() {
   const [
     currentWorker,
     setCurrentWorker,
-  ] = useState("Uporabnik");
+  ] = useState(
+    "Uporabnik"
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -116,17 +290,19 @@ function Projects() {
 
           const {
             data: profile,
-            error: profileError,
-          } = await supabase
-            .from("users")
-            .select(
-              "name"
-            )
-            .eq(
-              "auth_user_id",
-              user.id
-            )
-            .maybeSingle();
+            error:
+              profileError,
+          } =
+            await supabase
+              .from("users")
+              .select(
+                "name"
+              )
+              .eq(
+                "auth_user_id",
+                user.id
+              )
+              .maybeSingle();
 
           if (
             profileError
@@ -153,7 +329,9 @@ function Projects() {
               profile.name
             );
           }
-        } catch (exception) {
+        } catch (
+          exception
+        ) {
           console.error(
             "Napaka pri ugotavljanju prijavljenega uporabnika:",
             exception
@@ -275,7 +453,8 @@ function Projects() {
     projectId?: number
   ) => {
     const project =
-      projectId !== undefined
+      projectId !==
+      undefined
         ? activeProjects.find(
             (item) =>
               item.id ===
@@ -288,13 +467,24 @@ function Projects() {
     }
 
     const requiredQuantity =
-      Number(project.requiredQuantity ?? 0);
+      Number(
+        project.requiredQuantity ??
+          0
+      );
 
-    if (requiredQuantity > 0) {
+    if (
+      requiredQuantity >
+      0
+    ) {
       const producedQuantity =
-        getProjectProducedQuantity(project.id);
+        getProjectProducedQuantity(
+          project.id
+        );
 
-      if (producedQuantity >= requiredQuantity) {
+      if (
+        producedQuantity >=
+        requiredQuantity
+      ) {
         return;
       }
     }
@@ -314,50 +504,58 @@ function Projects() {
     );
 
     setSelectedMachine(
-      activeMachines[0]?.name ??
+      activeMachines[0]
+        ?.name ??
         ""
     );
 
     setQuantity("0");
 
-    setShowEntryForm(true);
+    setShowEntryForm(
+      true
+    );
   };
 
   /* =========================================================
      ZAPRE VNOS IZDELAVE
   ========================================================= */
 
-  const closeEntryForm = () => {
-    setShowEntryForm(false);
+  const closeEntryForm =
+    () => {
+      setShowEntryForm(
+        false
+      );
 
-    setSelectedProjectId(
-      ""
-    );
+      setSelectedProjectId(
+        ""
+      );
 
-    setQuantity("0");
-  };
+      setQuantity("0");
+    };
 
   /* =========================================================
      ODPRE PODROBNOSTI PROJEKTA
   ========================================================= */
 
-  const openProjectDetails = (
-    projectId: number
-  ) => {
-    setDetailsProjectId(
-      projectId
-    );
-  };
+  const openProjectDetails =
+    (
+      projectId: number
+    ) => {
+      setDetailsProjectId(
+        projectId
+      );
+    };
 
   /* =========================================================
      ZAPRE PODROBNOSTI PROJEKTA
   ========================================================= */
 
-  const closeProjectDetails = () => {
-    setDetailsProjectId(
-      null
-    );
-  };
+  const closeProjectDetails =
+    () => {
+      setDetailsProjectId(
+        null
+      );
+    };
 
   /* =========================================================
      SHRANI VNOS IZDELAVE
@@ -365,27 +563,39 @@ function Projects() {
 
   const saveEntry =
     async () => {
-      if (!selectedProject) {
+      if (
+        !selectedProject
+      ) {
         return;
       }
 
       if (
         selectedProject.status &&
-        selectedProject.status !== "active"
+        selectedProject.status !==
+          "active"
       ) {
         return;
       }
 
       const requiredQuantity =
-        Number(selectedProject.requiredQuantity ?? 0);
+        Number(
+          selectedProject.requiredQuantity ??
+            0
+        );
 
-      if (requiredQuantity > 0) {
+      if (
+        requiredQuantity >
+        0
+      ) {
         const producedQuantity =
           getProjectProducedQuantity(
             selectedProject.id
           );
 
-        if (producedQuantity >= requiredQuantity) {
+        if (
+          producedQuantity >=
+          requiredQuantity
+        ) {
           return;
         }
       }
@@ -401,7 +611,9 @@ function Projects() {
         return;
       }
 
-      if (!selectedMachine) {
+      if (
+        !selectedMachine
+      ) {
         return;
       }
 
@@ -551,9 +763,12 @@ function Projects() {
       <div
         style={{
           width: "100%",
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "20px 0",
+          maxWidth:
+            "1200px",
+          margin:
+            "0 auto",
+          padding:
+            "20px 0",
         }}
       >
         <div
@@ -587,9 +802,12 @@ function Projects() {
       <div
         style={{
           width: "100%",
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "20px 0",
+          maxWidth:
+            "1200px",
+          margin:
+            "0 auto",
+          padding:
+            "20px 0",
         }}
       >
         <div
@@ -627,7 +845,9 @@ function Projects() {
   }
 
   /* =========================================================
-     GLAVNI PRIKAZ
+     GLAVNI PRIKAZ DELAVCA
+     
+     TA DEL OSTANE ENAK.
   ========================================================= */
 
   return (
@@ -635,8 +855,10 @@ function Projects() {
       <div
         style={{
           width: "100%",
-          maxWidth: "1200px",
-          margin: "0 auto",
+          maxWidth:
+            "1200px",
+          margin:
+            "0 auto",
         }}
       >
         {/* ===================================================
@@ -777,10 +999,10 @@ function Projects() {
                   "#64748b",
               }}
             >
-              Projekt najprej
-              ustvari v
-              Administracija
-              → Projekti.
+              Trenutno ni
+              projektov, ki bi
+              bili na voljo za
+              izdelavo.
             </div>
           </div>
         ) : (
@@ -923,13 +1145,15 @@ function Projects() {
 
                 if (
                   detailsProject.status &&
-                  detailsProject.status !== "active"
+                  detailsProject.status !==
+                    "active"
                 ) {
                   return;
                 }
 
                 if (
-                  requiredQuantity > 0 &&
+                  requiredQuantity >
+                    0 &&
                   producedQuantity >=
                     requiredQuantity
                 ) {
