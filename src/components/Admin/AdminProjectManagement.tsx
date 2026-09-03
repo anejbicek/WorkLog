@@ -33,10 +33,6 @@ function AdminProjectManagement() {
     getProjectHours,
   } = useProjects();
 
-  /* =========================================================
-     AKTIVNA SEKCIJA
-  ========================================================= */
-
   const [
     activeSection,
     setActiveSection,
@@ -161,7 +157,6 @@ function AdminProjectManagement() {
         alert(
           "Vnesi ime projekta."
         );
-
         return;
       }
 
@@ -174,7 +169,6 @@ function AdminProjectManagement() {
         alert(
           "Zahtevana količina mora biti celo število 0 ali več."
         );
-
         return;
       }
 
@@ -190,13 +184,8 @@ function AdminProjectManagement() {
       });
 
       setName("");
-
       setRequiredQuantity(
         "0"
-      );
-
-      setNewStatus(
-        "preparation"
       );
 
       setActiveSection(
@@ -250,7 +239,6 @@ function AdminProjectManagement() {
       alert(
         "Zahtevana količina mora biti celo število 0 ali več."
       );
-
       return;
     }
 
@@ -293,7 +281,6 @@ function AdminProjectManagement() {
       alert(
         "Pred aktiviranjem mora projekt imeti zahtevano količino večjo od 0."
       );
-
       return;
     }
 
@@ -334,7 +321,6 @@ function AdminProjectManagement() {
       alert(
         "Projekt še ni dosegel 100 % zahtevane količine."
       );
-
       return;
     }
 
@@ -367,7 +353,6 @@ function AdminProjectManagement() {
       alert(
         "Zaključenega projekta ne brišemo, ker mora ostati v zgodovini."
       );
-
       return;
     }
 
@@ -387,9 +372,7 @@ function AdminProjectManagement() {
   ========================================================= */
 
   return (
-    <div
-      style={layoutStyle}
-    >
+    <div style={layoutStyle}>
       {/* =====================================================
           LEVI MENI
       ===================================================== */}
@@ -494,26 +477,18 @@ function AdminProjectManagement() {
           contentStyle
         }
       >
-        {/* ===================================================
-            DODAJ PROJEKT
-        =================================================== */}
-
         {activeSection ===
           "add" && (
           <CreateProject
             name={name}
-            setName={
-              setName
-            }
+            setName={setName}
             requiredQuantity={
               requiredQuantity
             }
             setRequiredQuantity={
               setRequiredQuantity
             }
-            status={
-              newStatus
-            }
+            status={newStatus}
             setStatus={
               setNewStatus
             }
@@ -522,10 +497,6 @@ function AdminProjectManagement() {
             }
           />
         )}
-
-        {/* ===================================================
-            PROJEKTI
-        =================================================== */}
 
         {activeSection !==
           "add" && (
@@ -579,36 +550,35 @@ function AdminProjectManagement() {
               </button>
             </div>
 
-            {/* =================================================
-                KARTICE
-            ================================================= */}
+            <div
+              style={
+                tableStyle
+              }
+            >
+              {visibleProjects.length ===
+              0 ? (
+                <div
+                  style={
+                    emptyStyle
+                  }
+                >
+                  {activeSection ===
+                    "active" &&
+                    "Trenutno ni aktivnih projektov."}
 
-            {visibleProjects.length ===
-            0 ? (
-              <div
-                style={
-                  emptyStyle
-                }
-              >
-                {activeSection ===
-                  "active" &&
-                  "Trenutno ni aktivnih projektov."}
+                  {activeSection ===
+                    "preparation" &&
+                    "Trenutno ni projektov v pripravi."}
 
-                {activeSection ===
-                  "preparation" &&
-                  "Trenutno ni projektov v pripravi."}
-
-                {activeSection ===
-                  "completed" &&
-                  "Trenutno ni zaključenih projektov."}
-              </div>
-            ) : (
-              <div
-                className="admin-project-grid"
-              >
-                {visibleProjects.map(
+                  {activeSection ===
+                    "completed" &&
+                    "Trenutno ni zaključenih projektov."}
+                </div>
+              ) : (
+                visibleProjects.map(
                   (
-                    project
+                    project,
+                    index
                   ) => {
                     const produced =
                       getProjectProducedQuantity(
@@ -647,15 +617,20 @@ function AdminProjectManagement() {
                         key={
                           project.id
                         }
-                        className="admin-project-card"
+                        style={{
+                          padding:
+                            "18px 20px",
+                          borderBottom:
+                            index ===
+                            visibleProjects.length -
+                              1
+                              ? "none"
+                              : "1px solid #e5e7eb",
+                        }}
                       >
-                        {/* ===================================
-                            GLAVA
-                        =================================== */}
-
                         <div
                           style={
-                            projectCardHeaderStyle
+                            projectRowStyle
                           }
                         >
                           <div
@@ -722,62 +697,31 @@ function AdminProjectManagement() {
                                 )}
                               </span>
                             </div>
-                          </div>
-                        </div>
 
-                        {/* ===================================
-                            NAPREDEK
-                        =================================== */}
-
-                        <div
-                          style={
-                            progressTrackStyle
-                          }
-                        >
-                          <div
-                            style={{
-                              ...progressFillStyle,
-                              width: `${progress}%`,
-                            }}
-                          />
-                        </div>
-
-                        <div
-                          style={
-                            progressTextStyle
-                          }
-                        >
-                          {progress.toFixed(
-                            0
-                          )}{" "}
-                          %
-                        </div>
-
-                        {/* ===================================
-                            SPODNJI DEL
-                        =================================== */}
-
-                        <div
-                          style={
-                            projectCardBottomStyle
-                          }
-                        >
-                          {readyToComplete && (
                             <div
                               style={
-                                readyBannerStyle
+                                progressTrackStyle
                               }
                             >
-                              Projekt je
-                              dosegel
-                              100 %
-                              zahtevane
-                              količine in
-                              čaka na
-                              potrditev
-                              administratorja.
+                              <div
+                                style={{
+                                  ...progressFillStyle,
+                                  width: `${progress}%`,
+                                }}
+                              />
                             </div>
-                          )}
+
+                            <div
+                              style={
+                                progressTextStyle
+                              }
+                            >
+                              {progress.toFixed(
+                                0
+                              )}{" "}
+                              %
+                            </div>
+                          </div>
 
                           <div
                             style={
@@ -849,12 +793,29 @@ function AdminProjectManagement() {
                             )}
                           </div>
                         </div>
+
+                        {readyToComplete && (
+                          <div
+                            style={
+                              readyBannerStyle
+                            }
+                          >
+                            Projekt je
+                            dosegel
+                            100 %
+                            zahtevane
+                            količine in
+                            čaka na
+                            potrditev
+                            administratorja.
+                          </div>
+                        )}
                       </div>
                     );
                   }
-                )}
-              </div>
-            )}
+                )
+              )}
+            </div>
           </>
         )}
       </main>
@@ -1145,9 +1106,7 @@ function CreateProject({
             </label>
 
             <select
-              value={
-                status
-              }
+              value={status}
               onChange={(
                 event
               ) =>
@@ -1229,12 +1188,10 @@ function SidebarButton({
         style={{
           width: "7px",
           height: "7px",
-          borderRadius:
-            "50%",
-          background:
-            active
-              ? "#ffffff"
-              : "#94a3b8",
+          borderRadius: "50%",
+          background: active
+            ? "#ffffff"
+            : "#94a3b8",
           flexShrink: 0,
         }}
       />
@@ -1327,7 +1284,7 @@ function getStatusStyle(
 }
 
 /* =========================================================
-   GLAVNI LAYOUT
+   STILI
 ========================================================= */
 
 const layoutStyle = {
@@ -1337,10 +1294,6 @@ const layoutStyle = {
   gap: "24px",
   alignItems: "start",
 };
-
-/* =========================================================
-   SIDEBAR
-========================================================= */
 
 const sidebarStyle = {
   background: "#ffffff",
@@ -1399,10 +1352,6 @@ const separatorStyle = {
     "8px 4px",
 };
 
-/* =========================================================
-   CONTENT
-========================================================= */
-
 const contentStyle = {
   minWidth: 0,
 };
@@ -1431,77 +1380,99 @@ const subtitleStyle = {
   color: "#64748b",
 };
 
-/* =========================================================
-   PROJEKTNA MREŽA
-========================================================= */
-
-const projectGridStyle = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(2, 520px)",
-  justifyContent:
-    "center",
-  alignItems:
-    "start",
-  gap: "20px",
-};
-
-/* =========================================================
-   PROJEKTNA KARTICA
-========================================================= */
-
-const projectCardStyle = {
-  width: "520px",
-  minHeight: "240px",
-  boxSizing:
-    "border-box" as const,
-
+const createCardStyle = {
   background: "#ffffff",
-
   border:
     "1px solid #e5e7eb",
+  borderRadius: "14px",
+  padding: "20px",
+};
 
-  borderRadius:
-    "14px",
+const createGridStyle = {
+  display: "grid",
+  gridTemplateColumns:
+    "minmax(0, 1fr) 180px 180px auto",
+  gap: "12px",
+  alignItems: "end",
+};
 
+const helperStyle = {
+  marginTop: "12px",
+  fontSize: "12px",
+  color: "#64748b",
+};
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "7px",
+  fontSize: "13px",
+  fontWeight: 600,
+  color: "#334155",
+};
+
+const inputStyle = {
+  width: "100%",
+  height: "44px",
+  padding: "0 14px",
+  border:
+    "1px solid #d1d5db",
+  borderRadius: "9px",
+  background: "#ffffff",
+  fontSize: "14px",
+  outline: "none",
+  boxSizing:
+    "border-box" as const,
+};
+
+const primaryButtonStyle = {
+  height: "44px",
   padding:
-    "20px",
-
-  boxShadow:
-    "0 2px 8px rgba(15,23,42,0.04)",
+    "0 18px",
+  border: "none",
+  borderRadius: "9px",
+  background: "#1d526b",
+  color: "#ffffff",
+  fontSize: "14px",
+  fontWeight: 600,
+  cursor: "pointer",
+  whiteSpace:
+    "nowrap" as const,
 };
 
-const projectCardHeaderStyle = {
-  display: "flex",
-  alignItems:
-    "flex-start",
-  justifyContent:
-    "space-between",
-  gap: "15px",
-};
-
-const projectCardBottomStyle = {
-  marginTop: "16px",
-  paddingTop:
-    "14px",
-  borderTop:
+const tableStyle = {
+  background: "#ffffff",
+  border:
     "1px solid #e5e7eb",
+  borderRadius: "14px",
+  overflow:
+    "hidden" as const,
+};
+
+const emptyStyle = {
+  padding: "35px",
+  textAlign:
+    "center" as const,
+  color: "#64748b",
+  fontSize: "14px",
+};
+
+const projectRowStyle = {
+  display: "grid",
+  gridTemplateColumns:
+    "minmax(0, 1fr) auto",
+  gap: "18px",
+  alignItems:
+    "center",
 };
 
 const projectNameStyle = {
   color: "#12344d",
-  fontSize: "16px",
+  fontSize: "15px",
   fontWeight: 700,
-  whiteSpace:
-    "nowrap" as const,
-  overflow:
-    "hidden",
-  textOverflow:
-    "ellipsis",
 };
 
 const metaStyle = {
-  marginTop: "6px",
+  marginTop: "5px",
   fontSize: "12px",
   color: "#64748b",
 };
@@ -1531,8 +1502,9 @@ const progressTrackStyle = {
   overflow:
     "hidden" as const,
   marginTop:
-    "15px",
-  width: "100%",
+    "11px",
+  maxWidth:
+    "520px",
 };
 
 const progressFillStyle = {
@@ -1546,146 +1518,18 @@ const progressFillStyle = {
 };
 
 const progressTextStyle = {
-  marginTop:
-    "5px",
+  marginTop: "4px",
   fontSize: "11px",
   color: "#64748b",
 };
 
-/* =========================================================
-   PRAZEN STAN
-========================================================= */
-
-const emptyStyle = {
-  width: "420px",
-  maxWidth:
-    "100%",
-  margin:
-    "0 auto",
-  padding:
-    "40px 25px",
-  boxSizing:
-    "border-box" as const,
-  background:
-    "#ffffff",
-  border:
-    "1px solid #e5e7eb",
-  borderRadius:
-    "14px",
-  textAlign:
-    "center" as const,
-  color:
-    "#64748b",
-  fontSize:
-    "14px",
-};
-
-/* =========================================================
-   CREATE
-========================================================= */
-
-const createCardStyle = {
-  background:
-    "#ffffff",
-  border:
-    "1px solid #e5e7eb",
-  borderRadius:
-    "14px",
-  padding:
-    "20px",
-};
-
-const createGridStyle = {
-  display: "grid",
-  gridTemplateColumns:
-    "minmax(0, 1fr) 180px 180px auto",
-  gap: "12px",
-  alignItems:
-    "end",
-};
-
-const helperStyle = {
-  marginTop:
-    "12px",
-  fontSize: "12px",
-  color:
-    "#64748b",
-};
-
-/* =========================================================
-   FORM
-========================================================= */
-
-const labelStyle = {
-  display:
-    "block",
-  marginBottom:
-    "7px",
-  fontSize:
-    "13px",
-  fontWeight:
-    600,
-  color:
-    "#334155",
-};
-
-const inputStyle = {
-  width:
-    "100%",
-  height:
-    "44px",
-  padding:
-    "0 14px",
-  border:
-    "1px solid #d1d5db",
-  borderRadius:
-    "9px",
-  background:
-    "#ffffff",
-  fontSize:
-    "14px",
-  outline:
-    "none",
-  boxSizing:
-    "border-box" as const,
-};
-
-const primaryButtonStyle = {
-  height:
-    "44px",
-  padding:
-    "0 18px",
-  border:
-    "none",
-  borderRadius:
-    "9px",
-  background:
-    "#1d526b",
-  color:
-    "#ffffff",
-  fontSize:
-    "14px",
-  fontWeight:
-    600,
-  cursor:
-    "pointer",
-  whiteSpace:
-    "nowrap" as const,
-};
-
-/* =========================================================
-   AKCIJE
-========================================================= */
-
 const actionsStyle = {
-  display:
-    "flex",
+  display: "flex",
   justifyContent:
     "flex-end",
   alignItems:
     "center",
-  gap:
-    "8px",
+  gap: "8px",
   flexWrap:
     "nowrap" as const,
   whiteSpace:
@@ -1695,12 +1539,10 @@ const actionsStyle = {
 const primarySmallButtonStyle =
   {
     ...primaryButtonStyle,
-    height:
-      "34px",
+    height: "34px",
     padding:
       "0 12px",
-    fontSize:
-      "12px",
+    fontSize: "12px",
   };
 
 const completeButtonStyle = {
@@ -1711,24 +1553,17 @@ const completeButtonStyle = {
 
 const secondaryButtonStyle =
   {
-    height:
-      "34px",
+    height: "34px",
     padding:
       "0 12px",
     border:
       "1px solid #dbe3e8",
-    borderRadius:
-      "8px",
-    background:
-      "#ffffff",
-    color:
-      "#334155",
-    fontSize:
-      "12px",
-    fontWeight:
-      600,
-    cursor:
-      "pointer",
+    borderRadius: "8px",
+    background: "#ffffff",
+    color: "#334155",
+    fontSize: "12px",
+    fontWeight: 600,
+    cursor: "pointer",
     whiteSpace:
       "nowrap" as const,
   };
@@ -1737,30 +1572,20 @@ const deleteButtonStyle = {
   ...secondaryButtonStyle,
   borderColor:
     "#fecaca",
-  color:
-    "#dc2626",
+  color: "#dc2626",
 };
 
 const readyBannerStyle = {
-  marginBottom:
-    "12px",
+  marginTop: "12px",
   padding:
     "10px 12px",
-  borderRadius:
-    "8px",
+  borderRadius: "8px",
   background:
     "#ecfdf5",
-  color:
-    "#166534",
-  fontSize:
-    "12px",
-  fontWeight:
-    600,
+  color: "#166534",
+  fontSize: "12px",
+  fontWeight: 600,
 };
-
-/* =========================================================
-   MODAL
-========================================================= */
 
 const overlayStyle = {
   position:
@@ -1777,16 +1602,12 @@ const overlayStyle = {
 };
 
 const modalStyle = {
-  width:
-    "420px",
+  width: "420px",
   maxWidth:
     "calc(100vw - 30px)",
-  background:
-    "#ffffff",
-  borderRadius:
-    "14px",
-  padding:
-    "24px",
+  background: "#ffffff",
+  borderRadius: "14px",
+  padding: "24px",
   boxShadow:
     "0 20px 50px rgba(0,0,0,0.18)",
 };
@@ -1794,63 +1615,16 @@ const modalStyle = {
 const modalTitleStyle = {
   margin:
     "0 0 18px",
-  color:
-    "#12344d",
+  color: "#12344d",
 };
 
 const modalActionsStyle = {
-  display:
-    "flex",
+  display: "flex",
   justifyContent:
     "flex-end",
-  gap:
-    "10px",
+  gap: "10px",
   marginTop:
     "22px",
 };
-
-/* =========================================================
-   RESPONSIVE CSS
-========================================================= */
-
-const responsiveStyle = `
-  .admin-project-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 420px);
-    justify-content: center;
-    align-items: start;
-    gap: 20px;
-    width: 100%;
-  }
-
-  .admin-project-card {
-    width: 420px;
-    min-height: 240px;
-    box-sizing: border-box;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.04);
-  }
-
-  @media (max-width: 950px) {
-    .admin-project-grid {
-      grid-template-columns: 420px;
-    }
-  }
-
-  @media (max-width: 500px) {
-    .admin-project-grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .admin-project-card {
-      width: 100%;
-      max-width: 420px;
-      margin: 0 auto;
-    }
-  }
-`;
 
 export default AdminProjectManagement;
