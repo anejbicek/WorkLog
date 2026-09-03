@@ -19,6 +19,7 @@ import {
 import ProjectCard from "../components/Projects/ProjectCard";
 import ProjectDetails from "../components/Projects/ProjectDetails";
 import ProjectEntryForm from "../components/Projects/ProjectEntryForm";
+
 import AdminProjectManagement from "../components/Admin/AdminProjectManagement";
 
 function Projects() {
@@ -41,7 +42,7 @@ function Projects() {
   } = useProjects();
 
   /* =========================================================
-     ADMINISTRATOR
+     ADMIN PREVERJANJE
   ========================================================= */
 
   const [
@@ -57,78 +58,72 @@ function Projects() {
   useEffect(() => {
     let cancelled = false;
 
-    const checkAdminRole =
-      async () => {
-        try {
-          const {
-            data: {
-              user,
-            },
-            error: authError,
-          } =
-            await supabase.auth.getUser();
+    const checkAdminRole = async () => {
+      try {
+        const {
+          data: {
+            user,
+          },
+          error: authError,
+        } = await supabase.auth.getUser();
 
-          if (
-            authError ||
-            !user
-          ) {
-            if (!cancelled) {
-              setIsAdmin(false);
-              setCheckingAdmin(false);
-            }
-
-            return;
-          }
-
-          const {
-            data: profile,
-            error: profileError,
-          } =
-            await supabase
-              .from("users")
-              .select("role")
-              .eq(
-                "auth_user_id",
-                user.id
-              )
-              .maybeSingle();
-
-          if (profileError) {
-            console.error(
-              "Napaka pri preverjanju administratorske vloge:",
-              profileError
-            );
-
-            if (!cancelled) {
-              setIsAdmin(false);
-              setCheckingAdmin(false);
-            }
-
-            return;
-          }
-
+        if (
+          authError ||
+          !user
+        ) {
           if (!cancelled) {
-            setIsAdmin(
-              profile?.role ===
-                "admin"
-            );
-
-            setCheckingAdmin(
-              false
-            );
+            setIsAdmin(false);
+            setCheckingAdmin(false);
           }
-        } catch (exception) {
+
+          return;
+        }
+
+        const {
+          data: profile,
+          error: profileError,
+        } = await supabase
+          .from("users")
+          .select("role")
+          .eq(
+            "auth_user_id",
+            user.id
+          )
+          .maybeSingle();
+
+        if (profileError) {
           console.error(
             "Napaka pri preverjanju administratorske vloge:",
-            exception
+            profileError
           );
 
           if (!cancelled) {
             setIsAdmin(false);
             setCheckingAdmin(false);
           }
+
+          return;
         }
-      };
+
+        if (!cancelled) {
+          setIsAdmin(
+            profile?.role === "admin"
+          );
+
+          setCheckingAdmin(false);
+        }
+      } catch (exception) {
+        console.error(
+          "Napaka pri preverjanju administratorske vloge:",
+          exception
+        );
+
+        if (!cancelled) {
+          setIsAdmin(false);
+          setCheckingAdmin(false);
+        }
+      }
+    };
 
     void checkAdminRole();
 
@@ -138,69 +133,60 @@ function Projects() {
   }, []);
 
   /* =========================================================
-     AKTIVNI PROJEKTI
+     AKTIVNI PROJEKTI IN STROJI
   ========================================================= */
 
-  const activeProjects =
-    useMemo(
-      () =>
-        projects.filter(
-          (project) => {
-            if (!project.active) {
-              return false;
-            }
-
-            if (
-              project.status &&
-              project.status !==
-                "active"
-            ) {
-              return false;
-            }
-
-            const requiredQuantity =
-              Number(
-                project.requiredQuantity ??
-                  0
-              );
-
-            if (
-              requiredQuantity <=
-              0
-            ) {
-              return true;
-            }
-
-            const producedQuantity =
-              getProjectProducedQuantity(
-                project.id
-              );
-
-            return (
-              producedQuantity <
-              requiredQuantity
-            );
+  const activeProjects = useMemo(
+    () =>
+      projects.filter(
+        (project) => {
+          if (!project.active) {
+            return false;
           }
-        ),
-      [
-        projects,
-        getProjectProducedQuantity,
-      ]
-    );
 
-  /* =========================================================
-     AKTIVNI STROJI
-  ========================================================= */
+          if (
+            project.status &&
+            project.status !== "active"
+          ) {
+            return false;
+          }
 
-  const activeMachines =
-    useMemo(
-      () =>
-        machines.filter(
-          (machine) =>
-            machine.active
-        ),
-      [machines]
-    );
+          const requiredQuantity =
+            Number(
+              project.requiredQuantity ?? 0
+            );
+
+          if (
+            requiredQuantity <= 0
+          ) {
+            return true;
+          }
+
+          const producedQuantity =
+            getProjectProducedQuantity(
+              project.id
+            );
+
+          return (
+            producedQuantity <
+            requiredQuantity
+          );
+        }
+      ),
+    [
+      projects,
+      getProjectProducedQuantity,
+    ]
+  );
+
+  const activeMachines = useMemo(
+    () =>
+      machines.filter(
+        (machine) =>
+          machine.active
+      ),
+    [machines]
+  );
 
   /* =========================================================
      PRIJAVLJENI UPORABNIK
@@ -243,15 +229,14 @@ function Projects() {
           const {
             data: profile,
             error: profileError,
-          } =
-            await supabase
-              .from("users")
-              .select("name")
-              .eq(
-                "auth_user_id",
-                user.id
-              )
-              .maybeSingle();
+          } = await supabase
+            .from("users")
+            .select("name")
+            .eq(
+              "auth_user_id",
+              user.id
+            )
+            .maybeSingle();
 
           if (profileError) {
             console.error(
@@ -307,7 +292,7 @@ function Projects() {
       .split("T")[0];
 
   /* =========================================================
-     STANJE
+     STANJE MODALOV
   ========================================================= */
 
   const [
@@ -328,6 +313,10 @@ function Projects() {
   ] = useState<
     number | null
   >(null);
+
+  /* =========================================================
+     STANJE VNOSA IZDELAVE
+  ========================================================= */
 
   const [
     entryDate,
@@ -360,7 +349,7 @@ function Projects() {
   ] = useState(false);
 
   /* =========================================================
-     IZBRANI PROJEKT
+     IZBRANI PROJEKT ZA VNOS
   ========================================================= */
 
   const selectedProject =
@@ -374,7 +363,7 @@ function Projects() {
       : null;
 
   /* =========================================================
-     PODROBNOSTI PROJEKTA
+     PROJEKT ZA PODROBNOSTI
   ========================================================= */
 
   const detailsProject =
@@ -387,7 +376,7 @@ function Projects() {
       : null;
 
   /* =========================================================
-     ODPRE VNOS
+     ODPRE VNOS IZDELAVE
   ========================================================= */
 
   const openEntryForm = (
@@ -408,8 +397,7 @@ function Projects() {
 
     const requiredQuantity =
       Number(
-        project.requiredQuantity ??
-          0
+        project.requiredQuantity ?? 0
       );
 
     if (
@@ -432,32 +420,53 @@ function Projects() {
       project.id
     );
 
-    setEntryDate(today);
-    setStartTime("07:00");
-    setEndTime("15:00");
+    setEntryDate(
+      today
+    );
+
+    setStartTime(
+      "07:00"
+    );
+
+    setEndTime(
+      "15:00"
+    );
 
     setSelectedMachine(
       activeMachines[0]?.name ??
         ""
     );
 
-    setQuantity("0");
-    setShowEntryForm(true);
+    setQuantity(
+      "0"
+    );
+
+    setShowEntryForm(
+      true
+    );
   };
 
   /* =========================================================
-     ZAPRE VNOS
+     ZAPRE VNOS IZDELAVE
   ========================================================= */
 
   const closeEntryForm =
     () => {
-      setShowEntryForm(false);
-      setSelectedProjectId("");
-      setQuantity("0");
+      setShowEntryForm(
+        false
+      );
+
+      setSelectedProjectId(
+        ""
+      );
+
+      setQuantity(
+        "0"
+      );
     };
 
   /* =========================================================
-     PODROBNOSTI
+     ODPRE PODROBNOSTI PROJEKTA
   ========================================================= */
 
   const openProjectDetails =
@@ -469,13 +478,19 @@ function Projects() {
       );
     };
 
+  /* =========================================================
+     ZAPRE PODROBNOSTI PROJEKTA
+  ========================================================= */
+
   const closeProjectDetails =
     () => {
-      setDetailsProjectId(null);
+      setDetailsProjectId(
+        null
+      );
     };
 
   /* =========================================================
-     SHRANI VNOS
+     SHRANI VNOS IZDELAVE
   ========================================================= */
 
   const saveEntry =
@@ -547,18 +562,24 @@ function Projects() {
         await addEntry({
           projectId:
             selectedProject.id,
+
           date:
             entryDate,
+
           startTime:
             startTime,
+
           endTime:
             endTime,
+
           machine:
             selectedMachine,
+
           quantity:
             Math.round(
               parsedQuantity
             ),
+
           workerName:
             currentWorker,
         });
@@ -572,7 +593,7 @@ function Projects() {
     };
 
   /* =========================================================
-     IZBRIS VNOSA
+     IZBRIS VNOSA IZDELAVE
   ========================================================= */
 
   const handleDeleteEntry =
@@ -596,7 +617,7 @@ function Projects() {
     };
 
   /* =========================================================
-     PODATKI ZA PODROBNOSTI
+     PODATKI ZA PROJEKT
   ========================================================= */
 
   const getProjectData = (
@@ -642,10 +663,19 @@ function Projects() {
     return {
       entries:
         projectEntries,
-      requiredQuantity,
-      producedQuantity,
-      hours,
-      workers,
+
+      requiredQuantity:
+        requiredQuantity,
+
+      producedQuantity:
+        producedQuantity,
+
+      hours:
+        hours,
+
+      workers:
+        workers,
+
       machines:
         projectMachines,
     };
@@ -653,6 +683,10 @@ function Projects() {
 
   /* =========================================================
      PREVERJANJE ADMINA
+     
+     Pomembno:
+     vsi hooki so zgoraj, zato tukaj lahko varno
+     prikažemo administratorski pogled.
   ========================================================= */
 
   if (checkingAdmin) {
@@ -660,19 +694,28 @@ function Projects() {
       <div
         style={{
           width: "100%",
-          minHeight: "300px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "20px 0",
         }}
       >
         <div
           style={{
-            color: "#64748b",
-            fontSize: "14px",
+            background:
+              "#ffffff",
+            border:
+              "1px solid #e2e8f0",
+            borderRadius:
+              "14px",
+            padding:
+              "40px",
+            textAlign:
+              "center",
+            color:
+              "#64748b",
           }}
         >
-          Nalagam...
+          Preverjam uporabniške pravice ...
         </div>
       </div>
     );
@@ -704,13 +747,18 @@ function Projects() {
       >
         <div
           style={{
-            background: "#ffffff",
+            background:
+              "#ffffff",
             border:
               "1px solid #e2e8f0",
-            borderRadius: "14px",
-            padding: "40px",
-            textAlign: "center",
-            color: "#64748b",
+            borderRadius:
+              "14px",
+            padding:
+              "40px",
+            textAlign:
+              "center",
+            color:
+              "#64748b",
           }}
         >
           Nalagam projekte ...
@@ -735,12 +783,16 @@ function Projects() {
       >
         <div
           style={{
-            background: "#ffffff",
+            background:
+              "#ffffff",
             border:
               "1px solid #fecaca",
-            borderRadius: "14px",
-            padding: "30px",
-            color: "#b91c1c",
+            borderRadius:
+              "14px",
+            padding:
+              "30px",
+            color:
+              "#b91c1c",
           }}
         >
           <strong>
@@ -750,8 +802,10 @@ function Projects() {
 
           <div
             style={{
-              marginTop: "8px",
-              fontSize: "14px",
+              marginTop:
+                "8px",
+              fontSize:
+                "14px",
             }}
           >
             {error}
@@ -762,53 +816,46 @@ function Projects() {
   }
 
   /* =========================================================
-     GLAVNI PRIKAZ
+     GLAVNI PRIKAZ ZA DELAVCA
   ========================================================= */
 
   return (
     <>
       <style>
         {`
-          .worklog-project-grid {
+          .worker-project-grid {
             display: grid;
-            grid-template-columns: repeat(
-              2,
-              440px
-            );
+            grid-template-columns: repeat(2, 550px);
             justify-content: center;
-            align-items: start;
             gap: 20px;
-            width: 100%;
+            align-items: stretch;
           }
 
-          .worklog-project-card-wrapper {
-            width: 440px;
-            max-width: 440px;
+          .worker-project-card {
+            width: 550px;
+            max-width: 100%;
+            box-sizing: border-box;
           }
 
-          @media (max-width: 950px) {
-            .worklog-project-grid {
-              grid-template-columns: 440px;
+          @media (max-width: 1140px) {
+            .worker-project-grid {
+              grid-template-columns: minmax(0, 550px);
             }
 
-            .worklog-project-card-wrapper {
-              width: 440px;
-              max-width: 440px;
+            .worker-project-card {
+              width: 550px;
+              max-width: 100%;
             }
           }
 
-          @media (max-width: 500px) {
-            .worklog-project-grid {
-              grid-template-columns: minmax(
-                0,
-                1fr
-              );
+          @media (max-width: 600px) {
+            .worker-project-grid {
+              grid-template-columns: minmax(0, 100%);
             }
 
-            .worklog-project-card-wrapper {
+            .worker-project-card {
               width: 100%;
-              max-width: 440px;
-              margin: 0 auto;
+              max-width: 100%;
             }
           }
         `}
@@ -827,12 +874,14 @@ function Projects() {
 
         <div
           style={{
-            display: "flex",
+            display:
+              "flex",
             justifyContent:
               "space-between",
             alignItems:
               "flex-start",
-            gap: "20px",
+            gap:
+              "20px",
             marginBottom:
               "30px",
           }}
@@ -841,9 +890,12 @@ function Projects() {
             <h1
               style={{
                 margin: 0,
-                fontSize: "32px",
-                fontWeight: 700,
-                color: "#12344d",
+                fontSize:
+                  "32px",
+                fontWeight:
+                  700,
+                color:
+                  "#12344d",
               }}
             >
               Projekti
@@ -851,10 +903,14 @@ function Projects() {
 
             <p
               style={{
-                marginTop: "8px",
-                marginBottom: 0,
-                fontSize: "15px",
-                color: "#64748b",
+                marginTop:
+                  "8px",
+                marginBottom:
+                  0,
+                fontSize:
+                  "15px",
+                color:
+                  "#64748b",
               }}
             >
               Spremljanje
@@ -875,8 +931,10 @@ function Projects() {
               0
             }
             style={{
-              border: "none",
-              borderRadius: "10px",
+              border:
+                "none",
+              borderRadius:
+                "10px",
               padding:
                 "11px 18px",
               background:
@@ -884,9 +942,12 @@ function Projects() {
                 0
                   ? "#cbd5e1"
                   : "#1d526b",
-              color: "#ffffff",
-              fontSize: "14px",
-              fontWeight: 700,
+              color:
+                "#ffffff",
+              fontSize:
+                "14px",
+              fontWeight:
+                700,
               cursor:
                 activeProjects.length ===
                 0
@@ -922,9 +983,12 @@ function Projects() {
           >
             <div
               style={{
-                fontSize: "18px",
-                fontWeight: 700,
-                color: "#12344d",
+                fontSize:
+                  "18px",
+                fontWeight:
+                  700,
+                color:
+                  "#12344d",
                 marginBottom:
                   "8px",
               }}
@@ -936,8 +1000,10 @@ function Projects() {
 
             <div
               style={{
-                fontSize: "14px",
-                color: "#64748b",
+                fontSize:
+                  "14px",
+                color:
+                  "#64748b",
               }}
             >
               Trenutno ni
@@ -947,80 +1013,91 @@ function Projects() {
             </div>
           </div>
         ) : (
-          /* =================================================
-             KARTICE PROJEKTOV
-          ================================================= */
+          <>
+            {/* ===============================================
+                PROJEKTNE KARTICE
+            =============================================== */}
 
-          <div
-            className="worklog-project-grid"
-          >
-            {activeProjects.map(
-              (project) => {
-                const requiredQuantity =
-                  project.requiredQuantity;
+            <div
+              className="worker-project-grid"
+            >
+              {activeProjects.map(
+                (
+                  project
+                ) => {
+                  const requiredQuantity =
+                    project.requiredQuantity;
 
-                const producedQuantity =
-                  getProjectProducedQuantity(
-                    project.id
-                  );
-
-                const hours =
-                  getProjectHours(
-                    project.id
-                  );
-
-                const workers =
-                  getProjectWorkers(
-                    project.id
-                  );
-
-                const projectMachines =
-                  getProjectMachines(
-                    project.id
-                  );
-
-                return (
-                  <div
-                    key={
+                  const producedQuantity =
+                    getProjectProducedQuantity(
                       project.id
-                    }
-                    className="worklog-project-card-wrapper"
-                  >
-                    <ProjectCard
-                      project={
-                        project
+                    );
+
+                  const hours =
+                    getProjectHours(
+                      project.id
+                    );
+
+                  const workers =
+                    getProjectWorkers(
+                      project.id
+                    );
+
+                  const projectMachines =
+                    getProjectMachines(
+                      project.id
+                    );
+
+                  return (
+                    <div
+                      key={
+                        project.id
                       }
-                      requiredQuantity={
-                        requiredQuantity
-                      }
-                      producedQuantity={
-                        producedQuantity
-                      }
-                      hours={
-                        hours
-                      }
-                      workerCount={
-                        workers.length
-                      }
-                      machineCount={
-                        projectMachines.length
-                      }
-                      onDetails={() =>
-                        openProjectDetails(
-                          project.id
-                        )
-                      }
-                      onAddEntry={() =>
-                        openEntryForm(
-                          project.id
-                        )
-                      }
-                    />
-                  </div>
-                );
-              }
-            )}
-          </div>
+                      className="worker-project-card"
+                    >
+                      <ProjectCard
+                        project={
+                          project
+                        }
+
+                        requiredQuantity={
+                          requiredQuantity
+                        }
+
+                        producedQuantity={
+                          producedQuantity
+                        }
+
+                        hours={
+                          hours
+                        }
+
+                        workerCount={
+                          workers.length
+                        }
+
+                        machineCount={
+                          projectMachines.length
+                        }
+
+                        onDetails={() =>
+                          openProjectDetails(
+                            project.id
+                          )
+                        }
+
+                        onAddEntry={() =>
+                          openEntryForm(
+                            project.id
+                          )
+                        }
+                      />
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          </>
         )}
       </div>
 
@@ -1040,24 +1117,31 @@ function Projects() {
               project={
                 detailsProject
               }
+
               entries={
                 data.entries
               }
+
               requiredQuantity={
                 data.requiredQuantity
               }
+
               producedQuantity={
                 data.producedQuantity
               }
+
               hours={
                 data.hours
               }
+
               workers={
                 data.workers
               }
+
               machines={
                 data.machines
               }
+
               onAddEntry={() => {
                 const requiredQuantity =
                   Number(
@@ -1079,8 +1163,7 @@ function Projects() {
                 }
 
                 if (
-                  requiredQuantity >
-                    0 &&
+                  requiredQuantity > 0 &&
                   producedQuantity >=
                     requiredQuantity
                 ) {
@@ -1093,9 +1176,11 @@ function Projects() {
                   detailsProject.id
                 );
               }}
+
               onDeleteEntry={
                 handleDeleteEntry
               }
+
               onClose={
                 closeProjectDetails
               }
@@ -1112,33 +1197,43 @@ function Projects() {
           projects={
             activeProjects
           }
+
           machines={
             activeMachines
           }
+
           selectedProjectId={
             selectedProjectId
           }
+
           date={
             entryDate
           }
+
           startTime={
             startTime
           }
+
           endTime={
             endTime
           }
+
           machine={
             selectedMachine
           }
+
           quantity={
             quantity
           }
+
           currentWorker={
             currentWorker
           }
+
           saving={
             saving
           }
+
           onProjectChange={(
             value
           ) => {
@@ -1148,6 +1243,7 @@ function Projects() {
               setSelectedProjectId(
                 ""
               );
+
               return;
             }
 
@@ -1155,24 +1251,31 @@ function Projects() {
               Number(value)
             );
           }}
+
           onDateChange={
             setEntryDate
           }
+
           onStartTimeChange={
             setStartTime
           }
+
           onEndTimeChange={
             setEndTime
           }
+
           onMachineChange={
             setSelectedMachine
           }
+
           onQuantityChange={
             setQuantity
           }
+
           onSave={
             saveEntry
           }
+
           onClose={
             closeEntryForm
           }
