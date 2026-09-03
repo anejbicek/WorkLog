@@ -18,7 +18,7 @@ import { supabase } from "../services/supabase";
    KONSTANTE
 ===================================================== */
 
-const ROWS_PER_PAGE = 25;
+const ROWS_PER_PAGE = 20;
 
 /* =====================================================
    PDF
@@ -714,7 +714,7 @@ function PDF() {
                   tableLayout:
                     "fixed",
                   fontSize:
-                    "8.5px",
+                    "8px",
                   marginBottom:
                     "3mm",
                 }}
@@ -879,7 +879,7 @@ function PDF() {
                     tableLayout:
                       "fixed",
                     fontSize:
-                      "8.5px",
+                       "8px",
                   }}
                 >
                   <thead>
