@@ -50,20 +50,33 @@ function ProjectCard({
   return (
     <div
       style={{
+        width: "100%",
+        maxWidth: "440px",
+        minHeight: "260px",
+        margin: "0 auto",
+
         background: "#ffffff",
         border: "1px solid #e5e7eb",
         borderRadius: "14px",
         padding: "20px",
+
         boxShadow:
           "0 2px 8px rgba(15,23,42,0.04)",
+
+        boxSizing: "border-box",
       }}
     >
+      {/* =====================================================
+          GLAVA PROJEKTA
+      ===================================================== */}
+
       <div
         style={{
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
           marginBottom: "18px",
+          gap: "12px",
         }}
       >
         <div
@@ -71,12 +84,14 @@ function ProjectCard({
             display: "flex",
             alignItems: "center",
             gap: "12px",
+            minWidth: 0,
           }}
         >
           <div
             style={{
               width: "44px",
               height: "44px",
+              minWidth: "44px",
               borderRadius: "10px",
               background: "#eaf2f5",
               display: "flex",
@@ -90,12 +105,19 @@ function ProjectCard({
             />
           </div>
 
-          <div>
+          <div
+            style={{
+              minWidth: 0,
+            }}
+          >
             <div
               style={{
                 color: "#12344d",
                 fontSize: "16px",
                 fontWeight: 700,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               {project.name}
@@ -127,11 +149,16 @@ function ProjectCard({
                 : "#1d526b",
             fontSize: "12px",
             fontWeight: 700,
+            flexShrink: 0,
           }}
         >
           {progress} %
         </div>
       </div>
+
+      {/* =====================================================
+          NAPREDEK
+      ===================================================== */}
 
       <div
         style={{
@@ -152,11 +179,15 @@ function ProjectCard({
         />
       </div>
 
+      {/* =====================================================
+          KOLIČINE
+      ===================================================== */}
+
       <div
         style={{
           display: "grid",
           gridTemplateColumns:
-            "repeat(3, 1fr)",
+            "repeat(3, minmax(0, 1fr))",
           gap: "10px",
           marginBottom: "16px",
         }}
@@ -177,11 +208,15 @@ function ProjectCard({
         />
       </div>
 
+      {/* =====================================================
+          STATISTIKA
+      ===================================================== */}
+
       <div
         style={{
           display: "grid",
           gridTemplateColumns:
-            "repeat(3, 1fr)",
+            "repeat(3, minmax(0, 1fr))",
           gap: "10px",
           paddingTop: "15px",
           borderTop:
@@ -215,12 +250,17 @@ function ProjectCard({
         />
       </div>
 
+      {/* =====================================================
+          GUMBI
+      ===================================================== */}
+
       <div
         style={{
           display: "flex",
           justifyContent:
             "space-between",
           alignItems: "center",
+          gap: "10px",
           marginTop: "18px",
           paddingTop: "14px",
           borderTop:
@@ -264,6 +304,7 @@ function InfoBox({
         padding: "13px",
         background: "#f8fafc",
         borderRadius: "9px",
+        minWidth: 0,
       }}
     >
       <div
@@ -281,6 +322,7 @@ function InfoBox({
           color: "#12344d",
           fontSize: "17px",
           fontWeight: 700,
+          whiteSpace: "nowrap",
         }}
       >
         {value}
@@ -307,17 +349,23 @@ function MiniInfo({
         padding: "10px 12px",
         background: "#f8fafc",
         borderRadius: "9px",
+        minWidth: 0,
       }}
     >
       <div
         style={{
           color: "#1d526b",
+          flexShrink: 0,
         }}
       >
         {icon}
       </div>
 
-      <div>
+      <div
+        style={{
+          minWidth: 0,
+        }}
+      >
         <div
           style={{
             color: "#64748b",
@@ -355,6 +403,7 @@ const primaryButtonStyle = {
   fontSize: "12px",
   fontWeight: 600,
   cursor: "pointer",
+  whiteSpace: "nowrap" as const,
 };
 
 const secondaryButtonStyle = {
@@ -367,6 +416,7 @@ const secondaryButtonStyle = {
   fontSize: "12px",
   fontWeight: 600,
   cursor: "pointer",
+  whiteSpace: "nowrap" as const,
 };
 
 export default ProjectCard;
