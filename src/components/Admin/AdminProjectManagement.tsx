@@ -3,6 +3,8 @@ import {
   useState,
 } from "react";
 
+import type { ReactNode } from "react";
+
 import {
   useAdmin,
   type AdminProject,
@@ -12,11 +14,18 @@ import {
   useProjects,
 } from "../../context/ProjectContext";
 
+import ProjectCard from "../Projects/ProjectCard";
+import ProjectDetails from "../Projects/ProjectDetails";
+
 type ProjectSection =
   | "active"
   | "preparation"
   | "completed"
   | "add";
+
+/* =========================================================
+   GLAVNA KOMPONENTA
+========================================================= */
 
 function AdminProjectManagement() {
   const {
@@ -31,19 +40,21 @@ function AdminProjectManagement() {
   const {
     getProjectProducedQuantity,
     getProjectHours,
+    getProjectWorkers,
+    getProjectMachines,
+    getProjectEntries,
   } = useProjects();
 
   /* =========================================================
-     AKTIVNA SEKCIJA
+     MENI
   ========================================================= */
 
   const [
     activeSection,
     setActiveSection,
-  ] =
-    useState<ProjectSection>(
-      "active"
-    );
+  ] = useState<ProjectSection>(
+    "active"
+  );
 
   /* =========================================================
      NOV PROJEKT
@@ -62,10 +73,9 @@ function AdminProjectManagement() {
   const [
     newStatus,
     setNewStatus,
-  ] =
-    useState<
-      AdminProject["status"]
-    >("preparation");
+  ] = useState<
+    AdminProject["status"]
+  >("preparation");
 
   /* =========================================================
      UREJANJE
@@ -96,6 +106,17 @@ function AdminProjectManagement() {
     useState<
       AdminProject["status"]
     >("preparation");
+
+  /* =========================================================
+     PODROBNOSTI PROJEKTA
+  ========================================================= */
+
+  const [
+    detailsProjectId,
+    setDetailsProjectId,
+  ] = useState<number | null>(
+    null
+  );
 
   /* =========================================================
      PROJEKTI PO STATUSU
@@ -135,8 +156,7 @@ function AdminProjectManagement() {
     );
 
   const visibleProjects =
-    activeSection ===
-    "active"
+    activeSection === "active"
       ? activeProjects
       : activeSection ===
           "preparation"
@@ -161,6 +181,7 @@ function AdminProjectManagement() {
         alert(
           "Vnesi ime projekta."
         );
+
         return;
       }
 
@@ -173,6 +194,7 @@ function AdminProjectManagement() {
         alert(
           "Zahtevana količina mora biti celo število 0 ali več."
         );
+
         return;
       }
 
@@ -203,7 +225,7 @@ function AdminProjectManagement() {
     };
 
   /* =========================================================
-     UREDI PROJEKT
+     ZAČNI UREJANJE
   ========================================================= */
 
   const startEdit = (
@@ -225,6 +247,10 @@ function AdminProjectManagement() {
       project.status
     );
   };
+
+  /* =========================================================
+     SHRANI UREJANJE
+  ========================================================= */
 
   const saveEdit = () => {
     if (
@@ -248,6 +274,7 @@ function AdminProjectManagement() {
       alert(
         "Zahtevana količina mora biti celo število 0 ali več."
       );
+
       return;
     }
 
@@ -277,7 +304,7 @@ function AdminProjectManagement() {
   };
 
   /* =========================================================
-     AKTIVIRAJ
+     AKTIVIRAJ PROJEKT
   ========================================================= */
 
   const handleActivate = (
@@ -290,6 +317,7 @@ function AdminProjectManagement() {
       alert(
         "Pred aktiviranjem mora projekt imeti zahtevano količino večjo od 0."
       );
+
       return;
     }
 
@@ -309,7 +337,7 @@ function AdminProjectManagement() {
   };
 
   /* =========================================================
-     ZAKLJUČI
+     ZAKLJUČI PROJEKT
   ========================================================= */
 
   const handleComplete = (
@@ -330,6 +358,7 @@ function AdminProjectManagement() {
       alert(
         "Projekt še ni dosegel 100 % zahtevane količine."
       );
+
       return;
     }
 
@@ -349,7 +378,7 @@ function AdminProjectManagement() {
   };
 
   /* =========================================================
-     IZBRIŠI
+     IZBRIŠI PROJEKT
   ========================================================= */
 
   const handleDelete = (
@@ -362,6 +391,7 @@ function AdminProjectManagement() {
       alert(
         "Zaključenega projekta ne brišemo, ker mora ostati v zgodovini."
       );
+
       return;
     }
 
@@ -377,6 +407,33 @@ function AdminProjectManagement() {
   };
 
   /* =========================================================
+     PODROBNOSTI
+  ========================================================= */
+
+  const openDetails = (
+    projectId: number
+  ) => {
+    setDetailsProjectId(
+      projectId
+    );
+  };
+
+  const closeDetails = () => {
+    setDetailsProjectId(
+      null
+    );
+  };
+
+  const detailsProject =
+    detailsProjectId !== null
+      ? projects.find(
+          (project) =>
+            project.id ===
+            detailsProjectId
+        ) ?? null
+      : null;
+
+  /* =========================================================
      PRIKAZ
   ========================================================= */
 
@@ -384,37 +441,102 @@ function AdminProjectManagement() {
     <>
       <style>
         {`
-          .admin-project-table {
-            width: 700px;
+          .admin-project-layout {
+            display: grid;
+            grid-template-columns: 210px minmax(0, 1fr);
+            gap: 24px;
+            align-items: start;
+          }
+
+          .admin-project-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 550px);
+            justify-content: center;
+            gap: 20px;
+            align-items: start;
+          }
+
+          .admin-project-card-wrapper {
+            width: 550px;
             max-width: 100%;
-            margin: 0 auto;
+          }
+
+          .admin-project-actions {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+          }
+
+          .admin-project-action {
+            height: 36px;
+            padding: 0 14px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+          }
+
+          .admin-project-action-edit {
+            border: 1px solid #dbe3e8;
             background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            overflow: hidden;
+            color: #334155;
           }
 
-          .admin-project-row {
-            width: 100%;
-            box-sizing: border-box;
+          .admin-project-action-delete {
+            border: 1px solid #fecaca;
+            background: #ffffff;
+            color: #dc2626;
           }
 
-          @media (max-width: 800px) {
-            .admin-project-table {
+          .admin-project-action-complete {
+            border: none;
+            background: #15803d;
+            color: #ffffff;
+          }
+
+          .admin-project-action-activate {
+            border: none;
+            background: #1d526b;
+            color: #ffffff;
+          }
+
+          .admin-project-action:hover {
+            opacity: 0.88;
+          }
+
+          @media (max-width: 1200px) {
+            .admin-project-grid {
+              grid-template-columns: 550px;
+            }
+          }
+
+          @media (max-width: 850px) {
+            .admin-project-layout {
+              grid-template-columns: 1fr;
+            }
+          }
+
+          @media (max-width: 600px) {
+            .admin-project-grid {
+              grid-template-columns: 100%;
+            }
+
+            .admin-project-card-wrapper {
               width: 100%;
             }
           }
         `}
       </style>
 
-      <div
-        style={
-          layoutStyle
-        }
-      >
-        {/* =====================================================
+      <div className="admin-project-layout">
+
+        {/* ===================================================
             LEVI MENI
-        ===================================================== */}
+        =================================================== */}
 
         <aside
           style={
@@ -441,7 +563,6 @@ function AdminProjectManagement() {
             }
           >
             Aktivni projekti
-
             <Count>
               {
                 activeProjects.length
@@ -461,7 +582,6 @@ function AdminProjectManagement() {
             }
           >
             V pripravi
-
             <Count>
               {
                 preparationProjects.length
@@ -481,7 +601,6 @@ function AdminProjectManagement() {
             }
           >
             Zaključeni
-
             <Count>
               {
                 completedProjects.length
@@ -510,26 +629,25 @@ function AdminProjectManagement() {
           </SidebarButton>
         </aside>
 
-        {/* =====================================================
+        {/* ===================================================
             DESNI DEL
-        ===================================================== */}
+        =================================================== */}
 
         <main
           style={
             contentStyle
           }
         >
-          {/* ===================================================
+
+          {/* =================================================
               DODAJ PROJEKT
-          =================================================== */}
+          ================================================= */}
 
           {activeSection ===
             "add" && (
             <CreateProject
               name={name}
-              setName={
-                setName
-              }
+              setName={setName}
               requiredQuantity={
                 requiredQuantity
               }
@@ -548,9 +666,9 @@ function AdminProjectManagement() {
             />
           )}
 
-          {/* ===================================================
+          {/* =================================================
               PROJEKTI
-          =================================================== */}
+          ================================================= */}
 
           {activeSection !==
             "add" && (
@@ -604,9 +722,9 @@ function AdminProjectManagement() {
                 </button>
               </div>
 
-              {/* =================================================
-                  PROJEKTNE VRSTICE
-              ================================================= */}
+              {/* =============================================
+                  PRAZEN STAN
+              ============================================= */}
 
               {visibleProjects.length ===
               0 ? (
@@ -628,15 +746,20 @@ function AdminProjectManagement() {
                     "Trenutno ni zaključenih projektov."}
                 </div>
               ) : (
-                <div
-                  className="admin-project-table"
-                >
+                /* ===========================================
+                   KARTICE
+                =========================================== */
+
+                <div className="admin-project-grid">
+
                   {visibleProjects.map(
                     (
-                      project,
-                      index
+                      project
                     ) => {
-                      const produced =
+                      const requiredQuantity =
+                        project.requiredQuantity;
+
+                      const producedQuantity =
                         getProjectProducedQuantity(
                           project.id
                         );
@@ -646,406 +769,399 @@ function AdminProjectManagement() {
                           project.id
                         );
 
-                      const required =
-                        project.requiredQuantity;
+                      const workers =
+                        getProjectWorkers(
+                          project.id
+                        );
 
-                      const progress =
-                        required >
-                        0
-                          ? Math.min(
-                              100,
-                              (produced /
-                                required) *
-                                100
-                            )
-                          : 0;
+                      const projectMachines =
+                        getProjectMachines(
+                          project.id
+                        );
 
                       const readyToComplete =
                         project.status ===
                           "active" &&
-                        required >
+                        requiredQuantity >
                           0 &&
-                        produced >=
-                          required;
+                        producedQuantity >=
+                          requiredQuantity;
 
                       return (
                         <div
                           key={
                             project.id
                           }
-                          className="admin-project-row"
-                          style={{
-                            padding:
-                              "18px 20px",
-
-                            borderBottom:
-                              index ===
-                              visibleProjects.length -
-                                1
-                                ? "none"
-                                : "1px solid #e5e7eb",
-                          }}
+                          className="admin-project-card-wrapper"
                         >
-                          <div
-                            style={
-                              projectRowStyle
+
+                          {/* =================================
+                              ENAKA KARTICA KOT PRI DELAVCU
+                          ================================= */}
+
+                          <ProjectCard
+                            project={
+                              project
                             }
+
+                            requiredQuantity={
+                              requiredQuantity
+                            }
+
+                            producedQuantity={
+                              producedQuantity
+                            }
+
+                            hours={
+                              hours
+                            }
+
+                            workerCount={
+                              workers.length
+                            }
+
+                            machineCount={
+                              projectMachines.length
+                            }
+
+                            onDetails={() =>
+                              openDetails(
+                                project.id
+                              )
+                            }
+
+                            onAddEntry={() =>
+                              openDetails(
+                                project.id
+                              )
+                            }
+                          />
+
+                          {/* =================================
+                              ADMINISTRATORSKE FUNKCIJE
+                          ================================= */}
+
+                          <div
+                            className="admin-project-actions"
                           >
-                            {/* =================================
-                                PODATKI
-                            ================================= */}
 
-                            <div
-                              style={{
-                                minWidth:
-                                  0,
-                              }}
-                            >
-                              <div
-                                style={
-                                  projectNameStyle
-                                }
-                              >
-                                {
-                                  project.name
-                                }
-                              </div>
-
-                              <div
-                                style={
-                                  metaStyle
-                                }
-                              >
-                                {produced.toLocaleString(
-                                  "sl-SI"
-                                )}{" "}
-                                /{" "}
-                                {required.toLocaleString(
-                                  "sl-SI"
-                                )}{" "}
-                                kos
-
-                                <span
-                                  style={
-                                    dotStyle
-                                  }
-                                >
-                                  •
-                                </span>
-
-                                {hours.toFixed(
-                                  2
-                                )}{" "}
-                                h
-
-                                <span
-                                  style={
-                                    dotStyle
-                                  }
-                                >
-                                  •
-                                </span>
-
-                                <span
-                                  style={{
-                                    ...statusBadgeStyle,
-                                    ...getStatusStyle(
-                                      project.status
-                                    ),
-                                  }}
-                                >
-                                  {statusLabel(
-                                    project.status
-                                  )}
-                                </span>
-                              </div>
-
-                              {/* ===============================
-                                  NAPREDEK
-                              =============================== */}
-
-                              <div
-                                style={
-                                  progressTrackStyle
-                                }
-                              >
-                                <div
-                                  style={{
-                                    ...progressFillStyle,
-                                    width: `${progress}%`,
-                                  }}
-                                />
-                              </div>
-
-                              <div
-                                style={
-                                  progressTextStyle
-                                }
-                              >
-                                {progress.toFixed(
-                                  0
-                                )}{" "}
-                                %
-                              </div>
-                            </div>
-
-                            {/* =================================
-                                GUMBI
-                            ================================= */}
-
-                            <div
-                              style={
-                                actionsStyle
-                              }
-                            >
-                              {project.status ===
-                                "preparation" && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleActivate(
-                                      project
-                                    )
-                                  }
-                                  style={
-                                    primarySmallButtonStyle
-                                  }
-                                >
-                                  Aktiviraj
-                                </button>
-                              )}
-
-                              {readyToComplete && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleComplete(
-                                      project
-                                    )
-                                  }
-                                  style={
-                                    completeButtonStyle
-                                  }
-                                >
-                                  ✓ Zaključi
-                                </button>
-                              )}
-
+                            {/* V PRIPRAVI */}
+                            {project.status ===
+                              "preparation" && (
                               <button
                                 type="button"
+                                className="admin-project-action admin-project-action-activate"
+                                onClick={() =>
+                                  handleActivate(
+                                    project
+                                  )
+                                }
+                              >
+                                Aktiviraj
+                              </button>
+                            )}
+
+                            {/* ZAKLJUČI */}
+                            {readyToComplete && (
+                              <button
+                                type="button"
+                                className="admin-project-action admin-project-action-complete"
+                                onClick={() =>
+                                  handleComplete(
+                                    project
+                                  )
+                                }
+                              >
+                                ✓ Zaključi
+                              </button>
+                            )}
+
+                            {/* UREDI */}
+                            {project.status !==
+                              "completed" && (
+                              <button
+                                type="button"
+                                className="admin-project-action admin-project-action-edit"
                                 onClick={() =>
                                   startEdit(
                                     project
                                   )
                                 }
-                                style={
-                                  secondaryButtonStyle
+                              >
+                                ✏ Uredi
+                              </button>
+                            )}
+
+                            {/* IZBRIŠI */}
+                            {project.status !==
+                              "completed" && (
+                              <button
+                                type="button"
+                                className="admin-project-action admin-project-action-delete"
+                                onClick={() =>
+                                  handleDelete(
+                                    project
+                                  )
                                 }
                               >
-                                Uredi
+                                🗑 Izbriši
                               </button>
+                            )}
 
-                              {project.status !==
-                                "completed" && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDelete(
-                                      project
-                                    )
-                                  }
-                                  style={
-                                    deleteButtonStyle
-                                  }
-                                >
-                                  Izbriši
-                                </button>
-                              )}
-                            </div>
+                            {/* ZAČETEK */}
+                            {project.status ===
+                              "completed" && (
+                              <span
+                                style={{
+                                  fontSize:
+                                    "12px",
+                                  color:
+                                    "#64748b",
+                                  padding:
+                                    "8px 10px",
+                                }}
+                              >
+                                Projekt je zaključen
+                              </span>
+                            )}
                           </div>
-
-                          {/* ===================================
-                              OBVESTILO
-                          =================================== */}
-
-                          {readyToComplete && (
-                            <div
-                              style={
-                                readyBannerStyle
-                              }
-                            >
-                              Projekt je
-                              dosegel
-                              100 %
-                              zahtevane
-                              količine in
-                              čaka na
-                              potrditev
-                              administratorja.
-                            </div>
-                          )}
                         </div>
                       );
                     }
                   )}
+
                 </div>
               )}
             </>
           )}
         </main>
+      </div>
 
-        {/* =====================================================
-            UREDI PROJEKT
-        ===================================================== */}
+      {/* =====================================================
+          PODROBNOSTI PROJEKTA
+      ===================================================== */}
 
-        {editing && (
+      {detailsProject &&
+        (() => {
+          const entries =
+            getProjectEntries(
+              detailsProject.id
+            );
+
+          const producedQuantity =
+            getProjectProducedQuantity(
+              detailsProject.id
+            );
+
+          const hours =
+            getProjectHours(
+              detailsProject.id
+            );
+
+          const workers =
+            getProjectWorkers(
+              detailsProject.id
+            );
+
+          const machines =
+            getProjectMachines(
+              detailsProject.id
+            );
+
+          return (
+            <ProjectDetails
+              project={
+                detailsProject
+              }
+
+              entries={
+                entries
+              }
+
+              requiredQuantity={
+                detailsProject.requiredQuantity
+              }
+
+              producedQuantity={
+                producedQuantity
+              }
+
+              hours={
+                hours
+              }
+
+              workers={
+                workers
+              }
+
+              machines={
+                machines
+              }
+
+              onAddEntry={() => {
+                closeDetails();
+              }}
+
+              onDeleteEntry={() => {
+                closeDetails();
+              }}
+
+              onClose={
+                closeDetails
+              }
+            />
+          );
+        })()}
+
+      {/* =====================================================
+          UREDI PROJEKT
+      ===================================================== */}
+
+      {editing && (
+        <div
+          style={
+            overlayStyle
+          }
+        >
           <div
             style={
-              overlayStyle
+              modalStyle
             }
           >
-            <div
+            <h3
               style={
-                modalStyle
+                modalTitleStyle
               }
             >
-              <h3
-                style={
-                  modalTitleStyle
-                }
-              >
-                Uredi projekt
-              </h3>
+              Uredi projekt
+            </h3>
 
-              <label
-                style={
-                  labelStyle
-                }
-              >
-                Ime projekta
-              </label>
+            <label
+              style={
+                labelStyle
+              }
+            >
+              Ime projekta
+            </label>
 
-              <input
-                value={
-                  editName
-                }
-                onChange={(
-                  event
-                ) =>
-                  setEditName(
-                    event.target
-                      .value
+            <input
+              value={
+                editName
+              }
+              onChange={(
+                event
+              ) =>
+                setEditName(
+                  event.target.value
+                )
+              }
+              style={
+                inputStyle
+              }
+            />
+
+            <label
+              style={{
+                ...labelStyle,
+                marginTop:
+                  "16px",
+              }}
+            >
+              Zahtevana količina
+            </label>
+
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={
+                editRequiredQuantity
+              }
+              onChange={(
+                event
+              ) =>
+                setEditRequiredQuantity(
+                  event.target.value
+                )
+              }
+              style={
+                inputStyle
+              }
+            />
+
+            <label
+              style={{
+                ...labelStyle,
+                marginTop:
+                  "16px",
+              }}
+            >
+              Status
+            </label>
+
+            <select
+              value={
+                editStatus
+              }
+              onChange={(
+                event
+              ) =>
+                setEditStatus(
+                  event.target.value as
+                    AdminProject["status"]
+                )
+              }
+              style={
+                inputStyle
+              }
+            >
+              <option value="preparation">
+                V pripravi
+              </option>
+
+              <option value="active">
+                Aktiven
+              </option>
+
+              <option value="completed">
+                Zaključen
+              </option>
+            </select>
+
+            <div
+              style={
+                modalActionsStyle
+              }
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setEditing(
+                    null
                   )
                 }
                 style={
-                  inputStyle
+                  secondaryButtonStyle
                 }
-              />
-
-              <label
-                style={{
-                  ...labelStyle,
-                  marginTop:
-                    "16px",
-                }}
               >
-                Zahtevana količina
-              </label>
+                Prekliči
+              </button>
 
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={
-                  editRequiredQuantity
-                }
-                onChange={(
-                  event
-                ) =>
-                  setEditRequiredQuantity(
-                    event.target
-                      .value
-                  )
+              <button
+                type="button"
+                onClick={
+                  saveEdit
                 }
                 style={
-                  inputStyle
-                }
-              />
-
-              <label
-                style={{
-                  ...labelStyle,
-                  marginTop:
-                    "16px",
-                }}
-              >
-                Status
-              </label>
-
-              <select
-                value={
-                  editStatus
-                }
-                onChange={(
-                  event
-                ) =>
-                  setEditStatus(
-                    event.target
-                      .value as AdminProject["status"]
-                  )
-                }
-                style={
-                  inputStyle
+                  primaryButtonStyle
                 }
               >
-                <option value="preparation">
-                  V pripravi
-                </option>
-
-                <option value="active">
-                  Aktiven
-                </option>
-
-                <option value="completed">
-                  Zaključen
-                </option>
-              </select>
-
-              <div
-                style={
-                  modalActionsStyle
-                }
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    setEditing(
-                      null
-                    )
-                  }
-                  style={
-                    secondaryButtonStyle
-                  }
-                >
-                  Prekliči
-                </button>
-
-                <button
-                  type="button"
-                  onClick={
-                    saveEdit
-                  }
-                  style={
-                    primaryButtonStyle
-                  }
-                >
-                  Shrani
-                </button>
-              </div>
+                Shrani
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 }
@@ -1064,17 +1180,25 @@ function CreateProject({
   onSave,
 }: {
   name: string;
+
   setName: (
     value: string
   ) => void;
+
   requiredQuantity: string;
+
   setRequiredQuantity: (
     value: string
   ) => void;
-  status: AdminProject["status"];
+
+  status:
+    AdminProject["status"];
+
   setStatus: (
-    value: AdminProject["status"]
+    value:
+      AdminProject["status"]
   ) => void;
+
   onSave: () => void;
 }) {
   return (
@@ -1132,8 +1256,7 @@ function CreateProject({
                 event
               ) =>
                 setName(
-                  event.target
-                    .value
+                  event.target.value
                 )
               }
               placeholder="Ime projekta"
@@ -1163,8 +1286,7 @@ function CreateProject({
                 event
               ) =>
                 setRequiredQuantity(
-                  event.target
-                    .value
+                  event.target.value
                 )
               }
               style={
@@ -1190,8 +1312,8 @@ function CreateProject({
                 event
               ) =>
                 setStatus(
-                  event.target
-                    .value as AdminProject["status"]
+                  event.target.value as
+                    AdminProject["status"]
                 )
               }
               style={
@@ -1240,7 +1362,7 @@ function CreateProject({
 }
 
 /* =========================================================
-   SIDEBAR BUTTON
+   SIDEBAR
 ========================================================= */
 
 function SidebarButton({
@@ -1249,15 +1371,20 @@ function SidebarButton({
   children,
 }: {
   active: boolean;
+
   onClick: () => void;
-  children: React.ReactNode;
+
+  children: ReactNode;
 }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={
+        onClick
+      }
       style={{
         ...sidebarButtonStyle,
+
         ...(active
           ? sidebarButtonActiveStyle
           : {}),
@@ -1265,14 +1392,20 @@ function SidebarButton({
     >
       <span
         style={{
-          width: "7px",
-          height: "7px",
+          width:
+            "7px",
+
+          height:
+            "7px",
+
           borderRadius:
             "50%",
+
           background:
             active
               ? "#ffffff"
               : "#94a3b8",
+
           flexShrink: 0,
         }}
       />
@@ -1288,16 +1421,21 @@ function SidebarButton({
   );
 }
 
+/* =========================================================
+   COUNT
+========================================================= */
+
 function Count({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <span
       style={{
         fontSize:
           "11px",
+
         opacity:
           0.75,
       }}
@@ -1308,84 +1446,7 @@ function Count({
 }
 
 /* =========================================================
-   STATUS
-========================================================= */
-
-function statusLabel(
-  status: AdminProject["status"]
-) {
-  if (
-    status ===
-    "preparation"
-  ) {
-    return "V pripravi";
-  }
-
-  if (
-    status ===
-    "completed"
-  ) {
-    return "Zaključen";
-  }
-
-  return "Aktiven";
-}
-
-function getStatusStyle(
-  status: AdminProject["status"]
-) {
-  if (
-    status ===
-    "preparation"
-  ) {
-    return {
-      background:
-        "#fff7ed",
-      color:
-        "#c2410c",
-    };
-  }
-
-  if (
-    status ===
-    "completed"
-  ) {
-    return {
-      background:
-        "#f1f5f9",
-      color:
-        "#475569",
-    };
-  }
-
-  return {
-    background:
-      "#ecfdf5",
-    color:
-      "#15803d",
-  };
-}
-
-/* =========================================================
-   GLAVNI LAYOUT
-========================================================= */
-
-const layoutStyle = {
-  display:
-    "grid",
-
-  gridTemplateColumns:
-    "210px minmax(0, 1fr)",
-
-  gap:
-    "24px",
-
-  alignItems:
-    "start",
-};
-
-/* =========================================================
-   SIDEBAR
+   STILI
 ========================================================= */
 
 const sidebarStyle = {
@@ -1492,10 +1553,6 @@ const separatorStyle = {
     "8px 4px",
 };
 
-/* =========================================================
-   CONTENT
-========================================================= */
-
 const contentStyle = {
   minWidth:
     0,
@@ -1540,10 +1597,6 @@ const subtitleStyle = {
     "#64748b",
 };
 
-/* =========================================================
-   DODAJ PROJEKT
-========================================================= */
-
 const createCardStyle = {
   background:
     "#ffffff",
@@ -1582,10 +1635,6 @@ const helperStyle = {
   color:
     "#64748b",
 };
-
-/* =========================================================
-   FORM
-========================================================= */
 
 const labelStyle = {
   display:
@@ -1665,167 +1714,27 @@ const primaryButtonStyle = {
     "nowrap" as const,
 };
 
-/* =========================================================
-   PROJEKTNA VRSTICA
-========================================================= */
+const emptyStyle = {
+  background:
+    "#ffffff",
 
-const projectRowStyle = {
-  display:
-    "grid",
+  border:
+    "1px solid #e5e7eb",
 
-  gridTemplateColumns:
-    "minmax(0, 1fr) auto",
-
-  gap:
-    "18px",
-
-  alignItems:
-    "center",
-
-  width:
-    "100%",
-};
-
-/* =========================================================
-   PROJEKTNI PODATKI
-========================================================= */
-
-const projectNameStyle = {
-  color:
-    "#12344d",
-
-  fontSize:
-    "15px",
-
-  fontWeight:
-    700,
-};
-
-const metaStyle = {
-  marginTop:
-    "5px",
-
-  fontSize:
-    "12px",
-
-  color:
-    "#64748b",
-};
-
-const dotStyle = {
-  margin:
-    "0 7px",
-};
-
-const statusBadgeStyle = {
-  display:
-    "inline-block",
+  borderRadius:
+    "14px",
 
   padding:
-    "3px 8px",
+    "50px 30px",
 
-  borderRadius:
-    "999px",
-
-  fontSize:
-    "11px",
-
-  fontWeight:
-    700,
-};
-
-/* =========================================================
-   NAPREDEK
-========================================================= */
-
-const progressTrackStyle = {
-  height:
-    "7px",
-
-  background:
-    "#e2e8f0",
-
-  borderRadius:
-    "99px",
-
-  overflow:
-    "hidden" as const,
-
-  marginTop:
-    "11px",
-
-  maxWidth:
-    "520px",
-};
-
-const progressFillStyle = {
-  height:
-    "100%",
-
-  background:
-    "#1d526b",
-
-  borderRadius:
-    "99px",
-
-  transition:
-    "width 0.2s ease",
-};
-
-const progressTextStyle = {
-  marginTop:
-    "4px",
-
-  fontSize:
-    "11px",
+  textAlign:
+    "center" as const,
 
   color:
     "#64748b",
-};
 
-/* =========================================================
-   GUMBI
-========================================================= */
-
-const actionsStyle = {
-  display:
-    "flex",
-
-  justifyContent:
-    "flex-end",
-
-  alignItems:
-    "center",
-
-  gap:
-    "8px",
-
-  flexWrap:
-    "nowrap" as const,
-
-  whiteSpace:
-    "nowrap" as const,
-};
-
-const primarySmallButtonStyle =
-  {
-    ...primaryButtonStyle,
-
-    height:
-      "34px",
-
-    padding:
-      "0 12px",
-
-    fontSize:
-      "12px",
-  };
-
-const completeButtonStyle = {
-  ...primarySmallButtonStyle,
-
-  background:
-    "#15803d",
+  fontSize:
+    "14px",
 };
 
 const secondaryButtonStyle =
@@ -1860,82 +1769,6 @@ const secondaryButtonStyle =
     whiteSpace:
       "nowrap" as const,
   };
-
-const deleteButtonStyle = {
-  ...secondaryButtonStyle,
-
-  borderColor:
-    "#fecaca",
-
-  color:
-    "#dc2626",
-};
-
-const readyBannerStyle = {
-  marginTop:
-    "12px",
-
-  padding:
-    "10px 12px",
-
-  borderRadius:
-    "8px",
-
-  background:
-    "#ecfdf5",
-
-  color:
-    "#166534",
-
-  fontSize:
-    "12px",
-
-  fontWeight:
-    600,
-};
-
-/* =========================================================
-   PRAZEN STAN
-========================================================= */
-
-const emptyStyle = {
-  width:
-    "700px",
-
-  maxWidth:
-    "100%",
-
-  margin:
-    "0 auto",
-
-  padding:
-    "35px",
-
-  boxSizing:
-    "border-box" as const,
-
-  background:
-    "#ffffff",
-
-  border:
-    "1px solid #e5e7eb",
-
-  borderRadius:
-    "14px",
-
-  textAlign:
-    "center" as const,
-
-  color:
-    "#64748b",
-
-  fontSize:
-    "14px",
-};
-
-/* =========================================================
-   MODAL
-========================================================= */
 
 const overlayStyle = {
   position:
