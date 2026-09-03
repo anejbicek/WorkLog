@@ -12,16 +12,20 @@ import PDF from "./pages/PDF";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import UserSettings from "./pages/UserSettings";
+import Projects from "./pages/Projects";
 
 import { supabase } from "./services/supabase";
 
-import { useAdmin } from "./context/AdminContext";
+import {
+  useAdmin,
+} from "./context/AdminContext";
 
 export type Page =
   | "dashboard"
   | "evidenca"
   | "statistika"
   | "pdf"
+  | "projects"
   | "admin"
   | "settings";
 
@@ -53,7 +57,7 @@ function App() {
   ] = useState(false);
 
   /* =====================================================
-     PREVERI SEJO IN VLOGO UPORABNIKA
+     PREVERI SEJO
   ===================================================== */
 
   useEffect(() => {
@@ -71,18 +75,18 @@ function App() {
           !!session
         );
 
-        /* -----------------------------------------------
-           PREVERI VLOGO
-        ----------------------------------------------- */
-
         if (
           session?.user?.email
         ) {
           const currentUser =
             users.find(
-              (user) =>
-                user.email.toLowerCase() ===
-                session.user.email!.toLowerCase()
+              (
+                user
+              ) =>
+                user.email
+                  .toLowerCase() ===
+                session.user.email!
+                  .toLowerCase()
             );
 
           setIsAdmin(
@@ -98,13 +102,13 @@ function App() {
         );
       };
 
-    checkSession();
+    void checkSession();
 
     const {
       data: authListener,
     } =
       supabase.auth.onAuthStateChange(
-        async (
+        (
           _event,
           session
         ) => {
@@ -117,9 +121,13 @@ function App() {
           ) {
             const currentUser =
               users.find(
-                (user) =>
-                  user.email.toLowerCase() ===
-                  session.user.email!.toLowerCase()
+                (
+                  user
+                ) =>
+                  user.email
+                    .toLowerCase() ===
+                  session.user.email!
+                    .toLowerCase()
               );
 
             setIsAdmin(
@@ -130,23 +138,24 @@ function App() {
             setIsAdmin(false);
           }
 
-          /* ---------------------------------------------
-             Če uporabnik ni administrator,
-             ga nikoli ne pustimo na admin strani.
-          --------------------------------------------- */
-
           if (
             session &&
             !users.some(
-              (user) =>
-                user.email.toLowerCase() ===
-                  session.user.email!.toLowerCase() &&
+              (
+                user
+              ) =>
+                user.email
+                  .toLowerCase() ===
+                  session.user.email!
+                    .toLowerCase() &&
                 user.role ===
                   "admin"
             )
           ) {
             setCurrentPage(
-              (page) =>
+              (
+                page
+              ) =>
                 page ===
                 "admin"
                   ? "dashboard"
@@ -164,7 +173,7 @@ function App() {
   }, [users]);
 
   /* =====================================================
-     PREPREČI DOSTOP DO ADMIN STRANI
+     ADMIN ZAŠČITA
   ===================================================== */
 
   useEffect(() => {
@@ -186,15 +195,19 @@ function App() {
      PREVERJANJE SEJE
   ===================================================== */
 
-  if (checkingSession) {
+  if (
+    checkingSession
+  ) {
     return null;
   }
 
   /* =====================================================
-     NI PRIJAVLJEN
+     LOGIN
   ===================================================== */
 
-  if (!isLoggedIn) {
+  if (
+    !isLoggedIn
+  ) {
     return (
       <Login
         onLogin={() =>
@@ -218,10 +231,6 @@ function App() {
       onNavigate={(
         page
       ) => {
-        /* -----------------------------------------------
-           DODATNA ZAŠČITA ADMINISTRACIJE
-        ----------------------------------------------- */
-
         if (
           page ===
             "admin" &&
@@ -253,6 +262,11 @@ function App() {
       {currentPage ===
         "pdf" && (
         <PDF />
+      )}
+
+      {currentPage ===
+        "projects" && (
+        <Projects />
       )}
 
       {currentPage ===

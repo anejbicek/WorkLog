@@ -879,7 +879,7 @@ function PDF() {
                     tableLayout:
                       "fixed",
                     fontSize:
-                      "7px",
+                      "8.5px",
                   }}
                 >
                   <thead>

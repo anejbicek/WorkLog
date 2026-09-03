@@ -16,6 +16,7 @@ type Page =
   | "evidenca"
   | "statistika"
   | "pdf"
+  | "projects"
   | "admin"
   | "settings";
 
@@ -38,19 +39,9 @@ function MainLayout({
     projects,
   } = useAdmin();
 
-  /*
-    ==========================================
-    PROJEKTNI AUTOCOMPLETE
-
-    Obstoječemu inputu:
-
-    placeholder="Izberi projekt"
-
-    dodamo HTML datalist.
-
-    Tako WorkOrderCard ni potrebno
-    spreminjati.
-  */
+  /* =====================================================
+     PROJEKTNI AUTOCOMPLETE
+  ===================================================== */
 
   useEffect(() => {
     const projectInput =
@@ -70,7 +61,9 @@ function MainLayout({
 
   const activeProjects =
     projects.filter(
-      (project) =>
+      (
+        project
+      ) =>
         project.active
     );
 
@@ -119,15 +112,13 @@ function MainLayout({
       >
         {children}
 
-        {/* ==================================
-            PROJEKTNI SEZNAM
-        ================================== */}
-
         <datalist
           id="zusta-worklog-projects"
         >
           {activeProjects.map(
-            (project) => (
+            (
+              project
+            ) => (
               <option
                 key={
                   project.id

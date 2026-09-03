@@ -27,6 +27,7 @@ export type AdminUser = {
 export type AdminProject = {
   id: number;
   name: string;
+  requiredQuantity: number;
   active: boolean;
 };
 
@@ -585,6 +586,7 @@ export function AdminProvider({
             (row) => ({
               id: Number(row.id),
               name: row.name,
+              requiredQuantity: Number(row.required_quantity ?? 0),
               active: row.active,
             })
           );
@@ -1043,6 +1045,7 @@ export function AdminProvider({
           .from("projects")
           .insert({
             name: project.name,
+            required_quantity: project.requiredQuantity,
             active: project.active,
           })
           .select("*")
@@ -1062,6 +1065,7 @@ export function AdminProvider({
           {
             id: Number(data.id),
             name: data.name,
+            requiredQuantity: Number(data.required_quantity ?? 0),
             active: data.active,
           };
 
@@ -1089,6 +1093,8 @@ export function AdminProvider({
           .from("projects")
           .update({
             name: project.name,
+            required_quantity:
+              project.requiredQuantity,
             active:
               project.active,
           })
@@ -1113,6 +1119,7 @@ export function AdminProvider({
           {
             id: Number(data.id),
             name: data.name,
+            requiredQuantity: Number(data.required_quantity ?? 0),
             active: data.active,
           };
 

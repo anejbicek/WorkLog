@@ -20,6 +20,11 @@ function AdminProjects() {
   ] = useState("");
 
   const [
+    requiredQuantity,
+    setRequiredQuantity,
+  ] = useState("");
+
+  const [
     editing,
     setEditing,
   ] =
@@ -33,9 +38,18 @@ function AdminProjects() {
   ] = useState("");
 
   const [
+    editRequiredQuantity,
+    setEditRequiredQuantity,
+  ] = useState("");
+
+  const [
     editActive,
     setEditActive,
   ] = useState(true);
+
+  /* =======================================================
+     DODAJ NOV PROJEKT
+  ======================================================= */
 
   const saveNewProject =
     () => {
@@ -43,25 +57,63 @@ function AdminProjects() {
         return;
       }
 
+      const quantity =
+        Number(
+          requiredQuantity
+        );
+
+      if (
+        !Number.isFinite(
+          quantity
+        ) ||
+        quantity < 0
+      ) {
+        return;
+      }
+
       addProject({
-        name: name.trim(),
+        name:
+          name.trim(),
+
+        requiredQuantity:
+          Math.round(
+            quantity
+          ),
+
         active: true,
       });
 
       setName("");
+      setRequiredQuantity("");
     };
+
+  /* =======================================================
+     ZAČNI UREJANJE
+  ======================================================= */
 
   const startEdit = (
     project: AdminProject
   ) => {
     setEditing(project);
+
     setEditName(
       project.name
     );
+
+    setEditRequiredQuantity(
+      String(
+        project.requiredQuantity
+      )
+    );
+
     setEditActive(
       project.active
     );
   };
+
+  /* =======================================================
+     SHRANI UREJANJE
+  ======================================================= */
 
   const saveEdit =
     () => {
@@ -72,11 +124,31 @@ function AdminProjects() {
         return;
       }
 
+      const quantity =
+        Number(
+          editRequiredQuantity
+        );
+
+      if (
+        !Number.isFinite(
+          quantity
+        ) ||
+        quantity < 0
+      ) {
+        return;
+      }
+
       updateProject(
         editing.id,
         {
           name:
             editName.trim(),
+
+          requiredQuantity:
+            Math.round(
+              quantity
+            ),
+
           active:
             editActive,
         }
@@ -85,8 +157,26 @@ function AdminProjects() {
       setEditing(null);
     };
 
+  /* =======================================================
+     FORMATIRANJE ŠTEVIL
+  ======================================================= */
+
+  const formatQuantity = (
+    quantity: number
+  ) => {
+    return new Intl.NumberFormat(
+      "sl-SI"
+    ).format(
+      quantity
+    );
+  };
+
   return (
     <div>
+      {/* =================================================
+          NASLOV
+      ================================================= */}
+
       <div
         style={{
           marginBottom:
@@ -108,14 +198,21 @@ function AdminProjects() {
         >
           Projekti, ki bodo
           na voljo pri vnosu
-          delovnih nalogov.
+          delovnih nalogov in
+          izdelave.
         </p>
       </div>
+
+      {/* =================================================
+          NOV PROJEKT
+      ================================================= */}
 
       <div
         style={{
           display:
-            "flex",
+            "grid",
+          gridTemplateColumns:
+            "1fr 180px auto",
           gap: "10px",
           marginBottom:
             "18px",
@@ -138,10 +235,36 @@ function AdminProjects() {
             }
           }}
           placeholder="Ime projekta"
-          style={{
-            ...inputStyle,
-            flex: 1,
+          style={
+            inputStyle
+          }
+        />
+
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={
+            requiredQuantity
+          }
+          onChange={(event) =>
+            setRequiredQuantity(
+              event.target
+                .value
+            )
+          }
+          onKeyDown={(event) => {
+            if (
+              event.key ===
+              "Enter"
+            ) {
+              saveNewProject();
+            }
           }}
+          placeholder="Zahtevana količina"
+          style={
+            inputStyle
+          }
         />
 
         <button
@@ -156,6 +279,10 @@ function AdminProjects() {
           + Dodaj projekt
         </button>
       </div>
+
+      {/* =================================================
+          SEZNAM PROJEKTOV
+      ================================================= */}
 
       <div
         style={
@@ -193,7 +320,7 @@ function AdminProjects() {
                   display:
                     "grid",
                   gridTemplateColumns:
-                    "1.3fr 300px",
+                    "1fr 180px 300px",
                   alignItems:
                     "center",
                   gap: "15px",
@@ -207,6 +334,10 @@ function AdminProjects() {
                       : "1px solid #e5e7eb",
                 }}
               >
+                {/* =======================================
+                    PROJEKT
+                ======================================= */}
+
                 <div>
                   <strong
                     style={{
@@ -238,6 +369,50 @@ function AdminProjects() {
                       : "Neaktiven"}
                   </div>
                 </div>
+
+                {/* =======================================
+                    ZAHTEVANA KOLIČINA
+                ======================================= */}
+
+                <div
+                  style={{
+                    textAlign:
+                      "left",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize:
+                        "11px",
+                      color:
+                        "#64748b",
+                      marginBottom:
+                        "3px",
+                    }}
+                  >
+                    Zahtevana količina
+                  </div>
+
+                  <strong
+                    style={{
+                      color:
+                        "#12344d",
+                      fontSize:
+                        "15px",
+                    }}
+                  >
+                    {
+                      formatQuantity(
+                        project.requiredQuantity
+                      )
+                    }{" "}
+                    kos
+                  </strong>
+                </div>
+
+                {/* =======================================
+                    AKCIJE
+                ======================================= */}
 
                 <div
                   style={{
@@ -304,6 +479,10 @@ function AdminProjects() {
         )}
       </div>
 
+      {/* =================================================
+          UREJANJE PROJEKTA
+      ================================================= */}
+
       {editing && (
         <div
           style={
@@ -325,6 +504,10 @@ function AdminProjects() {
             >
               Uredi projekt
             </h3>
+
+            {/* =========================================
+                IME PROJEKTA
+            ========================================= */}
 
             <label
               style={
@@ -348,6 +531,66 @@ function AdminProjects() {
                 inputStyle
               }
             />
+
+            {/* =========================================
+                ZAHTEVANA KOLIČINA
+            ========================================= */}
+
+            <label
+              style={{
+                ...labelStyle,
+                marginTop:
+                  "16px",
+              }}
+            >
+              Zahtevana količina
+            </label>
+
+            <div
+              style={{
+                display:
+                  "flex",
+                alignItems:
+                  "center",
+                gap: "10px",
+              }}
+            >
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={
+                  editRequiredQuantity
+                }
+                onChange={(event) =>
+                  setEditRequiredQuantity(
+                    event.target
+                      .value
+                  )
+                }
+                style={{
+                  ...inputStyle,
+                  flex: 1,
+                }}
+              />
+
+              <span
+                style={{
+                  color:
+                    "#64748b",
+                  fontSize:
+                    "14px",
+                  fontWeight:
+                    600,
+                }}
+              >
+                kos
+              </span>
+            </div>
+
+            {/* =========================================
+                STATUS
+            ========================================= */}
 
             <label
               style={{
@@ -384,6 +627,10 @@ function AdminProjects() {
                 Neaktiven
               </option>
             </select>
+
+            {/* =========================================
+                GUMBI
+            ========================================= */}
 
             <div
               style={
@@ -422,6 +669,10 @@ function AdminProjects() {
     </div>
   );
 }
+
+/* =========================================================
+   STILI
+========================================================= */
 
 const titleStyle = {
   margin: 0,

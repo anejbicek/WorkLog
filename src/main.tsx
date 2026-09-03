@@ -1,4 +1,6 @@
-import { StrictMode } from "react";
+import {
+  StrictMode,
+} from "react";
 
 import {
   createRoot,
@@ -16,6 +18,10 @@ import {
   AdminProvider,
 } from "./context/AdminContext";
 
+import {
+  ProjectProvider,
+} from "./context/ProjectContext";
+
 createRoot(
   document.getElementById(
     "root"
@@ -24,7 +30,9 @@ createRoot(
   <StrictMode>
     <AdminProvider>
       <WorkOrderProvider>
-        <App />
+        <ProjectProvider>
+          <App />
+        </ProjectProvider>
       </WorkOrderProvider>
     </AdminProvider>
   </StrictMode>

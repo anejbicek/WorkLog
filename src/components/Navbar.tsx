@@ -7,17 +7,23 @@ import {
   Settings,
 } from "lucide-react";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import { supabase } from "../services/supabase";
 
-import { useAdmin } from "../context/AdminContext";
+import {
+  useAdmin,
+} from "../context/AdminContext";
 
 type Page =
   | "dashboard"
   | "evidenca"
   | "statistika"
   | "pdf"
+  | "projects"
   | "admin";
 
 type NavbarProps = {
@@ -32,8 +38,9 @@ function Navbar({
   currentPage,
   onNavigate,
 }: NavbarProps) {
-  const { users } =
-    useAdmin();
+  const {
+    users,
+  } = useAdmin();
 
   const [
     isAdmin,
@@ -41,7 +48,7 @@ function Navbar({
   ] = useState(false);
 
   /* =====================================================
-     PREVERI VLOGO TRENUTNEGA UPORABNIKA
+     PREVERI VLOGO
   ===================================================== */
 
   useEffect(() => {
@@ -57,14 +64,19 @@ function Navbar({
 
         if (!email) {
           setIsAdmin(false);
+
           return;
         }
 
         const currentUser =
           users.find(
-            (user) =>
-              user.email.toLowerCase() ===
-              email.toLowerCase()
+            (
+              user
+            ) =>
+              user.email
+                .toLowerCase() ===
+              email
+                .toLowerCase()
           );
 
         setIsAdmin(
@@ -73,8 +85,12 @@ function Navbar({
         );
       };
 
-    checkUserRole();
+    void checkUserRole();
   }, [users]);
+
+  /* =====================================================
+     ZAVIHKI
+  ===================================================== */
 
   const items = [
     {
@@ -82,8 +98,10 @@ function Navbar({
         <ClipboardList
           size={20}
         />,
+
       text:
         "Delovni nalogi",
+
       page:
         "dashboard" as const,
     },
@@ -93,8 +111,10 @@ function Navbar({
         <Clock3
           size={20}
         />,
+
       text:
         "Evidenca",
+
       page:
         "evidenca" as const,
     },
@@ -104,8 +124,10 @@ function Navbar({
         <BarChart3
           size={20}
         />,
+
       text:
         "Statistika",
+
       page:
         "statistika" as const,
     },
@@ -115,16 +137,26 @@ function Navbar({
         <FileText
           size={20}
         />,
+
       text:
         "PDF",
+
       page:
         "pdf" as const,
     },
 
-    /* ===================================================
-       ADMINISTRACIJA
-       Prikaže se samo administratorju.
-    =================================================== */
+    {
+      icon:
+        <FolderKanban
+          size={20}
+        />,
+
+      text:
+        "PROJEKTI",
+
+      page:
+        "projects" as const,
+    },
 
     ...(isAdmin
       ? [
@@ -133,8 +165,10 @@ function Navbar({
               <Settings
                 size={20}
               />,
+
             text:
               "Administracija",
+
             page:
               "admin" as const,
           },
@@ -171,7 +205,9 @@ function Navbar({
       }}
     >
       {items.map(
-        (item) => {
+        (
+          item
+        ) => {
           const active =
             currentPage ===
             item.page;
@@ -246,136 +282,6 @@ function Navbar({
           );
         }
       )}
-
-      {/* =====================================
-          PROJEKTI
-      ===================================== */}
-
-      <div
-        style={{
-          height:
-            "62px",
-
-          padding:
-            "0 18px",
-
-          display:
-            "flex",
-
-          alignItems:
-            "center",
-
-          gap:
-            "9px",
-
-          color:
-            "#ffffff",
-
-          fontWeight:
-            600,
-
-          fontSize:
-            "16px",
-
-          boxSizing:
-            "border-box",
-
-          cursor:
-            "default",
-
-          position:
-            "relative",
-
-          overflow:
-            "hidden",
-        }}
-      >
-        <FolderKanban
-          size={20}
-        />
-
-        <span
-          style={{
-            position:
-              "relative",
-
-            zIndex:
-              2,
-          }}
-        >
-          PROJEKTI
-        </span>
-
-        <div
-          style={{
-            position:
-              "absolute",
-
-            left:
-              "-12px",
-
-            top:
-              "50%",
-
-            width:
-              "145px",
-
-            height:
-              "10px",
-
-            background:
-              "repeating-linear-gradient(135deg, #f4c430 0px, #f4c430 10px, #222222 10px, #222222 20px)",
-
-            transform:
-              "translateY(-50%) rotate(-12deg)",
-
-            zIndex:
-              3,
-
-            pointerEvents:
-              "none",
-          }}
-        />
-
-        <span
-          style={{
-            position:
-              "absolute",
-
-            left:
-              "50%",
-
-            top:
-              "50%",
-
-            transform:
-              "translate(-50%, -50%) rotate(-12deg)",
-
-            color:
-              "#ffffff",
-
-            fontSize:
-              "7px",
-
-            fontWeight:
-              800,
-
-            letterSpacing:
-              "0.5px",
-
-            whiteSpace:
-              "nowrap",
-
-            zIndex:
-              4,
-
-            pointerEvents:
-              "none",
-          }}
-        >
-          V PRIPRAVI
-        </span>
-      </div>
     </nav>
   );
 }

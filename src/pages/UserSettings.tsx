@@ -53,33 +53,93 @@ function UserSettings() {
     setError,
   ] = useState("");
 
+  /* =========================================================
+     NALOŽI UPORABNIKA
+  ========================================================= */
+
   useEffect(() => {
-    const loadUser = async () => {
-      const {
-        data: {
-          user,
-        },
-      } = await supabase.auth.getUser();
+    const loadUser =
+      async () => {
+        const {
+          data: {
+            user,
+          },
+        } =
+          await supabase.auth.getUser();
 
-      if (!user) {
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
+        const email =
+          user.email ?? "";
+
+        setUserEmail(
+          email
+        );
+
+        const {
+          data: profile,
+          error: profileError,
+        } =
+          await supabase
+            .from("users")
+            .select("username")
+            .eq(
+              "auth_user_id",
+              user.id
+            )
+            .maybeSingle();
+
+        if (
+          !profileError &&
+          profile?.username
+        ) {
+          setUserName(
+            profile.username
+          );
+        } else if (email) {
+          const {
+            data: emailProfile,
+          } =
+            await supabase
+              .from("users")
+              .select("username")
+              .eq(
+                "email",
+                email
+              )
+              .maybeSingle();
+
+          setUserName(
+            emailProfile?.username ??
+              ""
+          );
+        }
+
         setLoading(false);
-        return;
-      }
-
-      setUserEmail(
-        user.email ?? ""
-      );
-
-      setLoading(false);
-    };
+      };
 
     void loadUser();
   }, []);
+
+  /* =========================================================
+     SHRANI
+  ========================================================= */
 
   const handleSave =
     async () => {
       setError("");
       setMessage("");
+
+      if (!userName.trim()) {
+        setError(
+          "Uporabniško ime je obvezno."
+        );
+
+        return;
+      }
 
       if (
         newPassword ||
@@ -87,11 +147,12 @@ function UserSettings() {
       ) {
         if (
           newPassword.length <
-          8
+          4
         ) {
           setError(
-            "Geslo mora imeti najmanj 8 znakov."
+            "Geslo mora imeti najmanj 4 znake."
           );
+
           return;
         }
 
@@ -102,6 +163,7 @@ function UserSettings() {
           setError(
             "Gesli se ne ujemata."
           );
+
           return;
         }
       }
@@ -109,6 +171,129 @@ function UserSettings() {
       setSaving(true);
 
       try {
+        const {
+          data: {
+            user,
+          },
+        } =
+          await supabase.auth.getUser();
+
+        if (!user) {
+          setError(
+            "Uporabnik ni prijavljen."
+          );
+
+          setSaving(false);
+          return;
+        }
+
+        const normalizedUsername =
+          userName
+            .trim()
+            .toLowerCase();
+
+        /* ===================================================
+           SHRANI UPORABNIŠKO IME
+        =================================================== */
+
+        const {
+          data: updatedProfiles,
+          error: profileError,
+        } =
+          await supabase
+            .from("users")
+            .update({
+              username:
+                normalizedUsername,
+            })
+            .eq(
+              "auth_user_id",
+              user.id
+            )
+            .select("id")
+            .maybeSingle();
+
+        if (profileError) {
+          if (
+            profileError.code ===
+            "23505"
+          ) {
+            setError(
+              "To uporabniško ime je že zasedeno."
+            );
+
+            setSaving(false);
+            return;
+          }
+
+          setError(
+            profileError.message
+          );
+
+          setSaving(false);
+          return;
+        }
+
+        /*
+         * Če uporabnik še nima povezave z auth_user_id,
+         * poiščemo zapis po e-pošti.
+         */
+
+        if (!updatedProfiles) {
+          const {
+            data: emailProfile,
+            error:
+              emailProfileError,
+          } =
+            await supabase
+              .from("users")
+              .update({
+                username:
+                  normalizedUsername,
+                auth_user_id:
+                  user.id,
+              })
+              .eq(
+                "email",
+                user.email ?? ""
+              )
+              .select("id")
+              .maybeSingle();
+
+          if (
+            emailProfileError
+          ) {
+            if (
+              emailProfileError.code ===
+              "23505"
+            ) {
+              setError(
+                "To uporabniško ime je že zasedeno."
+              );
+            } else {
+              setError(
+                emailProfileError.message
+              );
+            }
+
+            setSaving(false);
+            return;
+          }
+
+          if (!emailProfile) {
+            setError(
+              "Uporabniškega profila ni mogoče posodobiti."
+            );
+
+            setSaving(false);
+            return;
+          }
+        }
+
+        /* ===================================================
+           SPREMEMBA GESLA
+        =================================================== */
+
         if (newPassword) {
           const {
             error:
@@ -127,10 +312,15 @@ function UserSettings() {
             setError(
               passwordError.message
             );
+
             setSaving(false);
             return;
           }
         }
+
+        setUserName(
+          normalizedUsername
+        );
 
         setNewPassword("");
         setConfirmPassword("");
@@ -146,6 +336,10 @@ function UserSettings() {
 
       setSaving(false);
     };
+
+  /* =========================================================
+     LOADING
+  ========================================================= */
 
   if (loading) {
     return (
@@ -351,6 +545,19 @@ function UserSettings() {
                   "#334155",
               }}
             />
+          </div>
+
+          <div
+            style={{
+              marginTop:
+                "7px",
+              fontSize:
+                "12px",
+              color:
+                "#94a3b8",
+            }}
+          >
+            S tem uporabniškim imenom se lahko prijaviš v WorkLog.
           </div>
         </div>
 
@@ -655,7 +862,7 @@ function UserSettings() {
                 "#94a3b8",
             }}
           >
-            Geslo mora vsebovati najmanj 8 znakov.
+            Geslo mora vsebovati najmanj 4 znake.
           </div>
         </div>
       </div>
