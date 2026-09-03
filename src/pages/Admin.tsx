@@ -5,176 +5,137 @@ import AdminProjects from "../components/Admin/AdminProjects";
 import AdminMachines from "../components/Admin/AdminMachines";
 import AdminSettings from "../components/Admin/AdminSettings";
 
-type AdminTab =
-  | "users"
-  | "projects"
-  | "machines"
-  | "settings";
+type AdminSection = "users" | "projects" | "machines" | "settings";
 
 function Admin() {
-  const [
-    activeTab,
-    setActiveTab,
-  ] =
-    useState<AdminTab>(
-      "users"
-    );
+  const [activeSection, setActiveSection] = useState<AdminSection>("users");
 
-  const tabs = [
-    {
-      id: "users" as const,
-      title: "Uporabniki",
-    },
-    {
-      id: "projects" as const,
-      title: "Projekti",
-    },
-    {
-      id: "machines" as const,
-      title: "Stroji",
-    },
-    {
-      id: "settings" as const,
-      title: "Nastavitve",
-    },
+  const sections: { id: AdminSection; title: string }[] = [
+    { id: "users", title: "Uporabniki" },
+    { id: "projects", title: "Projekti" },
+    { id: "machines", title: "Stroji" },
+    { id: "settings", title: "Nastavitve" },
   ];
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth:
-          "1080px",
-        margin:
-          "0 auto",
-      }}
-    >
-      <div
-        style={{
-          marginBottom:
-            "25px",
-        }}
-      >
-        <h1
-          style={{
-            margin: 0,
-            fontSize:
-              "30px",
-            fontWeight:
-              700,
-            color:
-              "#12344d",
-          }}
-        >
-          Administracija
-        </h1>
-
-        <p
-          style={{
-            marginTop:
-              "7px",
-            marginBottom:
-              0,
-            fontSize:
-              "15px",
-            color:
-              "#64748b",
-          }}
-        >
-          Upravljanje
-          uporabnikov,
-          projektov,
-          strojev in
-          nastavitev
-          WorkLoga.
+    <div style={pageStyle}>
+      <div style={headerStyle}>
+        <h1 style={titleStyle}>Administracija</h1>
+        <p style={subtitleStyle}>
+          Upravljanje uporabnikov, projektov, strojev in nastavitev WorkLoga.
         </p>
       </div>
 
-      <div
-        style={{
-          display:
-            "flex",
-          gap: "10px",
-          marginBottom:
-            "25px",
-          borderBottom:
-            "1px solid #e2e8f0",
-          paddingBottom:
-            "10px",
-        }}
-      >
-        {tabs.map(
-          (tab) => {
-            const active =
-              activeTab ===
-              tab.id;
-
+      <div style={layoutStyle}>
+        <aside style={sidebarStyle}>
+          <div style={sidebarTitleStyle}>ADMINISTRACIJA</div>
+          {sections.map((section) => {
+            const active = activeSection === section.id;
             return (
               <button
-                key={
-                  tab.id
-                }
+                key={section.id}
                 type="button"
-                onClick={() =>
-                  setActiveTab(
-                    tab.id
-                  )
-                }
+                onClick={() => setActiveSection(section.id)}
                 style={{
-                  padding:
-                    "11px 18px",
-                  borderRadius:
-                    "9px",
-                  border:
-                    active
-                      ? "1px solid #1d526b"
-                      : "1px solid #dbe3e8",
-                  background:
-                    active
-                      ? "#1d526b"
-                      : "#ffffff",
-                  color:
-                    active
-                      ? "#ffffff"
-                      : "#334155",
-                  fontSize:
-                    "14px",
-                  fontWeight:
-                    600,
-                  cursor:
-                    "pointer",
+                  ...sidebarButtonStyle,
+                  ...(active ? sidebarButtonActiveStyle : {}),
                 }}
               >
-                {
-                  tab.title
-                }
+                <span
+                  style={{
+                    width: "7px",
+                    height: "7px",
+                    borderRadius: "50%",
+                    background: active ? "#ffffff" : "#94a3b8",
+                    flexShrink: 0,
+                  }}
+                />
+                {section.title}
               </button>
             );
-          }
-        )}
+          })}
+        </aside>
+
+        <main style={contentStyle}>
+          {activeSection === "users" && <AdminUsers />}
+          {activeSection === "projects" && <AdminProjects />}
+          {activeSection === "machines" && <AdminMachines />}
+          {activeSection === "settings" && <AdminSettings />}
+        </main>
       </div>
-
-      {activeTab ===
-        "users" && (
-        <AdminUsers />
-      )}
-
-      {activeTab ===
-        "projects" && (
-        <AdminProjects />
-      )}
-
-      {activeTab ===
-        "machines" && (
-        <AdminMachines />
-      )}
-
-      {activeTab ===
-        "settings" && (
-        <AdminSettings />
-      )}
     </div>
   );
 }
+
+const pageStyle = {
+  width: "100%",
+  maxWidth: "1080px",
+  margin: "0 auto",
+};
+
+const headerStyle = { marginBottom: "25px" };
+const titleStyle = {
+  margin: 0,
+  fontSize: "30px",
+  fontWeight: 700,
+  color: "#12344d",
+};
+const subtitleStyle = {
+  marginTop: "7px",
+  marginBottom: 0,
+  fontSize: "15px",
+  color: "#64748b",
+};
+
+const layoutStyle = {
+  display: "grid",
+  gridTemplateColumns: "210px minmax(0, 1fr)",
+  gap: "24px",
+  alignItems: "start",
+};
+
+const sidebarStyle = {
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
+  borderRadius: "14px",
+  padding: "10px",
+  boxShadow: "0 4px 14px rgba(15,23,42,0.04)",
+};
+
+const sidebarTitleStyle = {
+  padding: "10px 12px 8px",
+  fontSize: "10px",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  color: "#94a3b8",
+};
+
+const sidebarButtonStyle = {
+  width: "100%",
+  minHeight: "44px",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  padding: "0 12px",
+  marginBottom: "4px",
+  border: "1px solid transparent",
+  borderRadius: "9px",
+  background: "transparent",
+  color: "#334155",
+  fontSize: "14px",
+  fontWeight: 600,
+  textAlign: "left" as const,
+  cursor: "pointer",
+};
+
+const sidebarButtonActiveStyle = {
+  background: "#1d526b",
+  color: "#ffffff",
+  boxShadow: "0 4px 10px rgba(29,82,107,0.18)",
+};
+
+const contentStyle = {
+  minWidth: 0,
+};
 
 export default Admin;

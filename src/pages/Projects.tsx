@@ -45,11 +45,28 @@ function Projects() {
 
   const activeProjects = useMemo(
     () =>
-      projects.filter(
-        (project) =>
-          project.active
-      ),
-    [projects]
+      projects.filter((project) => {
+        if (!project.active) {
+          return false;
+        }
+
+        if (project.status && project.status !== "active") {
+          return false;
+        }
+
+        const requiredQuantity =
+          Number(project.requiredQuantity ?? 0);
+
+        if (requiredQuantity <= 0) {
+          return true;
+        }
+
+        const producedQuantity =
+          getProjectProducedQuantity(project.id);
+
+        return producedQuantity < requiredQuantity;
+      }),
+    [projects, getProjectProducedQuantity]
   );
 
   const activeMachines = useMemo(
@@ -270,6 +287,18 @@ function Projects() {
       return;
     }
 
+    const requiredQuantity =
+      Number(project.requiredQuantity ?? 0);
+
+    if (requiredQuantity > 0) {
+      const producedQuantity =
+        getProjectProducedQuantity(project.id);
+
+      if (producedQuantity >= requiredQuantity) {
+        return;
+      }
+    }
+
     setSelectedProjectId(
       project.id
     );
@@ -338,6 +367,27 @@ function Projects() {
     async () => {
       if (!selectedProject) {
         return;
+      }
+
+      if (
+        selectedProject.status &&
+        selectedProject.status !== "active"
+      ) {
+        return;
+      }
+
+      const requiredQuantity =
+        Number(selectedProject.requiredQuantity ?? 0);
+
+      if (requiredQuantity > 0) {
+        const producedQuantity =
+          getProjectProducedQuantity(
+            selectedProject.id
+          );
+
+        if (producedQuantity >= requiredQuantity) {
+          return;
+        }
       }
 
       if (!entryDate) {
@@ -860,6 +910,32 @@ function Projects() {
               }
 
               onAddEntry={() => {
+                const requiredQuantity =
+                  Number(
+                    detailsProject.requiredQuantity ??
+                      0
+                  );
+
+                const producedQuantity =
+                  getProjectProducedQuantity(
+                    detailsProject.id
+                  );
+
+                if (
+                  detailsProject.status &&
+                  detailsProject.status !== "active"
+                ) {
+                  return;
+                }
+
+                if (
+                  requiredQuantity > 0 &&
+                  producedQuantity >=
+                    requiredQuantity
+                ) {
+                  return;
+                }
+
                 closeProjectDetails();
 
                 openEntryForm(

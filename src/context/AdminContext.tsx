@@ -29,6 +29,7 @@ export type AdminProject = {
   name: string;
   requiredQuantity: number;
   active: boolean;
+  status: "preparation" | "active" | "completed";
 };
 
 export type AdminMachine = {
@@ -105,6 +106,14 @@ type AdminContextType = {
   ) => void;
 
   toggleProjectActive: (
+    id: number
+  ) => void;
+
+  activateProject: (
+    id: number
+  ) => void;
+
+  completeProject: (
     id: number
   ) => void;
 
@@ -588,6 +597,7 @@ export function AdminProvider({
               name: row.name,
               requiredQuantity: Number(row.required_quantity ?? 0),
               active: row.active,
+              status: row.status ?? (row.active ? "active" : "preparation"),
             })
           );
 
@@ -1047,6 +1057,7 @@ export function AdminProvider({
             name: project.name,
             required_quantity: project.requiredQuantity,
             active: project.active,
+            status: project.status,
           })
           .select("*")
           .single();
@@ -1067,6 +1078,7 @@ export function AdminProvider({
             name: data.name,
             requiredQuantity: Number(data.required_quantity ?? 0),
             active: data.active,
+            status: data.status ?? (data.active ? "active" : "preparation"),
           };
 
         setProjects(
@@ -1097,6 +1109,8 @@ export function AdminProvider({
               project.requiredQuantity,
             active:
               project.active,
+            status:
+              project.status,
           })
           .eq(
             "id",
@@ -1114,15 +1128,15 @@ export function AdminProvider({
           return;
         }
 
-        const updatedProject:
-          AdminProject =
-          {
-            id: Number(data.id),
-            name: data.name,
-            requiredQuantity: Number(data.required_quantity ?? 0),
-            active: data.active,
-          };
-
+const updatedProject:
+  AdminProject =
+  {
+    id: Number(data.id),
+    name: data.name,
+    requiredQuantity: Number(data.required_quantity ?? 0),
+    active: data.active,
+    status: data.status ?? (data.active ? "active" : "preparation"),
+  };
         setProjects(
           (previous) =>
             previous.map(
@@ -1176,59 +1190,118 @@ export function AdminProvider({
   const toggleProjectActive = (
     id: number
   ) => {
-    const toggleProject =
-      async () => {
-        const currentProject =
-          projects.find(
-            (project) =>
-              project.id === id
-          );
+    const toggleProject = async () => {
+      const currentProject = projects.find(
+        (project) => project.id === id
+      );
 
-        if (!currentProject) {
-          return;
-        }
+      if (!currentProject || currentProject.status === "completed") {
+        return;
+      }
 
-        const newActive =
-          !currentProject.active;
+      const nextStatus =
+        currentProject.status === "active"
+          ? "preparation"
+          : "active";
 
-        const {
-          error,
-        } = await supabase
-          .from("projects")
-          .update({
-            active:
-              newActive,
-          })
-          .eq(
-            "id",
-            id
-          );
+      const { data, error } = await supabase
+        .from("projects")
+        .update({
+          active: nextStatus === "active",
+          status: nextStatus,
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
 
-        if (error) {
-          console.error(
-            "Napaka pri spreminjanju aktivnega stanja projekta:",
-            error
-          );
-
-          return;
-        }
-
-        setProjects(
-          (previous) =>
-            previous.map(
-              (project) =>
-                project.id === id
-                  ? {
-                      ...project,
-                      active:
-                        newActive,
-                    }
-                  : project
-            )
+      if (error) {
+        console.error(
+          "Napaka pri spreminjanju statusa projekta:",
+          error
         );
-      };
+        return;
+      }
+
+      setProjects((previous) =>
+        previous.map((project) =>
+          project.id === id
+            ? {
+                ...project,
+                active: data.active,
+                status: data.status,
+              }
+            : project
+        )
+      );
+    };
 
     void toggleProject();
+  };
+
+  const activateProject = (id: number) => {
+    const activate = async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .update({
+          active: true,
+          status: "active",
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error("Napaka pri aktiviranju projekta:", error);
+        return;
+      }
+
+      setProjects((previous) =>
+        previous.map((project) =>
+          project.id === id
+            ? {
+                ...project,
+                active: data.active,
+                status: data.status,
+              }
+            : project
+        )
+      );
+    };
+
+    void activate();
+  };
+
+  const completeProject = (id: number) => {
+    const complete = async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .update({
+          active: false,
+          status: "completed",
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error("Napaka pri zaključevanju projekta:", error);
+        return;
+      }
+
+      setProjects((previous) =>
+        previous.map((project) =>
+          project.id === id
+            ? {
+                ...project,
+                active: data.active,
+                status: data.status,
+              }
+            : project
+        )
+      );
+    };
+
+    void complete();
   };
 
   /* =======================================================
@@ -1449,6 +1522,8 @@ export function AdminProvider({
         updateProject,
         deleteProject,
         toggleProjectActive,
+        activateProject,
+        completeProject,
 
         addMachine,
         updateMachine,
