@@ -1,0 +1,1742 @@
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+
+import { supabase } from "../services/supabase";
+
+/* =========================================================
+   TIPI
+========================================================= */
+
+export type UserRole = "admin" | "worker";
+
+export type AdminUser = {
+  id: number;
+  name: string;
+  email: string;
+  username: string;
+  authUserId?: string;
+  role: UserRole;
+  active: boolean;
+};
+
+export type AdminProject = {
+  id: number;
+  name: string;
+  serialNumber?: string;
+  requiredQuantity: number;
+  active: boolean;
+  status: "preparation" | "active" | "completed";
+};
+
+export type AdminMachine = {
+  id: number;
+  name: string;
+  active: boolean;
+};
+
+export type AdminHoliday = {
+  id: number;
+  date: string;
+  name: string;
+};
+
+export type AdminSettings = {
+  companyName: string;
+  workDayHours: string;
+  breakMinutes: string;
+  nightStart: string;
+  nightEnd: string;
+  overtimeAfter: string;
+  autoBreak: boolean;
+  pdfCompanyName: string;
+  pdfResponsiblePerson: string;
+  notificationsService: boolean;
+  notificationsMissingWorkOrders: boolean;
+};
+
+/* =========================================================
+   CONTEXT TYPE
+========================================================= */
+
+type AdminContextType = {
+  users: AdminUser[];
+  projects: AdminProject[];
+  machines: AdminMachine[];
+  holidays: AdminHoliday[];
+  settings: AdminSettings;
+
+  addUser: (
+    user: Omit<AdminUser, "id" | "authUserId">,
+    initialPassword: string
+  ) => Promise<boolean>;
+
+  updateUser: (
+    id: number,
+    user: Omit<AdminUser, "id">
+  ) => void;
+
+  deleteUser: (
+    id: number
+  ) => void;
+
+  toggleUserActive: (
+    id: number
+  ) => void;
+
+  linkUserAuthId: (
+    email: string,
+    authUserId: string
+  ) => void;
+
+  addProject: (
+    project: Omit<AdminProject, "id">
+  ) => void;
+
+  updateProject: (
+    id: number,
+    project: Omit<AdminProject, "id">
+  ) => void;
+
+  deleteProject: (
+    id: number
+  ) => void;
+
+  toggleProjectActive: (
+    id: number
+  ) => void;
+
+  activateProject: (
+    id: number
+  ) => void;
+
+  completeProject: (
+    id: number
+  ) => void;
+
+  addMachine: (
+    machine: Omit<AdminMachine, "id">
+  ) => void;
+
+  updateMachine: (
+    id: number,
+    machine: Omit<AdminMachine, "id">
+  ) => void;
+
+  deleteMachine: (
+    id: number
+  ) => void;
+
+  toggleMachineActive: (
+    id: number
+  ) => void;
+
+  addHoliday: (
+    holiday: Omit<AdminHoliday, "id">
+  ) => void;
+
+  updateHoliday: (
+    id: number,
+    holiday: Omit<AdminHoliday, "id">
+  ) => void;
+
+  deleteHoliday: (
+    id: number
+  ) => void;
+
+  updateSettings: (
+    settings: AdminSettings
+  ) => void;
+};
+
+/* =========================================================
+   STORAGE KEYS
+========================================================= */
+
+const STORAGE_KEYS = {
+  users: "zusta_worklog_v2_users",
+  projects: "zusta_worklog_v2_projects",
+  machines: "zusta_worklog_v2_machines",
+  holidays: "zusta_worklog_v2_holidays",
+  settings: "zusta_worklog_v2_settings",
+};
+
+/* =========================================================
+   PRIVZETI UPORABNIK
+========================================================= */
+
+const defaultUsers: AdminUser[] = [
+  {
+    id: 1,
+    name: "Anej Biček",
+    email: "anej.bicek@gmail.com",
+    username: "anej",
+    role: "admin",
+    active: true,
+  },
+];
+
+/* =========================================================
+   PRIVZETI PROJEKTI
+========================================================= */
+
+const defaultProjects: AdminProject[] = [];
+
+/* =========================================================
+   PRIVZETI STROJI
+========================================================= */
+
+const defaultMachines: AdminMachine[] = [
+  {
+    id: 1,
+    name: "OKUMA MB-56VB",
+    active: true,
+  },
+  {
+    id: 2,
+    name: "OKUMA M460V-5AX",
+    active: true,
+  },
+  {
+    id: 3,
+    name: "Žična erozija",
+    active: true,
+  },
+  {
+    id: 4,
+    name: "Potopna erozija",
+    active: true,
+  },
+];
+
+/* =========================================================
+   PRIVZETI PRAZNIKI – SLOVENIJA 2026
+========================================================= */
+
+const defaultHolidays: AdminHoliday[] = [
+  {
+    id: 1,
+    date: "2026-01-01",
+    name: "Novo leto",
+  },
+  {
+    id: 2,
+    date: "2026-01-02",
+    name: "Novo leto",
+  },
+  {
+    id: 3,
+    date: "2026-02-08",
+    name: "Prešernov dan",
+  },
+  {
+    id: 4,
+    date: "2026-04-06",
+    name: "Velikonočni ponedeljek",
+  },
+  {
+    id: 5,
+    date: "2026-04-27",
+    name: "Dan upora proti okupatorju",
+  },
+  {
+    id: 6,
+    date: "2026-05-01",
+    name: "Praznik dela",
+  },
+  {
+    id: 7,
+    date: "2026-05-02",
+    name: "Praznik dela",
+  },
+  {
+    id: 8,
+    date: "2026-06-25",
+    name: "Dan državnosti",
+  },
+  {
+    id: 9,
+    date: "2026-08-15",
+    name: "Marijino vnebovzetje",
+  },
+  {
+    id: 10,
+    date: "2026-10-31",
+    name: "Dan reformacije",
+  },
+  {
+    id: 11,
+    date: "2026-11-01",
+    name: "Dan spomina na mrtve",
+  },
+  {
+    id: 12,
+    date: "2026-12-25",
+    name: "Božič",
+  },
+  {
+    id: 13,
+    date: "2026-12-26",
+    name: "Dan samostojnosti in enotnosti",
+  },
+];
+
+/* =========================================================
+   PRIVZETE NASTAVITVE
+========================================================= */
+
+const defaultSettings: AdminSettings = {
+  companyName: "ŽustAI",
+  workDayHours: "8",
+  breakMinutes: "30",
+  nightStart: "22:00",
+  nightEnd: "06:00",
+  overtimeAfter: "8",
+  autoBreak: false,
+  pdfCompanyName: "ŽustAI",
+  pdfResponsiblePerson: "",
+  notificationsService: true,
+  notificationsMissingWorkOrders: true,
+};
+
+/* =========================================================
+   CONTEXT
+========================================================= */
+
+const AdminContext =
+  createContext<
+    AdminContextType | undefined
+  >(undefined);
+
+/* =========================================================
+   PROVIDER
+========================================================= */
+
+type AdminProviderProps = {
+  children: ReactNode;
+};
+
+export function AdminProvider({
+  children,
+}: AdminProviderProps) {
+  /* =======================================================
+     USERS
+  ======================================================= */
+
+  const [users, setUsers] =
+    useState<AdminUser[]>(defaultUsers);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadUsers = async (
+      authUser: {
+        id: string;
+        email?: string | null;
+      }
+    ) => {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("users")
+        .select("*")
+        .order("id", {
+          ascending: true,
+        });
+
+      if (error) {
+        console.error(
+          "Napaka pri nalaganju uporabnikov:",
+          error
+        );
+
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const mappedUsers: AdminUser[] =
+          data.map((row) => ({
+            id: Number(row.id),
+            name: row.name,
+            email: row.email,
+            username: row.username ?? "",
+            authUserId:
+              row.auth_user_id ??
+              undefined,
+            role:
+              row.role as UserRole,
+            active: row.active,
+          }));
+
+        const currentUser =
+          mappedUsers.find(
+            (user) =>
+              user.email.toLowerCase() ===
+              authUser.email?.toLowerCase()
+          );
+
+        if (
+          currentUser &&
+          currentUser.authUserId !==
+            authUser.id
+        ) {
+          const {
+            error: linkError,
+          } = await supabase
+            .from("users")
+            .update({
+              auth_user_id:
+                authUser.id,
+            })
+            .eq(
+              "id",
+              currentUser.id
+            );
+
+          if (linkError) {
+            console.error(
+              "Napaka pri povezovanju WorkLog uporabnika z Auth uporabnikom:",
+              linkError
+            );
+          } else {
+            currentUser.authUserId =
+              authUser.id;
+          }
+        }
+
+        if (!cancelled) {
+          setUsers(mappedUsers);
+        }
+
+        return;
+      }
+
+      /*
+       * PRVA MIGRACIJA:
+       * Če tabela users še nima uporabnikov, poskusimo prenesti
+       * obstoječe WorkLog uporabnike iz localStorage.
+       */
+
+      let localUsers: AdminUser[] =
+        defaultUsers;
+
+      try {
+        const saved =
+          localStorage.getItem(
+            STORAGE_KEYS.users
+          );
+
+        if (saved) {
+          localUsers =
+            JSON.parse(saved);
+        }
+      } catch {
+        localUsers =
+          defaultUsers;
+      }
+
+      const rowsToInsert =
+        localUsers.map(
+          (user) => ({
+            name: user.name,
+            email: user.email,
+            username:
+              user.username?.trim().toLowerCase() ||
+              null,
+            auth_user_id:
+              user.authUserId ??
+              (
+                user.email.toLowerCase() ===
+                authUser.email?.toLowerCase()
+                  ? authUser.id
+                  : null
+              ),
+            role: user.role,
+            active: user.active,
+          })
+        );
+
+      const {
+        data: insertedUsers,
+        error: insertError,
+      } = await supabase
+        .from("users")
+        .insert(rowsToInsert)
+        .select("*");
+
+      if (insertError) {
+        console.error(
+          "Napaka pri prvi migraciji uporabnikov v Supabase:",
+          insertError
+        );
+
+        return;
+      }
+
+      const mappedInsertedUsers:
+        AdminUser[] =
+        (
+          insertedUsers ??
+          []
+        ).map(
+          (row) => ({
+            id: Number(row.id),
+            name: row.name,
+            email: row.email,
+            username:
+              row.username ?? "",
+            authUserId:
+              row.auth_user_id ??
+              undefined,
+            role:
+              row.role as UserRole,
+            active: row.active,
+          })
+        );
+
+      if (!cancelled) {
+        setUsers(
+          mappedInsertedUsers
+        );
+      }
+    };
+
+    const initialize =
+      async () => {
+        const {
+          data: {
+            session,
+          },
+        } =
+          await supabase.auth.getSession();
+
+        if (session?.user) {
+          await loadUsers(
+            session.user
+          );
+        }
+      };
+
+    void initialize();
+
+    const {
+      data: {
+        subscription,
+      },
+    } =
+      supabase.auth.onAuthStateChange(
+        (
+          _event,
+          session
+        ) => {
+          if (session?.user) {
+            void loadUsers(
+              session.user
+            );
+          } else if (
+            !cancelled
+          ) {
+            setUsers(
+              defaultUsers
+            );
+          }
+        }
+      );
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  /* =======================================================
+     PROJECTS
+  ======================================================= */
+
+  const [projects, setProjects] =
+    useState<AdminProject[]>(
+      defaultProjects
+    );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProjects =
+      async () => {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("projects")
+          .select("*")
+          .order("id", {
+            ascending: true,
+          });
+
+        if (error) {
+          console.error(
+            "Napaka pri nalaganju projektov:",
+            error
+          );
+
+          return;
+        }
+
+        const mappedProjects:
+          AdminProject[] =
+          (
+            data ??
+            []
+          ).map(
+            (row) => ({
+              id: Number(row.id),
+              name: row.name,
+              serialNumber: row.serial_number ?? "",
+              requiredQuantity: Number(row.required_quantity ?? 0),
+              active: row.active,
+              status: row.status ?? (row.active ? "active" : "preparation"),
+            })
+          );
+
+        if (!cancelled) {
+          setProjects(
+            mappedProjects
+          );
+        }
+      };
+
+    void loadProjects();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* =======================================================
+     MACHINES
+  ======================================================= */
+
+  const [machines, setMachines] =
+    useState<AdminMachine[]>(defaultMachines);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMachines = async () => {
+      const { data, error } = await supabase
+        .from("machines")
+        .select("*")
+        .order("id", { ascending: true });
+
+      if (error) {
+        console.error(
+          "Napaka pri nalaganju strojev:",
+          error
+        );
+
+        if (!cancelled) {
+          setMachines(defaultMachines);
+        }
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        const { data: inserted, error: insertError } =
+          await supabase
+            .from("machines")
+            .insert(
+              defaultMachines.map((machine) => ({
+                name: machine.name,
+                active: machine.active,
+              }))
+            )
+            .select("*");
+
+        if (insertError) {
+          console.error(
+            "Napaka pri začetnem vnosu strojev:",
+            insertError
+          );
+          if (!cancelled) setMachines(defaultMachines);
+          return;
+        }
+
+        if (!cancelled) {
+          setMachines(
+            (inserted ?? []).map((row) => ({
+              id: Number(row.id),
+              name: row.name,
+              active: row.active,
+            }))
+          );
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setMachines(
+          data.map((row) => ({
+            id: Number(row.id),
+            name: row.name,
+            active: row.active,
+          }))
+        );
+      }
+    };
+
+    void loadMachines();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* =======================================================
+     PRAZNIKI
+  ======================================================= */
+
+  const [holidays, setHolidays] =
+    useState<AdminHoliday[]>(() => {
+      try {
+        const saved =
+          localStorage.getItem(
+            STORAGE_KEYS.holidays
+          );
+
+        return saved
+          ? JSON.parse(saved)
+          : defaultHolidays;
+      } catch {
+        return defaultHolidays;
+      }
+    });
+
+  /* =======================================================
+     NASTAVITVE
+  ======================================================= */
+
+  const [settings, setSettings] =
+    useState<AdminSettings>(() => {
+      try {
+        const saved =
+          localStorage.getItem(
+            STORAGE_KEYS.settings
+          );
+
+        return saved
+          ? {
+              ...defaultSettings,
+              ...JSON.parse(saved),
+            }
+          : defaultSettings;
+      } catch {
+        return defaultSettings;
+      }
+    });
+
+  /* =======================================================
+     NASTAVITVE – SUPABASE
+
+     Supabase je glavni vir nastavitev.
+     localStorage ostane kot lokalni fallback, da aplikacija
+     tudi ob začasni nedosegljivosti Supabase ne izgubi nastavitev.
+  ======================================================= */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const mapSettings = (row: Record<string, unknown>): AdminSettings => ({
+      companyName:
+        String(row.company_name ?? defaultSettings.companyName),
+      workDayHours:
+        String(row.work_day_hours ?? defaultSettings.workDayHours),
+      breakMinutes:
+        String(row.break_minutes ?? defaultSettings.breakMinutes),
+      nightStart:
+        String(row.night_start ?? defaultSettings.nightStart),
+      nightEnd:
+        String(row.night_end ?? defaultSettings.nightEnd),
+      overtimeAfter:
+        String(row.overtime_after ?? defaultSettings.overtimeAfter),
+      autoBreak:
+        Boolean(row.auto_break ?? defaultSettings.autoBreak),
+      pdfCompanyName:
+        String(row.pdf_company_name ?? defaultSettings.pdfCompanyName),
+      pdfResponsiblePerson:
+        String(
+          row.pdf_responsible_person ??
+            defaultSettings.pdfResponsiblePerson
+        ),
+      notificationsService:
+        Boolean(
+          row.notifications_service ??
+            defaultSettings.notificationsService
+        ),
+      notificationsMissingWorkOrders:
+        Boolean(
+          row.notifications_missing_work_orders ??
+            defaultSettings.notificationsMissingWorkOrders
+        ),
+    });
+
+    const loadSettings = async () => {
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("*")
+        .eq("id", 1)
+        .maybeSingle();
+
+      if (error) {
+        console.error(
+          "Napaka pri nalaganju administratorskih nastavitev iz Supabase:",
+          error
+        );
+        return;
+      }
+
+      if (data && !cancelled) {
+        const mappedSettings = mapSettings(data);
+
+        setSettings(mappedSettings);
+        localStorage.setItem(
+          STORAGE_KEYS.settings,
+          JSON.stringify(mappedSettings)
+        );
+      }
+    };
+
+    void loadSettings();
+
+    /*
+     * Realtime omogoči, da sprememba administratorskih nastavitev
+     * pride do vseh odprtih WorkLog strani brez ročnega osveževanja.
+     */
+    const channel = supabase
+      .channel("admin-settings-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "admin_settings",
+          filter: "id=eq.1",
+        },
+        (payload) => {
+          if (cancelled) {
+            return;
+          }
+
+          const mappedSettings = mapSettings(
+            payload.new as Record<string, unknown>
+          );
+
+          setSettings(mappedSettings);
+          localStorage.setItem(
+            STORAGE_KEYS.settings,
+            JSON.stringify(mappedSettings)
+          );
+        }
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.error(
+            "Napaka pri povezavi na Supabase Realtime za administratorske nastavitve."
+          );
+        }
+      });
+
+    /*
+     * Realtime je primarni mehanizem. Enkrat na minuto pa še vedno
+     * preverimo Supabase kot varovalko, npr. če se je povezava
+     * Realtime vmes prekinila.
+     */
+    const refreshInterval = window.setInterval(() => {
+      void loadSettings();
+    }, 60_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(refreshInterval);
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  /* =======================================================
+     SHRANJEVANJE
+  =======================================================
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEYS.holidays,
+      JSON.stringify(holidays)
+    );
+  }, [holidays]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify(settings)
+    );
+  }, [settings]);
+
+  /* =======================================================
+     USERS – FUNKCIJE
+  ======================================================= */
+
+  const addUser = (
+    user: Omit<AdminUser, "id" | "authUserId">,
+    initialPassword: string
+  ): Promise<boolean> => {
+    const createUser = async () => {
+      const normalizedUsername =
+        user.username.trim().toLowerCase();
+
+      try {
+        const { data, error } =
+          await supabase.functions.invoke("create-user", {
+            body: {
+              name: user.name.trim(),
+              email: user.email.trim().toLowerCase(),
+              username: normalizedUsername,
+              password: initialPassword,
+              role: user.role,
+              active: user.active,
+            },
+          });
+
+        if (error) {
+          console.error(
+            "Napaka pri ustvarjanju uporabnika:",
+            error
+          );
+          return false;
+        }
+
+        if (!data?.user) {
+          console.error(
+            "Supabase ni vrnil ustvarjenega uporabnika:",
+            data
+          );
+          return false;
+        }
+
+        const created = data.user;
+        const newUser: AdminUser = {
+          id: Number(created.id),
+          name: created.name,
+          email: created.email,
+          username: created.username ?? "",
+          authUserId: created.auth_user_id ?? undefined,
+          role: created.role as UserRole,
+          active: created.active,
+        };
+
+        setUsers((previous) => [...previous, newUser]);
+        return true;
+      } catch (exception) {
+        console.error(
+          "Napaka pri ustvarjanju uporabnika:",
+          exception
+        );
+        return false;
+      }
+    };
+
+    return createUser();
+  };
+
+  const updateUser = (
+    id: number,
+    user: Omit<AdminUser, "id">
+  ) => {
+    const saveUser =
+      async () => {
+        const normalizedUsername =
+          user.username
+            .trim()
+            .toLowerCase();
+
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("users")
+          .update({
+            name: user.name,
+            email: user.email,
+            username:
+              normalizedUsername,
+            auth_user_id:
+              user.authUserId ??
+              null,
+            role: user.role,
+            active: user.active,
+          })
+          .eq(
+            "id",
+            id
+          )
+          .select("*")
+          .single();
+
+        if (error) {
+          console.error(
+            "Napaka pri urejanju uporabnika:",
+            error
+          );
+
+          return;
+        }
+
+        const updatedUser:
+          AdminUser =
+          {
+            id: Number(data.id),
+            name: data.name,
+            email: data.email,
+            username:
+              data.username ?? "",
+            authUserId:
+              data.auth_user_id ??
+              undefined,
+            role:
+              data.role as UserRole,
+            active: data.active,
+          };
+
+        setUsers(
+          (previous) =>
+            previous.map(
+              (item) =>
+                item.id === id
+                  ? updatedUser
+                  : item
+            )
+        );
+      };
+
+    void saveUser();
+  };
+
+  const deleteUser = (
+    id: number
+  ) => {
+    if (id === 1) {
+      return;
+    }
+
+    const removeUser =
+      async () => {
+        const {
+          error,
+        } = await supabase
+          .from("users")
+          .delete()
+          .eq(
+            "id",
+            id
+          );
+
+        if (error) {
+          console.error(
+            "Napaka pri brisanju uporabnika:",
+            error
+          );
+
+          return;
+        }
+
+        setUsers(
+          (previous) =>
+            previous.filter(
+              (user) =>
+                user.id !== id
+            )
+        );
+      };
+
+    void removeUser();
+  };
+
+  const toggleUserActive = (
+    id: number
+  ) => {
+    const toggleUser =
+      async () => {
+        const currentUser =
+          users.find(
+            (user) =>
+              user.id === id
+          );
+
+        if (!currentUser) {
+          return;
+        }
+
+        const newActive =
+          !currentUser.active;
+
+        const {
+          error,
+        } = await supabase
+          .from("users")
+          .update({
+            active:
+              newActive,
+          })
+          .eq(
+            "id",
+            id
+          );
+
+        if (error) {
+          console.error(
+            "Napaka pri spreminjanju aktivnega stanja uporabnika:",
+            error
+          );
+
+          return;
+        }
+
+        setUsers(
+          (previous) =>
+            previous.map(
+              (user) =>
+                user.id === id
+                  ? {
+                      ...user,
+                      active:
+                        newActive,
+                    }
+                  : user
+            )
+        );
+      };
+
+    void toggleUser();
+  };
+
+  /* =======================================================
+     POVEŽI SUPABASE UPORABNIKA
+  ======================================================= */
+
+  const linkUserAuthId = (
+    email: string,
+    authUserId: string
+  ) => {
+    const linkUser =
+      async () => {
+        const {
+          error,
+        } = await supabase
+          .from("users")
+          .update({
+            auth_user_id:
+              authUserId,
+          })
+          .eq(
+            "email",
+            email
+          );
+
+        if (error) {
+          console.error(
+            "Napaka pri povezovanju uporabnika z Auth računom:",
+            error
+          );
+
+          return;
+        }
+
+        setUsers(
+          (previous) =>
+            previous.map(
+              (user) =>
+                user.email.toLowerCase() ===
+                email.toLowerCase()
+                  ? {
+                      ...user,
+                      authUserId,
+                    }
+                  : user
+            )
+        );
+      };
+
+    void linkUser();
+  };
+
+  /* =======================================================
+     PROJECTS – FUNKCIJE
+  ======================================================= */
+
+  const addProject = (
+    project: Omit<AdminProject, "id">
+  ) => {
+    const saveProject =
+      async () => {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("projects")
+          .insert({
+            name: project.name,
+            ...(project.serialNumber !== undefined
+              ? { serial_number: project.serialNumber }
+              : {}),
+            required_quantity: project.requiredQuantity,
+            active: project.active,
+            status: project.status,
+          })
+          .select("*")
+          .single();
+
+        if (error) {
+          console.error(
+            "Napaka pri dodajanju projekta:",
+            error
+          );
+
+          return;
+        }
+
+        const newProject:
+          AdminProject =
+          {
+            id: Number(data.id),
+            name: data.name,
+            serialNumber: data.serial_number ?? "",
+            requiredQuantity: Number(data.required_quantity ?? 0),
+            active: data.active,
+            status: data.status ?? (data.active ? "active" : "preparation"),
+          };
+
+        setProjects(
+          (previous) => [
+            ...previous,
+            newProject,
+          ]
+        );
+      };
+
+    void saveProject();
+  };
+
+  const updateProject = (
+    id: number,
+    project: Omit<AdminProject, "id">
+  ) => {
+    const saveProject =
+      async () => {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("projects")
+          .update({
+            name: project.name,
+            ...(project.serialNumber !== undefined
+              ? { serial_number: project.serialNumber }
+              : {}),
+            required_quantity:
+              project.requiredQuantity,
+            active:
+              project.active,
+            status:
+              project.status,
+          })
+          .eq(
+            "id",
+            id
+          )
+          .select("*")
+          .single();
+
+        if (error) {
+          console.error(
+            "Napaka pri urejanju projekta:",
+            error
+          );
+
+          return;
+        }
+
+const updatedProject:
+  AdminProject =
+  {
+    id: Number(data.id),
+    name: data.name,
+    serialNumber: data.serial_number ?? "",
+    requiredQuantity: Number(data.required_quantity ?? 0),
+    active: data.active,
+    status: data.status ?? (data.active ? "active" : "preparation"),
+  };
+        setProjects(
+          (previous) =>
+            previous.map(
+              (item) =>
+                item.id === id
+                  ? updatedProject
+                  : item
+            )
+        );
+      };
+
+    void saveProject();
+  };
+
+  const deleteProject = (
+    id: number
+  ) => {
+    const removeProject =
+      async () => {
+        const {
+          error,
+        } = await supabase
+          .from("projects")
+          .delete()
+          .eq(
+            "id",
+            id
+          );
+
+        if (error) {
+          console.error(
+            "Napaka pri brisanju projekta:",
+            error
+          );
+
+          return;
+        }
+
+        setProjects(
+          (previous) =>
+            previous.filter(
+              (project) =>
+                project.id !== id
+            )
+        );
+      };
+
+    void removeProject();
+  };
+
+  const toggleProjectActive = (
+    id: number
+  ) => {
+    const toggleProject = async () => {
+      const currentProject = projects.find(
+        (project) => project.id === id
+      );
+
+      if (!currentProject || currentProject.status === "completed") {
+        return;
+      }
+
+      const nextStatus =
+        currentProject.status === "active"
+          ? "preparation"
+          : "active";
+
+      const { data, error } = await supabase
+        .from("projects")
+        .update({
+          active: nextStatus === "active",
+          status: nextStatus,
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error(
+          "Napaka pri spreminjanju statusa projekta:",
+          error
+        );
+        return;
+      }
+
+      setProjects((previous) =>
+        previous.map((project) =>
+          project.id === id
+            ? {
+                ...project,
+                active: data.active,
+                status: data.status,
+              }
+            : project
+        )
+      );
+    };
+
+    void toggleProject();
+  };
+
+  const activateProject = (id: number) => {
+    const activate = async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .update({
+          active: true,
+          status: "active",
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error("Napaka pri aktiviranju projekta:", error);
+        return;
+      }
+
+      setProjects((previous) =>
+        previous.map((project) =>
+          project.id === id
+            ? {
+                ...project,
+                active: data.active,
+                status: data.status,
+              }
+            : project
+        )
+      );
+    };
+
+    void activate();
+  };
+
+  const completeProject = (id: number) => {
+    const complete = async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .update({
+          active: false,
+          status: "completed",
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error("Napaka pri zaključevanju projekta:", error);
+        return;
+      }
+
+      setProjects((previous) =>
+        previous.map((project) =>
+          project.id === id
+            ? {
+                ...project,
+                active: data.active,
+                status: data.status,
+              }
+            : project
+        )
+      );
+    };
+
+    void complete();
+  };
+
+  /* =======================================================
+     MACHINES – FUNKCIJE
+  ======================================================= */
+
+  const addMachine = (
+    machine: Omit<AdminMachine, "id">
+  ) => {
+    const saveMachine = async () => {
+      const { data, error } = await supabase
+        .from("machines")
+        .insert({
+          name: machine.name.trim(),
+          active: machine.active,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error(
+          "Napaka pri dodajanju stroja:",
+          error
+        );
+        return;
+      }
+
+      setMachines((previous) => [
+        ...previous,
+        {
+          id: Number(data.id),
+          name: data.name,
+          active: data.active,
+        },
+      ]);
+    };
+
+    void saveMachine();
+  };
+
+  const updateMachine = (
+    id: number,
+    machine: Omit<AdminMachine, "id">
+  ) => {
+    const saveMachine = async () => {
+      const { data, error } = await supabase
+        .from("machines")
+        .update({
+          name: machine.name.trim(),
+          active: machine.active,
+        })
+        .eq("id", id)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error(
+          "Napaka pri urejanju stroja:",
+          error
+        );
+        return;
+      }
+
+      setMachines((previous) =>
+        previous.map((item) =>
+          item.id === id
+            ? {
+                id: Number(data.id),
+                name: data.name,
+                active: data.active,
+              }
+            : item
+        )
+      );
+    };
+
+    void saveMachine();
+  };
+
+  const deleteMachine = (id: number) => {
+    const removeMachine = async () => {
+      const { error } = await supabase
+        .from("machines")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error(
+          "Napaka pri brisanju stroja:",
+          error
+        );
+        return;
+      }
+
+      setMachines((previous) =>
+        previous.filter((machine) => machine.id !== id)
+      );
+    };
+
+    void removeMachine();
+  };
+
+  const toggleMachineActive = (id: number) => {
+    const toggleMachine = async () => {
+      const currentMachine = machines.find(
+        (machine) => machine.id === id
+      );
+
+      if (!currentMachine) return;
+
+      const newActive = !currentMachine.active;
+
+      const { error } = await supabase
+        .from("machines")
+        .update({ active: newActive })
+        .eq("id", id);
+
+      if (error) {
+        console.error(
+          "Napaka pri spreminjanju aktivnega stanja stroja:",
+          error
+        );
+        return;
+      }
+
+      setMachines((previous) =>
+        previous.map((machine) =>
+          machine.id === id
+            ? { ...machine, active: newActive }
+            : machine
+        )
+      );
+    };
+
+    void toggleMachine();
+  };
+
+  /* =======================================================
+     PRAZNIKI – FUNKCIJE
+  ======================================================= */
+
+  const addHoliday = (
+    holiday: Omit<AdminHoliday, "id">
+  ) => {
+    setHolidays(
+      (previous) => [
+        ...previous,
+        {
+          ...holiday,
+          id: Date.now(),
+        },
+      ]
+    );
+  };
+
+  const updateHoliday = (
+    id: number,
+    holiday: Omit<AdminHoliday, "id">
+  ) => {
+    setHolidays(
+      (previous) =>
+        previous.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...holiday,
+                  id,
+                }
+              : item
+        )
+    );
+  };
+
+  const deleteHoliday = (
+    id: number
+  ) => {
+    setHolidays(
+      (previous) =>
+        previous.filter(
+          (holiday) =>
+            holiday.id !== id
+        )
+    );
+  };
+
+  /* =======================================================
+     SETTINGS
+  ======================================================= */
+
+  const updateSettings = (
+    nextSettings: AdminSettings
+  ) => {
+    /*
+     * Najprej takoj posodobimo lokalni UI, da administrator
+     * spremembo vidi brez čakanja na odgovor strežnika.
+     */
+    setSettings(nextSettings);
+
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify(nextSettings)
+    );
+
+    const saveSettings = async () => {
+      const { error } = await supabase
+        .from("admin_settings")
+        .upsert(
+          {
+            id: 1,
+            company_name: nextSettings.companyName,
+            work_day_hours: nextSettings.workDayHours,
+            break_minutes: nextSettings.breakMinutes,
+            night_start: nextSettings.nightStart,
+            night_end: nextSettings.nightEnd,
+            overtime_after: nextSettings.overtimeAfter,
+            auto_break: nextSettings.autoBreak,
+            pdf_company_name: nextSettings.pdfCompanyName,
+            pdf_responsible_person:
+              nextSettings.pdfResponsiblePerson,
+            notifications_service:
+              nextSettings.notificationsService,
+            notifications_missing_work_orders:
+              nextSettings.notificationsMissingWorkOrders,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "id" }
+        );
+
+      if (error) {
+        console.error(
+          "Napaka pri shranjevanju administratorskih nastavitev v Supabase:",
+          error
+        );
+      }
+    };
+
+    void saveSettings();
+  };
+
+  /* =======================================================
+     PROVIDER
+  ======================================================= */
+
+  return (
+    <AdminContext.Provider
+      value={{
+        users,
+        projects,
+        machines,
+        holidays,
+        settings,
+
+        addUser,
+        updateUser,
+        deleteUser,
+        toggleUserActive,
+        linkUserAuthId,
+
+        addProject,
+        updateProject,
+        deleteProject,
+        toggleProjectActive,
+        activateProject,
+        completeProject,
+
+        addMachine,
+        updateMachine,
+        deleteMachine,
+        toggleMachineActive,
+
+        addHoliday,
+        updateHoliday,
+        deleteHoliday,
+
+        updateSettings,
+      }}
+    >
+      {children}
+    </AdminContext.Provider>
+  );
+}
+
+/* =========================================================
+   HOOK
+========================================================= */
+
+export function useAdmin() {
+  const context =
+    useContext(AdminContext);
+
+  if (!context) {
+    throw new Error(
+      "useAdmin mora biti uporabljen znotraj AdminProvider."
+    );
+  }
+
+  return context;
+}
