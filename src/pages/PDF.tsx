@@ -15,6 +15,12 @@ import {
 import type { WorkOrder } from "../types/WorkOrder";
 
 import { supabase } from "../services/supabase";
+import {
+  calculateMealCounts,
+  calculateOverlapHours,
+  calculateUniqueHourBreakdown,
+  calculateUniqueWorkHours,
+} from "../utils/workHours";
 
 /* =====================================================
    KONSTANTE
@@ -28,7 +34,7 @@ const ROWS_PER_PAGE = 20;
  * pri avgustovskem PDF-u.
  */
 const DAILY_EVIDENCE_TITLE_FONT_SIZE = "13px";
-const DAILY_EVIDENCE_TABLE_FONT_SIZE = "8px";
+const DAILY_EVIDENCE_TABLE_FONT_SIZE = "7px";
 
 /* =====================================================
    PDF
@@ -167,82 +173,45 @@ function PDF({
      URE
   ========================================= */
 
-  const regularHours =
-    monthWorkOrders.reduce(
-      (
-        sum,
-        workOrder
-      ) =>
-        sum +
-        Number(
-          workOrder.regularHours ||
-            0
-        ),
-      0
+  /*
+    Ure računamo enako kot v Statistiki in Evidenci:
+    - prekrivajoči vnosi se ne podvajajo
+    - prvih 8 ur je razdeljenih na redne/nočne/nedeljske
+    - vse po 8 urah so nadure
+    - nadure so razdeljene na navadne in nedeljske/nočne/praznične
+  */
+  const uniqueBreakdown =
+    calculateUniqueHourBreakdown(
+      monthWorkOrders
     );
+
+  const regularHours =
+    uniqueBreakdown.regular;
 
   const nightHours =
-    monthWorkOrders.reduce(
-      (
-        sum,
-        workOrder
-      ) =>
-        sum +
-        Number(
-          workOrder.nightHours ||
-            0
-        ),
-      0
-    );
+    uniqueBreakdown.night;
 
   const holidayHours =
-    monthWorkOrders.reduce(
-      (
-        sum,
-        workOrder
-      ) =>
-        sum +
-        Number(
-          workOrder.holidayHours ||
-            0
-        ),
-      0
-    );
+    uniqueBreakdown.holiday;
 
   const additionalHours =
-    monthWorkOrders.reduce(
-      (
-        sum,
-        workOrder
-      ) =>
-        sum +
-        Number(
-          workOrder.additionalHours ||
-            0
-        ),
-      0
+    calculateOverlapHours(
+      monthWorkOrders
     );
 
   const overtimeHours =
-    monthWorkOrders.reduce(
-      (
-        sum,
-        workOrder
-      ) =>
-        sum +
-        Number(
-          workOrder.overtimeHours ||
-            0
-        ),
-      0
-    );
+    uniqueBreakdown.overtime;
+
+  const overtimeSpecialHours =
+    uniqueBreakdown.overtimeSpecial;
+
+  const overtimeNormalHours =
+    uniqueBreakdown.overtimeNormal;
 
   const totalHours =
-    regularHours +
-    nightHours +
-    holidayHours +
-    additionalHours +
-    overtimeHours;
+    calculateUniqueWorkHours(
+      monthWorkOrders
+    );
 
   /* =========================================
      MALICA
@@ -253,19 +222,16 @@ function PDF({
     true  = imel malico s seboj
   */
 
+  const mealCounts =
+    calculateMealCounts(
+      monthWorkOrders
+    );
+
   const mealOutside =
-    monthWorkOrders.filter(
-      (workOrder) =>
-        !workOrder.meal
-    ).length;
+    mealCounts.outside;
 
   const mealWithSelf =
-    monthWorkOrders.filter(
-      (workOrder) =>
-        Boolean(
-          workOrder.meal
-        )
-    ).length;
+    mealCounts.withSelf;
 
   /* =========================================
      MESEC
@@ -365,27 +331,6 @@ function PDF({
           continue;
         }
 
-        /*
-          Pred izvozom dodatno prisilimo
-          svetlo različico A4 elementa.
-        */
-        const previousStyle =
-          element.getAttribute(
-            "style"
-          );
-
-        element.style.setProperty(
-          "background-color",
-          "#ffffff",
-          "important"
-        );
-
-        element.style.setProperty(
-          "color",
-          "#000000",
-          "important"
-        );
-
         const canvas =
           await html2canvas(
             element,
@@ -395,21 +340,14 @@ function PDF({
               backgroundColor:
                 "#ffffff",
               logging: false,
+              onclone: (clonedDocument) => {
+                clonedDocument.documentElement.setAttribute(
+                  "data-theme",
+                  "light"
+                );
+              },
             }
           );
-
-        /*
-          Povrnemo samo inline style
-          elementa po zajemu.
-        */
-        if (
-          previousStyle !== null
-        ) {
-          element.setAttribute(
-            "style",
-            previousStyle
-          );
-        }
 
         const pageWidth =
           pdf.internal.pageSize.getWidth();
@@ -430,25 +368,6 @@ function PDF({
         ) {
           pdf.addPage();
         }
-
-        /*
-          PDF stran je vedno
-          eksplicitno bela,
-          ne glede na temo aplikacije.
-        */
-        pdf.setFillColor(
-          255,
-          255,
-          255
-        );
-
-        pdf.rect(
-          0,
-          0,
-          pageWidth,
-          pageHeight,
-          "F"
-        );
 
         /*
           Stran je že A4,
@@ -505,111 +424,80 @@ function PDF({
   ]);
 
   return (
-    <div
+    <>
+      <style>{`
+        html[data-theme="dark"] .pdf-paper {
+          background: #ffffff !important;
+          color: #000000 !important;
+          color-scheme: light !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="background: #ffffff"],
+        html[data-theme="dark"] .pdf-paper [style*="background:#ffffff"],
+        html[data-theme="dark"] .pdf-paper [style*="background: rgb(255, 255, 255)"] {
+          background: #ffffff !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="background: #f8fafc"],
+        html[data-theme="dark"] .pdf-paper [style*="background:#f8fafc"],
+        html[data-theme="dark"] .pdf-paper [style*="background: rgb(248, 250, 252)"] {
+          background: #f8fafc !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="background: #f1f5f9"],
+        html[data-theme="dark"] .pdf-paper [style*="background:#f1f5f9"],
+        html[data-theme="dark"] .pdf-paper [style*="background: rgb(241, 245, 249)"] {
+          background: #f1f5f9 !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="background: #17465d"],
+        html[data-theme="dark"] .pdf-paper [style*="background:#17465d"],
+        html[data-theme="dark"] .pdf-paper [style*="background: rgb(23, 70, 93)"] {
+          background: #17465d !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="color: #000000"],
+        html[data-theme="dark"] .pdf-paper [style*="color:#000000"],
+        html[data-theme="dark"] .pdf-paper [style*="color: rgb(0, 0, 0)"] {
+          color: #000000 !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="color: #ffffff"],
+        html[data-theme="dark"] .pdf-paper [style*="color:#ffffff"],
+        html[data-theme="dark"] .pdf-paper [style*="color: rgb(255, 255, 255)"] {
+          color: #ffffff !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="color: #12344d"],
+        html[data-theme="dark"] .pdf-paper [style*="color:#12344d"],
+        html[data-theme="dark"] .pdf-paper [style*="color: rgb(18, 52, 77)"] {
+          color: #12344d !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="color: #64748b"],
+        html[data-theme="dark"] .pdf-paper [style*="color:#64748b"],
+        html[data-theme="dark"] .pdf-paper [style*="color: rgb(100, 116, 139)"] {
+          color: #64748b !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="color: #475569"],
+        html[data-theme="dark"] .pdf-paper [style*="color:#475569"],
+        html[data-theme="dark"] .pdf-paper [style*="color: rgb(71, 85, 105)"] {
+          color: #475569 !important;
+        }
+
+        html[data-theme="dark"] .pdf-paper [style*="border-bottom: 1.5px solid #17465d"] {
+          border-bottom-color: #17465d !important;
+        }
+      `}</style>
+
+      <div
       style={{
         width: "100%",
         maxWidth: "1080px",
         margin: "0 auto",
       }}
     >
-      {/* =====================================
-          PDF PREDOGLED - IZOLACIJA OD TEME
-      ===================================== */}
-
-      <style>
-        {`
-          /*
-           * PDF A4 stran mora biti vedno svetla.
-           * Ta pravila imajo prednost pred dark-mode
-           * pravili aplikacije.
-           */
-
-          .pdf-a4-page {
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-            color-scheme: light !important;
-          }
-
-          .pdf-a4-page h1,
-          .pdf-a4-page h2,
-          .pdf-a4-page h3,
-          .pdf-a4-page h4,
-          .pdf-a4-page h5,
-          .pdf-a4-page h6,
-          .pdf-a4-page p,
-          .pdf-a4-page span,
-          .pdf-a4-page div,
-          .pdf-a4-page td,
-          .pdf-a4-page th,
-          .pdf-a4-page label,
-          .pdf-a4-page strong {
-            color: inherit;
-          }
-
-          .pdf-a4-page input,
-          .pdf-a4-page button {
-            color-scheme: light !important;
-          }
-
-          .pdf-a4-page table {
-            color: #000000 !important;
-          }
-
-          .pdf-a4-page .pdf-summary-light {
-            background: #f1f5f9 !important;
-            background-color: #f1f5f9 !important;
-            color: #000000 !important;
-          }
-
-          .pdf-a4-page .pdf-summary-total {
-            background: #17465d !important;
-            background-color: #17465d !important;
-            color: #ffffff !important;
-          }
-
-          .pdf-a4-page .pdf-table-header {
-            background: #17465d !important;
-            background-color: #17465d !important;
-            color: #ffffff !important;
-          }
-
-          .pdf-a4-page .pdf-table-row-even {
-            background: #f8fafc !important;
-            background-color: #f8fafc !important;
-            color: #000000 !important;
-          }
-
-          .pdf-a4-page .pdf-table-row-odd {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            color: #000000 !important;
-          }
-
-          .pdf-a4-page .pdf-empty-state {
-            background: #f8fafc !important;
-            background-color: #f8fafc !important;
-            color: #000000 !important;
-          }
-
-          .pdf-a4-page .pdf-title {
-            color: #12344d !important;
-          }
-
-          .pdf-a4-page .pdf-secondary {
-            color: #64748b !important;
-          }
-
-          .pdf-a4-page .pdf-meal-text {
-            color: #475569 !important;
-          }
-
-          .pdf-a4-page .pdf-footer {
-            color: #64748b !important;
-          }
-        `}
-      </style>
-
       {/* =====================================
           NASLOV STRANI
       ===================================== */}
@@ -770,7 +658,7 @@ function PDF({
                 ] =
                   element;
               }}
-              className="pdf-a4-page"
+              className="pdf-paper"
               style={{
                 width:
                   "210mm",
@@ -782,14 +670,10 @@ function PDF({
                   "11mm 14mm 12mm 14mm",
                 boxSizing:
                   "border-box",
-                backgroundColor:
-                  "#ffffff",
                 background:
                   "#ffffff",
                 color:
                   "#000000",
-                colorScheme:
-                  "light",
                 fontFamily:
                   "Arial, Helvetica, sans-serif",
                 overflow:
@@ -854,7 +738,6 @@ function PDF({
                   }}
                 >
                   <div
-                    className="pdf-secondary"
                     style={{
                       fontSize:
                         "9px",
@@ -868,7 +751,6 @@ function PDF({
                   </div>
 
                   <div
-                    className="pdf-title"
                     style={{
                       fontSize:
                         "13px",
@@ -901,7 +783,6 @@ function PDF({
                 }}
               >
                 <h2
-                  className="pdf-title"
                   style={{
                     margin: 0,
                     fontSize:
@@ -915,7 +796,6 @@ function PDF({
                 </h2>
 
                 <div
-                  className="pdf-secondary"
                   style={{
                     fontSize:
                       "11px",
@@ -984,8 +864,21 @@ function PDF({
                       }
                     />
 
+                    <PdfSummaryCell
+                      label="Nadure nedeljske"
+                      value={
+                        overtimeSpecialHours
+                      }
+                    />
+
+                    <PdfSummaryCell
+                      label="Nadure navadne"
+                      value={
+                        overtimeNormalHours
+                      }
+                    />
+
                     <td
-                      className="pdf-summary-total"
                       style={{
                         padding:
                           "2.5mm 2mm",
@@ -1030,7 +923,6 @@ function PDF({
               =================================== */}
 
               <div
-                className="pdf-meal-text"
                 style={{
                   display:
                     "flex",
@@ -1066,7 +958,6 @@ function PDF({
               =================================== */}
 
               <div
-                className="pdf-title"
                 style={{
                   fontSize:
                     DAILY_EVIDENCE_TITLE_FONT_SIZE,
@@ -1083,7 +974,6 @@ function PDF({
               {pageWorkOrders.length ===
               0 ? (
                 <div
-                  className="pdf-empty-state"
                   style={{
                     padding:
                       "5mm",
@@ -1095,8 +985,6 @@ function PDF({
                       "center",
                     fontSize:
                       "10px",
-                    color:
-                      "#000000",
                   }}
                 >
                   Za izbrani mesec ni
@@ -1118,7 +1006,6 @@ function PDF({
                 >
                   <thead>
                     <tr
-                      className="pdf-table-header"
                       style={{
                         background:
                           "#17465d",
@@ -1256,13 +1143,6 @@ function PDF({
                           <tr
                             key={
                               workOrder.id
-                            }
-                            className={
-                              index %
-                                2 ===
-                              0
-                                ? "pdf-table-row-even"
-                                : "pdf-table-row-odd"
                             }
                             style={{
                               background:
@@ -1407,7 +1287,6 @@ function PDF({
               =================================== */}
 
               <div
-                className="pdf-footer"
                 style={{
                   marginTop:
                     "4mm",
@@ -1446,6 +1325,7 @@ function PDF({
         )}
       </div>
     </div>
+    </>
   );
 }
 
@@ -1462,7 +1342,6 @@ function PdfSummaryCell({
 }) {
   return (
     <td
-      className="pdf-summary-light"
       style={{
         padding:
           "2.5mm 2mm",
