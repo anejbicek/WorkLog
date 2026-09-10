@@ -500,17 +500,50 @@ export function AdminProvider({
   ) => {
     try {
       const {
+        data: sessionData,
+        error: sessionError,
+      } =
+        await supabase.auth.getSession();
+
+      if (
+        sessionError ||
+        !sessionData.session?.access_token
+      ) {
+        console.error(
+          "Napaka pri preverjanju prijave:",
+          sessionError
+        );
+
+        return false;
+      }
+
+      const {
         data,
         error,
       } =
-        await supabase.auth.admin.createUser(
+        await supabase.functions.invoke(
+          "create-user",
           {
-            email:
-              user.email,
-            password:
-              initialPassword,
-            email_confirm:
-              true,
+            body: {
+              name:
+                user.name.trim(),
+              email:
+                user.email
+                  .trim()
+                  .toLowerCase(),
+              username:
+                user.username.trim(),
+              password:
+                initialPassword,
+              role:
+                user.role,
+              active:
+                user.active,
+            },
+            headers: {
+              Authorization:
+                `Bearer ${sessionData.session.access_token}`,
+            },
           }
         );
 
@@ -518,6 +551,18 @@ export function AdminProvider({
         console.error(
           "Napaka pri ustvarjanju uporabnika:",
           error
+        );
+
+        return false;
+      }
+
+      const newUserData =
+        data?.user;
+
+      if (!newUserData?.id) {
+        console.error(
+          "Edge Function ni vrnila podatkov novega uporabnika:",
+          data
         );
 
         return false;
@@ -538,7 +583,7 @@ export function AdminProvider({
           ...user,
           id: newId,
           authUserId:
-            data.user?.id,
+            newUserData.id,
         };
 
       setUsers(
