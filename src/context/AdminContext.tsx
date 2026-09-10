@@ -79,7 +79,7 @@ type AdminContextType = {
   updateUser: (
     id: number,
     user: Omit<AdminUser, "id">
-  ) => void;
+  ) => Promise<void>;
 
   deleteUser: (
     id: number
@@ -87,7 +87,7 @@ type AdminContextType = {
 
   toggleUserActive: (
     id: number
-  ) => void;
+  ) => Promise<void>;
 
   linkUserAuthId: (
     email: string,
@@ -101,7 +101,7 @@ type AdminContextType = {
   updateProject: (
     id: number,
     project: Omit<AdminProject, "id">
-  ) => void;
+  ) => Promise<void>;
 
   deleteProject: (
     id: number
@@ -109,36 +109,36 @@ type AdminContextType = {
 
   toggleProjectActive: (
     id: number
-  ) => void;
+  ) => Promise<void>;
 
   activateProject: (
     id: number
-  ) => void;
+  ) => Promise<void>;
 
   completeProject: (
     id: number
-  ) => void;
+  ) => Promise<void>;
 
   archiveProject: (
     id: number
-  ) => void;
+  ) => Promise<void>;
 
   addMachine: (
     machine: Omit<AdminMachine, "id">
-  ) => void;
+  ) => Promise<void>;
 
   updateMachine: (
     id: number,
     machine: Omit<AdminMachine, "id">
-  ) => void;
+  ) => Promise<void>;
 
   deleteMachine: (
     id: number
-  ) => void;
+  ) => Promise<void>;
 
   toggleMachineActive: (
     id: number
-  ) => void;
+  ) => Promise<void>;
 
   addHoliday: (
     holiday: Omit<AdminHoliday, "id">
@@ -604,13 +604,33 @@ export function AdminProvider({
     }
   };
 
-  const updateUser = (
+  const updateUser = async (
     id: number,
     user: Omit<
       AdminUser,
       "id"
     >
   ) => {
+    const { error } =
+      await supabase
+        .from("users")
+        .update({
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+          active: user.active,
+        })
+        .eq("id", id);
+
+    if (error) {
+      console.error(
+        "Napaka pri posodabljanju uporabnika:",
+        error
+      );
+      return;
+    }
+
     setUsers(
       (current) =>
         current.map(
@@ -687,7 +707,7 @@ export function AdminProvider({
     }
   };
 
-  const toggleUserActive = (
+  const toggleUserActive = async (
     id: number
   ) => {
     /*
@@ -698,6 +718,35 @@ export function AdminProvider({
       return;
     }
 
+    const currentUser =
+      users.find(
+        (item) =>
+          item.id === id
+      );
+
+    if (!currentUser) {
+      return;
+    }
+
+    const newActive =
+      !currentUser.active;
+
+    const { error } =
+      await supabase
+        .from("users")
+        .update({
+          active: newActive,
+        })
+        .eq("id", id);
+
+    if (error) {
+      console.error(
+        "Napaka pri spreminjanju aktivnega uporabnika:",
+        error
+      );
+      return;
+    }
+
     setUsers(
       (current) =>
         current.map(
@@ -705,8 +754,7 @@ export function AdminProvider({
             item.id === id
               ? {
                   ...item,
-                  active:
-                    !item.active,
+                  active: newActive,
                 }
               : item
         )
@@ -793,7 +841,7 @@ export function AdminProvider({
       });
   };
 
-  const updateProject = (
+  const updateProject = async (
     id: number,
     project: Omit<
       AdminProject,
@@ -809,6 +857,38 @@ export function AdminProvider({
           false,
       };
 
+    const { error } =
+      await supabase
+        .from("projects")
+        .update({
+          name:
+            updatedProject.name,
+          serial_number:
+            updatedProject.serialNumber ??
+            "",
+          required_quantity:
+            updatedProject.requiredQuantity,
+          active:
+            updatedProject.active,
+          status:
+            updatedProject.status,
+          archived:
+            updatedProject.archived ??
+            false,
+        })
+        .eq(
+          "id",
+          id
+        );
+
+    if (error) {
+      console.error(
+        "Napaka pri posodabljanju projekta:",
+        error
+      );
+      return;
+    }
+
     setProjects(
       (current) =>
         current.map(
@@ -818,29 +898,6 @@ export function AdminProvider({
               : item
         )
     );
-
-    void supabase
-      .from("projects")
-      .update({
-        name:
-          updatedProject.name,
-        serial_number:
-          updatedProject.serialNumber ??
-          null,
-        required_quantity:
-          updatedProject.requiredQuantity,
-        active:
-          updatedProject.active,
-        status:
-          updatedProject.status,
-        archived:
-          updatedProject.archived ??
-          false,
-      })
-      .eq(
-        "id",
-        id
-      );
   };
 
   const deleteProject = async (
@@ -873,23 +930,9 @@ export function AdminProvider({
     }
   };
 
-  const toggleProjectActive = (
+  const toggleProjectActive = async (
     id: number
   ) => {
-    setProjects(
-      (current) =>
-        current.map(
-          (item) =>
-            item.id === id
-              ? {
-                  ...item,
-                  active:
-                    !item.active,
-                }
-              : item
-        )
-    );
-
     const currentProject =
       projects.find(
         (item) =>
@@ -900,21 +943,66 @@ export function AdminProvider({
       return;
     }
 
-    void supabase
-      .from("projects")
-      .update({
-        active:
-          !currentProject.active,
-      })
-      .eq(
-        "id",
-        id
+    const newActive =
+      !currentProject.active;
+
+    const { error } =
+      await supabase
+        .from("projects")
+        .update({
+          active: newActive,
+        })
+        .eq(
+          "id",
+          id
+        );
+
+    if (error) {
+      console.error(
+        "Napaka pri spreminjanju aktivnega projekta:",
+        error
       );
+      return;
+    }
+
+    setProjects(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  active: newActive,
+                }
+              : item
+        )
+    );
   };
 
-  const activateProject = (
+  const activateProject = async (
     id: number
   ) => {
+    const { error } =
+      await supabase
+        .from("projects")
+        .update({
+          active: true,
+          status: "active",
+          archived: false,
+        })
+        .eq(
+          "id",
+          id
+        );
+
+    if (error) {
+      console.error(
+        "Napaka pri aktiviranju projekta:",
+        error
+      );
+      return;
+    }
+
     setProjects(
       (current) =>
         current.map(
@@ -923,33 +1011,19 @@ export function AdminProvider({
               ? {
                   ...item,
                   active: true,
-                  status:
-                    "active",
-                  archived:
-                    false,
+                  status: "active",
+                  archived: false,
                 }
               : item
         )
     );
-
-    void supabase
-      .from("projects")
-      .update({
-        active: true,
-        status: "active",
-        archived: false,
-      })
-      .eq(
-        "id",
-        id
-      );
   };
 
   /* =======================================================
      ZAKLJUČEVANJE PROJEKTA
   ======================================================= */
 
-  const completeProject = (
+  const completeProject = async (
     id: number
   ) => {
     const currentProject =
@@ -962,23 +1036,34 @@ export function AdminProvider({
       return;
     }
 
-    /*
-     * Projekt je po kliku kljukice
-     * zaključen, vendar še ni arhiviran.
-     *
-     * Zato:
-     * - status = completed
-     * - active = false
-     * - archived = false
-     */
     const updatedProject: AdminProject =
       {
         ...currentProject,
-        status:
-          "completed",
+        status: "completed",
         active: false,
         archived: false,
       };
+
+    const { error } =
+      await supabase
+        .from("projects")
+        .update({
+          status: "completed",
+          active: false,
+          archived: false,
+        })
+        .eq(
+          "id",
+          id
+        );
+
+    if (error) {
+      console.error(
+        "Napaka pri zaključevanju projekta:",
+        error
+      );
+      return;
+    }
 
     setProjects(
       (current) =>
@@ -989,26 +1074,13 @@ export function AdminProvider({
               : item
         )
     );
-
-    void supabase
-      .from("projects")
-      .update({
-        status:
-          "completed",
-        active: false,
-        archived: false,
-      })
-      .eq(
-        "id",
-        id
-      );
   };
 
   /* =======================================================
      ARHIVIRANJE PROJEKTA
   ======================================================= */
 
-  const archiveProject = (
+  const archiveProject = async (
     id: number
   ) => {
     const currentProject =
@@ -1036,10 +1108,30 @@ export function AdminProvider({
       {
         ...currentProject,
         active: false,
-        status:
-          "completed",
+        status: "completed",
         archived: true,
       };
+
+    const { error } =
+      await supabase
+        .from("projects")
+        .update({
+          active: false,
+          status: "completed",
+          archived: true,
+        })
+        .eq(
+          "id",
+          id
+        );
+
+    if (error) {
+      console.error(
+        "Napaka pri arhiviranju projekta:",
+        error
+      );
+      return;
+    }
 
     setProjects(
       (current) =>
@@ -1050,26 +1142,13 @@ export function AdminProvider({
               : item
         )
     );
-
-    void supabase
-      .from("projects")
-      .update({
-        active: false,
-        status:
-          "completed",
-        archived: true,
-      })
-      .eq(
-        "id",
-        id
-      );
   };
 
   /* =======================================================
      STROJI
   ======================================================= */
 
-  const addMachine = (
+  const addMachine = async (
     machine: Omit<
       AdminMachine,
       "id"
@@ -1085,6 +1164,23 @@ export function AdminProvider({
           ) + 1
         : 1;
 
+    const { error } =
+      await supabase
+        .from("machines")
+        .insert({
+          id: newId,
+          name: machine.name,
+          active: machine.active,
+        });
+
+    if (error) {
+      console.error(
+        "Napaka pri dodajanju stroja:",
+        error
+      );
+      return;
+    }
+
     setMachines(
       (current) => [
         ...current,
@@ -1094,23 +1190,35 @@ export function AdminProvider({
         },
       ]
     );
-
-    void supabase
-      .from("machines")
-      .insert({
-        id: newId,
-        name: machine.name,
-        active: machine.active,
-      });
   };
 
-  const updateMachine = (
+  const updateMachine = async (
     id: number,
     machine: Omit<
       AdminMachine,
       "id"
     >
   ) => {
+    const { error } =
+      await supabase
+        .from("machines")
+        .update({
+          name: machine.name,
+          active: machine.active,
+        })
+        .eq(
+          "id",
+          id
+        );
+
+    if (error) {
+      console.error(
+        "Napaka pri posodabljanju stroja:",
+        error
+      );
+      return;
+    }
+
     setMachines(
       (current) =>
         current.map(
@@ -1125,9 +1233,26 @@ export function AdminProvider({
     );
   };
 
-  const deleteMachine = (
+  const deleteMachine = async (
     id: number
   ) => {
+    const { error } =
+      await supabase
+        .from("machines")
+        .delete()
+        .eq(
+          "id",
+          id
+        );
+
+    if (error) {
+      console.error(
+        "Napaka pri brisanju stroja:",
+        error
+      );
+      return;
+    }
+
     setMachines(
       (current) =>
         current.filter(
@@ -1137,9 +1262,41 @@ export function AdminProvider({
     );
   };
 
-  const toggleMachineActive = (
+  const toggleMachineActive = async (
     id: number
   ) => {
+    const currentMachine =
+      machines.find(
+        (item) =>
+          item.id === id
+      );
+
+    if (!currentMachine) {
+      return;
+    }
+
+    const newActive =
+      !currentMachine.active;
+
+    const { error } =
+      await supabase
+        .from("machines")
+        .update({
+          active: newActive,
+        })
+        .eq(
+          "id",
+          id
+        );
+
+    if (error) {
+      console.error(
+        "Napaka pri spreminjanju aktivnega stroja:",
+        error
+      );
+      return;
+    }
+
     setMachines(
       (current) =>
         current.map(
@@ -1147,8 +1304,7 @@ export function AdminProvider({
             item.id === id
               ? {
                   ...item,
-                  active:
-                    !item.active,
+                  active: newActive,
                 }
               : item
         )
