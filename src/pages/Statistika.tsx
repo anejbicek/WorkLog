@@ -103,7 +103,7 @@ function Statistika() {
   const overtimeSpecialHours = uniqueBreakdown.overtimeSpecial;
   const overtimeNormalHours = uniqueBreakdown.overtimeNormal;
 
-  const additionalHours = Number((calculateOverlapHours(monthWorkOrders) / 3).toFixed(2));
+  const additionalHours = Number(calculateOverlapHours(monthWorkOrders).toFixed(2));
 
   // Skupne ure so unikatni časovni intervali.
   // Če se dva različna projekta prekrivata, se isti čas šteje samo enkrat.
