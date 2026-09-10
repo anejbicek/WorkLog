@@ -1,0 +1,889 @@
+@import "tailwindcss";
+
+/* =========================================================
+   ŽustAI WorkLog – NOČNI NAČIN
+   ========================================================= */
+
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  background: #0b1720 !important;
+  color: #e2e8f0;
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] #root {
+  background: #0b1720 !important;
+}
+
+/* =========================================================
+   OSNOVNE POVRŠINE
+   ========================================================= */
+
+html[data-theme="dark"] .bg-white {
+  background-color: #162631 !important;
+}
+
+html[data-theme="dark"] .bg-gray-50 {
+  background-color: #101f29 !important;
+}
+
+html[data-theme="dark"] .bg-gray-100 {
+  background-color: #1b303c !important;
+}
+
+html[data-theme="dark"] .bg-green-50 {
+  background-color: #10271f !important;
+}
+
+/* =========================================================
+   TAILWIND BESEDILO
+   ========================================================= */
+
+html[data-theme="dark"] .text-gray-900,
+html[data-theme="dark"] .text-gray-800,
+html[data-theme="dark"] .text-gray-700,
+html[data-theme="dark"] .text-gray-600,
+html[data-theme="dark"] .text-gray-500 {
+  color: #d7e1e7 !important;
+}
+
+html[data-theme="dark"] .text-gray-400,
+html[data-theme="dark"] .text-gray-300 {
+  color: #91a5b1 !important;
+}
+
+/* =========================================================
+   TAILWIND OBROBE
+   ========================================================= */
+
+html[data-theme="dark"] .border-gray-200,
+html[data-theme="dark"] .border-gray-300 {
+  border-color: #304854 !important;
+}
+
+/* =========================================================
+   INPUT / SELECT / TEXTAREA
+   ========================================================= */
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: #172b37 !important;
+  color: #e2e8f0 !important;
+  border-color: #3b5662 !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #8095a1 !important;
+}
+
+html[data-theme="dark"] input:disabled,
+html[data-theme="dark"] textarea:disabled,
+html[data-theme="dark"] select:disabled {
+  background-color: #11212b !important;
+  color: #81939e !important;
+}
+
+/* =========================================================
+   GUMBI
+   ========================================================= */
+
+html[data-theme="dark"] .bg-green-600 {
+  background-color: #246d5b !important;
+}
+
+html[data-theme="dark"] .hover\:bg-green-700:hover {
+  background-color: #2b806a !important;
+}
+
+html[data-theme="dark"] button {
+  color: #e2e8f0;
+}
+
+/* =========================================================
+   INLINE SVETLE POVRŠINE
+   ========================================================= */
+
+html[data-theme="dark"]
+  [style*="background: rgb(255, 255, 255)"],
+html[data-theme="dark"]
+  [style*="background:#ffffff"],
+html[data-theme="dark"]
+  [style*="background: #ffffff"] {
+  background: #162631 !important;
+}
+
+html[data-theme="dark"]
+  [style*="background: rgb(248, 250, 252)"],
+html[data-theme="dark"]
+  [style*="background:#f8fafc"],
+html[data-theme="dark"]
+  [style*="background: #f8fafc"] {
+  background: #101f29 !important;
+}
+
+html[data-theme="dark"]
+  [style*="background: rgb(245, 247, 246)"],
+html[data-theme="dark"]
+  [style*="background:#f5f7f6"],
+html[data-theme="dark"]
+  [style*="background: #f5f7f6"] {
+  background: #0f202a !important;
+}
+
+html[data-theme="dark"]
+  [style*="background: rgb(230, 238, 242)"],
+html[data-theme="dark"]
+  [style*="background:#e6eef2"],
+html[data-theme="dark"]
+  [style*="background: #e6eef2"] {
+  background: #223b48 !important;
+}
+
+html[data-theme="dark"]
+  [style*="background: rgb(241, 245, 249)"],
+html[data-theme="dark"]
+  [style*="background:#f1f5f9"],
+html[data-theme="dark"]
+  [style*="background: #f1f5f9"] {
+  background: #1b303c !important;
+}
+
+/* =========================================================
+   INLINE BESEDILO
+   ========================================================= */
+
+/*
+ * Glavna temna ŽustAI modra.
+ * To je bila ena glavnih težav na statistiki.
+ */
+
+html[data-theme="dark"]
+  [style*="color: rgb(18, 52, 77)"],
+html[data-theme="dark"]
+  [style*="color:#12344d"],
+html[data-theme="dark"]
+  [style*="color: #12344d"] {
+  color: #9edcff !important;
+}
+
+/*
+ * ŽustAI modra.
+ */
+
+html[data-theme="dark"]
+  [style*="color: rgb(23, 70, 93)"],
+html[data-theme="dark"]
+  [style*="color:#17465d"],
+html[data-theme="dark"]
+  [style*="color: #17465d"] {
+  color: #8fd5f0 !important;
+}
+
+/*
+ * Druga temna modra.
+ */
+
+html[data-theme="dark"]
+  [style*="color: rgb(29, 82, 107)"],
+html[data-theme="dark"]
+  [style*="color:#1d526b"],
+html[data-theme="dark"]
+  [style*="color: #1d526b"] {
+  color: #91d7f2 !important;
+}
+
+/*
+ * Modra.
+ */
+
+html[data-theme="dark"]
+  [style*="color: rgb(37, 99, 235)"],
+html[data-theme="dark"]
+  [style*="color:#2563eb"],
+html[data-theme="dark"]
+  [style*="color: #2563eb"] {
+  color: #70b7ff !important;
+}
+
+/*
+ * Temno siva / modro-siva.
+ */
+
+html[data-theme="dark"]
+  [style*="color: rgb(51, 65, 85)"],
+html[data-theme="dark"]
+  [style*="color:#334155"],
+html[data-theme="dark"]
+  [style*="color: #334155"] {
+  color: #dce8ee !important;
+}
+
+html[data-theme="dark"]
+  [style*="color: rgb(71, 85, 105)"],
+html[data-theme="dark"]
+  [style*="color:#475569"],
+html[data-theme="dark"]
+  [style*="color: #475569"] {
+  color: #b8ccd6 !important;
+}
+
+html[data-theme="dark"]
+  [style*="color: rgb(100, 116, 139)"],
+html[data-theme="dark"]
+  [style*="color:#64748b"],
+html[data-theme="dark"]
+  [style*="color: #64748b"] {
+  color: #9fc0cf !important;
+}
+
+html[data-theme="dark"]
+  [style*="color: rgb(91, 113, 128)"],
+html[data-theme="dark"]
+  [style*="color:#5b7180"],
+html[data-theme="dark"]
+  [style*="color: #5b7180"] {
+  color: #a7c0cc !important;
+}
+
+html[data-theme="dark"]
+  [style*="color: rgb(102, 102, 102)"],
+html[data-theme="dark"]
+  [style*="color:#666"],
+html[data-theme="dark"]
+  [style*="color: #666"] {
+  color: #a0b3bd !important;
+}
+
+html[data-theme="dark"]
+  [style*="color: rgb(148, 163, 184)"],
+html[data-theme="dark"]
+  [style*="color:#94a3b8"],
+html[data-theme="dark"]
+  [style*="color: #94a3b8"] {
+  color: #9eb7c3 !important;
+}
+
+/* =========================================================
+   ČRNA BESEDILA
+   ========================================================= */
+
+/*
+ * Nekateri elementi imajo direktno nastavljeno
+ * color: #000000.
+ *
+ * To je razlog, da so bili na slikah:
+ *
+ * Redne ure
+ * Statistika strojev
+ * Statistika projektov
+ * imena strojev/projektov
+ *
+ * skoraj črni.
+ */
+
+html[data-theme="dark"]
+  [style*="color: rgb(0, 0, 0)"],
+html[data-theme="dark"]
+  [style*="color:#000000"],
+html[data-theme="dark"]
+  [style*="color: #000000"],
+html[data-theme="dark"]
+  [style*="color: rgb(0, 0, 0);"] {
+  color: #e8f3f7 !important;
+}
+
+/*
+ * Nekateri elementi uporabljajo samo black.
+ */
+
+html[data-theme="dark"]
+  [style*="color: black"],
+html[data-theme="dark"]
+  [style*="color:black"] {
+  color: #e8f3f7 !important;
+}
+
+/* =========================================================
+   INLINE OBROBE
+   ========================================================= */
+
+html[data-theme="dark"]
+  [style*="border: 1px solid rgb(226, 232, 240)"],
+html[data-theme="dark"]
+  [style*="border: 1px solid #e2e8f0"],
+html[data-theme="dark"]
+  [style*="border:1px solid #e2e8f0"] {
+  border-color: #304854 !important;
+}
+
+html[data-theme="dark"]
+  [style*="border: 1px solid rgb(229, 231, 235)"],
+html[data-theme="dark"]
+  [style*="border: 1px solid #e5e7eb"],
+html[data-theme="dark"]
+  [style*="border:1px solid #e5e7eb"] {
+  border-color: #304854 !important;
+}
+
+html[data-theme="dark"]
+  [style*="border: 1px solid rgb(209, 213, 219)"],
+html[data-theme="dark"]
+  [style*="border: 1px solid #d1d5db"],
+html[data-theme="dark"]
+  [style*="border:1px solid #d1d5db"] {
+  border-color: #3b5662 !important;
+}
+
+html[data-theme="dark"]
+  [style*="border: 1px solid rgb(203, 213, 225)"],
+html[data-theme="dark"]
+  [style*="border: 1px solid #cbd5e1"],
+html[data-theme="dark"]
+  [style*="border:1px solid #cbd5e1"] {
+  border-color: #496875 !important;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+html[data-theme="dark"] header {
+  background: #101f29 !important;
+  border-bottom-color: #29424e !important;
+}
+
+html[data-theme="dark"] nav {
+  background: #123b50 !important;
+}
+
+html[data-theme="dark"] nav div {
+  color: #e2e8f0 !important;
+}
+
+/*
+ * Aktivni element navigacije.
+ */
+
+html[data-theme="dark"]
+  nav
+  div[style*="background: rgb(255, 255, 255)"] {
+  background: #1b303c !important;
+  color: #d7edf5 !important;
+  border-bottom-color: #65b7da !important;
+}
+
+/* =========================================================
+   LOGO
+   ========================================================= */
+
+/*
+ * Uporabi transparentni logo-kocka.
+ *
+ * Header ima trenutno wrapper z marginTop: 17px.
+ * Zato sliko vizualno dvignemo, da je centrirana.
+ */
+
+header img[src="/logo.png"] {
+  content: url("/logo-kocka.png") !important;
+  width: 78px !important;
+  height: 78px !important;
+  object-fit: contain !important;
+  transform: translateY(-17px) !important;
+}
+
+/*
+ * Če Logo komponenta že uporablja logo-kocka,
+ * transform še vedno poskrbi za pravilen položaj
+ * v trenutnem Header wrapperju.
+ */
+
+header img[src="/logo-kocka.png"] {
+  width: 78px !important;
+  height: 78px !important;
+  object-fit: contain !important;
+  transform: translateY(-17px) !important;
+}
+
+/* =========================================================
+   USER MENU
+   ========================================================= */
+
+html[data-theme="dark"]
+  [style*="box-shadow: 0 10px 30px rgba(0,0,0,0.12)"] {
+  background: #162631 !important;
+  border-color: #304854 !important;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+html[data-theme="dark"] footer {
+  background: #101f29 !important;
+  border-top-color: #29424e !important;
+  color: #9ab2bd !important;
+}
+
+/* =========================================================
+   STATISTIKA – KOLEDAR
+   ========================================================= */
+
+/*
+ * Prazni dnevi imajo v originalni kodi:
+ *
+ * background: #ffffff
+ * border: #e2e8f0
+ * cursor: default
+ *
+ * Zato jih lahko natančno ujamemo brez spreminjanja
+ * Statistika.tsx.
+ *
+ * Želeni rezultat:
+ * nekoliko svetlejša modra površina,
+ * jasno vidna številka in rob.
+ */
+
+html[data-theme="dark"]
+  [style*="cursor: default"][style*="background: rgb(255, 255, 255)"] {
+  background: #1b4054 !important;
+  border-color: #4d91b0 !important;
+}
+
+/*
+ * Dodatna različica, če brskalnik vrstni red
+ * atributov v style zapisu spremeni.
+ */
+
+html[data-theme="dark"]
+  [style*="cursor: default"] {
+  border-color: #4d91b0;
+}
+
+/*
+ * Številke dni na praznih celicah.
+ * Ker je njihova originalna barva #12344d,
+ * jih zgornje pravilo že spremeni v svetlo modro.
+ */
+
+html[data-theme="dark"]
+  [style*="cursor: default"]
+  [style*="color: rgb(18, 52, 77)"] {
+  color: #b8e8ff !important;
+}
+
+html[data-theme="dark"]
+  [style*="cursor: default"]
+  [style*="color:#12344d"] {
+  color: #b8e8ff !important;
+}
+
+html[data-theme="dark"]
+  [style*="cursor: default"]
+  [style*="color: #12344d"] {
+  color: #b8e8ff !important;
+}
+
+/* =========================================================
+   STATISTIKA – NASLOVI
+   ========================================================= */
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3 {
+  color: #edf7fa;
+}
+
+/*
+ * Izrecno svetli naslovi, kjer je originalna
+ * barva temno modra.
+ */
+
+html[data-theme="dark"]
+  h1[style*="color: rgb(18, 52, 77)"],
+html[data-theme="dark"]
+  h2[style*="color: rgb(18, 52, 77)"],
+html[data-theme="dark"]
+  h3[style*="color: rgb(18, 52, 77)"] {
+  color: #e8f6fa !important;
+}
+
+/* =========================================================
+   STATISTIKA – OPISNA BESEDILA
+   ========================================================= */
+
+html[data-theme="dark"] p {
+  color: #b7ccd5;
+}
+
+html[data-theme="dark"]
+  p[style*="color: rgb(100, 116, 139)"] {
+  color: #9fc0cf !important;
+}
+
+/* =========================================================
+   DELOVNI NALOGI
+   ========================================================= */
+
+/*
+ * Kartice delovnih nalogov imajo lahko direktno
+ * črno besedilo.
+ */
+
+html[data-theme="dark"]
+  [style*="color: rgb(0, 0, 0)"] {
+  color: #e8f3f7 !important;
+}
+
+/*
+ * Temno modra besedila v delovnih nalogih.
+ */
+
+html[data-theme="dark"]
+  [style*="color: rgb(18, 52, 77)"] {
+  color: #9edcff !important;
+}
+
+html[data-theme="dark"]
+  [style*="color: rgb(23, 70, 93)"] {
+  color: #8fd5f0 !important;
+}
+
+/*
+ * Opisna besedila v karticah.
+ */
+
+html[data-theme="dark"]
+  [style*="color: rgb(71, 85, 105)"] {
+  color: #b8ccd6 !important;
+}
+
+/* =========================================================
+   LINKI
+   ========================================================= */
+
+html[data-theme="dark"] a {
+  color: #8fd5f0;
+}
+
+html[data-theme="dark"] a:hover {
+  color: #b7e9fa;
+}
+
+/* =========================================================
+   HR
+   ========================================================= */
+
+html[data-theme="dark"] hr {
+  border-color: #304854 !important;
+}
+
+/* =========================================================
+   SELECTION
+   ========================================================= */
+
+html[data-theme="dark"] ::selection {
+  background: #2c627c;
+  color: #ffffff;
+}
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+
+/*
+ * Login ozadje.
+ *
+ * Temno modra osnova + nežni radialni prehodi +
+ * diagonalni tehnološki vzorec.
+ */
+
+html[data-theme="dark"] body {
+  background-color: #0b1720 !important;
+}
+
+html[data-theme="dark"]
+  [style*="background-color: rgb(245, 248, 245)"] {
+  background-color: #0b1720 !important;
+
+  background-image:
+    radial-gradient(
+      circle at 12% 18%,
+      rgba(49, 116, 148, 0.32),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 88% 82%,
+      rgba(26, 82, 108, 0.38),
+      transparent 35%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(80, 150, 180, 0.04) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(80, 150, 180, 0.04) 50%,
+      rgba(80, 150, 180, 0.04) 75%,
+      transparent 75%
+    ) !important;
+
+  background-size:
+    auto,
+    auto,
+    80px 80px !important;
+}
+
+/*
+ * Login kartica.
+ */
+
+html[data-theme="dark"]
+  [style*="box-shadow: 0 25px 70px rgba(30,60,45,.12)"] {
+  background: #162631 !important;
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(112, 180, 210, 0.08) !important;
+}
+
+/* =========================================================
+   PDF
+   ========================================================= */
+
+/*
+ * PDF papir mora ostati BEL tudi v nočnem načinu.
+ */
+
+html[data-theme="dark"] .pdf-paper,
+html[data-theme="dark"] .pdf-paper * {
+  color-scheme: light !important;
+}
+
+html[data-theme="dark"] .pdf-paper {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+/*
+ * PDF površine.
+ */
+
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="background: rgb(255, 255, 255)"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="background:#ffffff"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="background: #ffffff"] {
+  background: #ffffff !important;
+}
+
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="background: rgb(248, 250, 252)"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="background:#f8fafc"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="background: #f8fafc"] {
+  background: #f8fafc !important;
+}
+
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="background: rgb(241, 245, 249)"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="background:#f1f5f9"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="background: #f1f5f9"] {
+  background: #f1f5f9 !important;
+}
+
+/*
+ * PDF črno ostane črno.
+ */
+
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="color: rgb(0, 0, 0)"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="color:#000000"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="color: #000000"] {
+  color: #000000 !important;
+}
+
+/*
+ * PDF modra ostane modra.
+ */
+
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="color: rgb(23, 70, 93)"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="color:#17465d"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="color: #17465d"] {
+  color: #17465d !important;
+}
+
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="color: rgb(100, 116, 139)"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="color:#64748b"],
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="color: #64748b"] {
+  color: #64748b !important;
+}
+
+/* =========================================================
+   DODATNA SPLOŠNA BERLJIVOST
+   ========================================================= */
+
+/*
+ * Če ima element direktno nastavljeno eno od zelo
+ * temnih modrih barv, ga v nočnem načinu posvetimo.
+ */
+
+html[data-theme="dark"]
+  [style*="#12344d"] {
+  color: #9edcff !important;
+}
+
+html[data-theme="dark"]
+  [style*="#17465d"] {
+  color: #8fd5f0 !important;
+}
+
+html[data-theme="dark"]
+  [style*="#1d526b"] {
+  color: #91d7f2 !important;
+}
+
+/*
+ * Izjema za PDF – papir mora imeti originalne barve.
+ */
+
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="#12344d"] {
+  color: #12344d !important;
+}
+
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="#17465d"] {
+  color: #17465d !important;
+}
+
+html[data-theme="dark"]
+  .pdf-paper
+  [style*="#1d526b"] {
+  color: #1d526b !important;
+}
+/* URE NA KARTICAH DELOVNIH NALOGOV */
+
+html[data-theme="dark"] .workorder-hours-value {
+  color: #ffffff !important;
+}/* =========================================================
+   ADMIN PROJECT CARD – NOČNI NAČIN
+   ========================================================= */
+
+/* Mapa */
+
+html[data-theme="dark"]
+  .project-card-folder-icon {
+  background: #1b4054 !important;
+  color: #ffffff !important;
+}
+
+/* Ime projekta */
+
+html[data-theme="dark"]
+  .project-card-name {
+  color: #ffffff !important;
+}
+
+/* Projekt # */
+
+html[data-theme="dark"]
+  .project-card-number {
+  color: #a9c9d8 !important;
+}
+
+/* Procent */
+
+html[data-theme="dark"]
+  .project-card-progress {
+  background: #1b4054 !important;
+  color: #ffffff !important;
+}
+
+/* 100 % naj ostane zelen, vendar svetlejši */
+
+html[data-theme="dark"]
+  .project-card-progress {
+  color: #ffffff !important;
+}
+
+/* Ikone Ure / Delavci / Stroji */
+
+html[data-theme="dark"]
+  .project-card-mini-icon {
+  color: #9edcff !important;
+}
+
+/* =========================================================
+   UREDI / IZBRIŠI
+   ========================================================= */
+
+html[data-theme="dark"]
+  .admin-project-action-edit {
+  background: #1b4054 !important;
+  border-color: #4d91b0 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"]
+  .admin-project-action-delete {
+  background: #1b4054 !important;
+  border-color: #4d91b0 !important;
+  color: #ffffff !important;
+}
+
+/* Hover */
+
+html[data-theme="dark"]
+  .admin-project-action-edit:hover,
+html[data-theme="dark"]
+  .admin-project-action-delete:hover {
+  background: #25566d !important;
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   ZAKLJUČI / AKTIVIRAJ
+   ========================================================= */
+
+html[data-theme="dark"]
+  .admin-project-action-complete {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"]
+  .admin-project-action-activate {
+  background: #1b4054 !important;
+  color: #ffffff !important;
+}
