@@ -740,7 +740,7 @@ export function AdminProvider({
      PROJEKTI
   ======================================================= */
 
-  const addProject = async (
+  const addProject = (
     project: Omit<
       AdminProject,
       "id"
@@ -772,26 +772,25 @@ export function AdminProvider({
       ]
     );
 
-    await supabase
+    void supabase
       .from("projects")
       .insert({
-          id: newId,
-          name:
-            newProject.name,
-          serial_number:
-            newProject.serialNumber ??
-            "",
-          required_quantity:
-            newProject.requiredQuantity,
-          active:
-            newProject.active,
-          status:
-            newProject.status,
-          archived:
-            newProject.archived ??
-            false,
-        });
-
+        id: newId,
+        name:
+          newProject.name,
+        serial_number:
+          newProject.serialNumber ??
+          "",
+        required_quantity:
+          newProject.requiredQuantity,
+        active:
+          newProject.active,
+        status:
+          newProject.status,
+        archived:
+          newProject.archived ??
+          false,
+      });
   };
 
   const updateProject = (
@@ -1095,6 +1094,14 @@ export function AdminProvider({
         },
       ]
     );
+
+    void supabase
+      .from("machines")
+      .insert({
+        id: newId,
+        name: machine.name,
+        active: machine.active,
+      });
   };
 
   const updateMachine = (
