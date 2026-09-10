@@ -772,6 +772,10 @@ export function AdminProvider({
       ]
     );
 
+    console.log(
+      "WORKLOG: addProject - INSERT v Supabase"
+    );
+
     void supabase
       .from("projects")
       .insert({
