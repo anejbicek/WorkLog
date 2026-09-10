@@ -54,6 +54,12 @@ type MenuItem = {
   icon: typeof Home;
 };
 
+type ViewPeriod =
+  | "today"
+  | "week"
+  | "month"
+  | "year";
+
 function Admin() {
   const {
     users,
@@ -69,6 +75,11 @@ function Admin() {
     activeSection,
     setActiveSection,
   ] = useState<AdminSection>("home");
+
+  const [
+    viewPeriod,
+    setViewPeriod,
+  ] = useState<ViewPeriod>("month");
 
   const menuItems: MenuItem[] = [
     {
@@ -143,28 +154,82 @@ function Admin() {
     []
   );
 
-  const monthWorkOrders = useMemo(
-    () =>
-      allWorkOrders.filter(
+  const periodWorkOrders = useMemo(
+    () => {
+      const now = new Date();
+      const todayString = `${now.getFullYear()}-${String(
+        now.getMonth() + 1
+      ).padStart(2, "0")}-${String(
+        now.getDate()
+      ).padStart(2, "0")}`;
+
+      if (viewPeriod === "today") {
+        return allWorkOrders.filter(
+          (order) => order.date === todayString
+        );
+      }
+
+      if (viewPeriod === "year") {
+        const year = String(now.getFullYear());
+        return allWorkOrders.filter(
+          (order) => order.date.startsWith(year)
+        );
+      }
+
+      if (viewPeriod === "week") {
+        const startOfWeek = new Date(now);
+        const day = startOfWeek.getDay();
+        const mondayOffset = day === 0 ? -6 : 1 - day;
+        startOfWeek.setDate(
+          startOfWeek.getDate() + mondayOffset
+        );
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(
+          endOfWeek.getDate() + 6
+        );
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        return allWorkOrders.filter((order) => {
+          const orderDate = new Date(
+            `${order.date}T00:00:00`
+          );
+          return (
+            orderDate >= startOfWeek &&
+            orderDate <= endOfWeek
+          );
+        });
+      }
+
+      return allWorkOrders.filter(
         (order) =>
-          order.date.startsWith(
-            currentMonth
-          )
-      ),
-    [allWorkOrders, currentMonth]
+          order.date.startsWith(currentMonth)
+      );
+    },
+    [allWorkOrders, currentMonth, viewPeriod]
   );
+
+  const periodLabel =
+    viewPeriod === "today"
+      ? "Danes"
+      : viewPeriod === "week"
+        ? "Ta teden"
+        : viewPeriod === "year"
+          ? "Leto"
+          : "Ta mesec";
 
   const monthHours = useMemo(
     () =>
       calculateUniqueWorkHours(
-        monthWorkOrders
+        periodWorkOrders
       ),
-    [monthWorkOrders]
+    [periodWorkOrders]
   );
 
   const monthOvertime = useMemo(
     () =>
-      monthWorkOrders.reduce(
+      periodWorkOrders.reduce(
         (sum, order) =>
           sum +
           Number(
@@ -172,7 +237,7 @@ function Admin() {
           ),
         0
       ),
-    [monthWorkOrders]
+    [periodWorkOrders]
   );
 
   const roleCounts = useMemo(
@@ -229,7 +294,7 @@ function Admin() {
       >();
 
       for (
-        const order of monthWorkOrders
+        const order of periodWorkOrders
       ) {
         const project =
           order.project?.trim() ||
@@ -257,7 +322,7 @@ function Admin() {
         )
         .slice(0, 6);
     },
-    [monthWorkOrders]
+    [periodWorkOrders]
   );
 
   const maxProjectHours =
@@ -323,7 +388,7 @@ function Admin() {
           activeProjects.length
         }
         workOrderCount={
-          monthWorkOrders.length
+          periodWorkOrders.length
         }
         monthHours={monthHours}
         monthOvertime={
@@ -341,6 +406,9 @@ function Admin() {
           maxProjectHours
         }
         dateLabel={dateLabel}
+        viewPeriod={viewPeriod}
+        setViewPeriod={setViewPeriod}
+        periodLabel={periodLabel}
         onNavigate={
           setActiveSection
         }
@@ -532,6 +600,11 @@ type AdministrationHomeProps = {
   }>;
   maxProjectHours: number;
   dateLabel: string;
+  viewPeriod: ViewPeriod;
+  setViewPeriod: (
+    period: ViewPeriod
+  ) => void;
+  periodLabel: string;
   onNavigate: (
     section: AdminSection
   ) => void;
@@ -550,6 +623,9 @@ function AdministrationHome({
   projectHours,
   maxProjectHours,
   dateLabel,
+  viewPeriod,
+  setViewPeriod,
+  periodLabel,
   onNavigate,
 }: AdministrationHomeProps) {
   const totalUsers =
@@ -577,7 +653,7 @@ function AdministrationHome({
             monthLabelStyle
           }
         >
-          September 2026
+          {periodLabel}
         </div>
 
         <div
@@ -587,8 +663,13 @@ function AdministrationHome({
         >
           <button
             type="button"
+            onClick={() =>
+              setViewPeriod("today")
+            }
             style={
-              activeFilterStyle
+              viewPeriod === "today"
+                ? activeFilterStyle
+                : filterButtonStyle
             }
           >
             Danes
@@ -596,8 +677,13 @@ function AdministrationHome({
 
           <button
             type="button"
+            onClick={() =>
+              setViewPeriod("week")
+            }
             style={
-              filterButtonStyle
+              viewPeriod === "week"
+                ? activeFilterStyle
+                : filterButtonStyle
             }
           >
             Ta teden
@@ -605,8 +691,13 @@ function AdministrationHome({
 
           <button
             type="button"
+            onClick={() =>
+              setViewPeriod("month")
+            }
             style={
-              filterButtonStyle
+              viewPeriod === "month"
+                ? activeFilterStyle
+                : filterButtonStyle
             }
           >
             Ta mesec
@@ -614,11 +705,16 @@ function AdministrationHome({
 
           <button
             type="button"
+            onClick={() =>
+              setViewPeriod("year")
+            }
             style={
-              filterButtonStyle
+              viewPeriod === "year"
+                ? activeFilterStyle
+                : filterButtonStyle
             }
           >
-            Letos
+            Leto
           </button>
         </div>
       </div>
@@ -756,7 +852,7 @@ function AdministrationHome({
         <Panel
           title="Ure po projektih"
           icon={BarChart3}
-          action="Ta mesec"
+          action={periodLabel}
         >
           {projectHours.length === 0 ? (
             <EmptyChart>
@@ -830,7 +926,7 @@ function AdministrationHome({
         <Panel
           title="Pregled dela"
           icon={Gauge}
-          action="Ta mesec"
+          action={periodLabel}
         >
           <div
             style={
