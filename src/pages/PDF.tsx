@@ -365,6 +365,27 @@ function PDF({
           continue;
         }
 
+        /*
+          Pred izvozom dodatno prisilimo
+          svetlo različico A4 elementa.
+        */
+        const previousStyle =
+          element.getAttribute(
+            "style"
+          );
+
+        element.style.setProperty(
+          "background-color",
+          "#ffffff",
+          "important"
+        );
+
+        element.style.setProperty(
+          "color",
+          "#000000",
+          "important"
+        );
+
         const canvas =
           await html2canvas(
             element,
@@ -376,6 +397,19 @@ function PDF({
               logging: false,
             }
           );
+
+        /*
+          Povrnemo samo inline style
+          elementa po zajemu.
+        */
+        if (
+          previousStyle !== null
+        ) {
+          element.setAttribute(
+            "style",
+            previousStyle
+          );
+        }
 
         const pageWidth =
           pdf.internal.pageSize.getWidth();
@@ -478,6 +512,104 @@ function PDF({
         margin: "0 auto",
       }}
     >
+      {/* =====================================
+          PDF PREDOGLED - IZOLACIJA OD TEME
+      ===================================== */}
+
+      <style>
+        {`
+          /*
+           * PDF A4 stran mora biti vedno svetla.
+           * Ta pravila imajo prednost pred dark-mode
+           * pravili aplikacije.
+           */
+
+          .pdf-a4-page {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            color-scheme: light !important;
+          }
+
+          .pdf-a4-page h1,
+          .pdf-a4-page h2,
+          .pdf-a4-page h3,
+          .pdf-a4-page h4,
+          .pdf-a4-page h5,
+          .pdf-a4-page h6,
+          .pdf-a4-page p,
+          .pdf-a4-page span,
+          .pdf-a4-page div,
+          .pdf-a4-page td,
+          .pdf-a4-page th,
+          .pdf-a4-page label,
+          .pdf-a4-page strong {
+            color: inherit;
+          }
+
+          .pdf-a4-page input,
+          .pdf-a4-page button {
+            color-scheme: light !important;
+          }
+
+          .pdf-a4-page table {
+            color: #000000 !important;
+          }
+
+          .pdf-a4-page .pdf-summary-light {
+            background: #f1f5f9 !important;
+            background-color: #f1f5f9 !important;
+            color: #000000 !important;
+          }
+
+          .pdf-a4-page .pdf-summary-total {
+            background: #17465d !important;
+            background-color: #17465d !important;
+            color: #ffffff !important;
+          }
+
+          .pdf-a4-page .pdf-table-header {
+            background: #17465d !important;
+            background-color: #17465d !important;
+            color: #ffffff !important;
+          }
+
+          .pdf-a4-page .pdf-table-row-even {
+            background: #f8fafc !important;
+            background-color: #f8fafc !important;
+            color: #000000 !important;
+          }
+
+          .pdf-a4-page .pdf-table-row-odd {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+          }
+
+          .pdf-a4-page .pdf-empty-state {
+            background: #f8fafc !important;
+            background-color: #f8fafc !important;
+            color: #000000 !important;
+          }
+
+          .pdf-a4-page .pdf-title {
+            color: #12344d !important;
+          }
+
+          .pdf-a4-page .pdf-secondary {
+            color: #64748b !important;
+          }
+
+          .pdf-a4-page .pdf-meal-text {
+            color: #475569 !important;
+          }
+
+          .pdf-a4-page .pdf-footer {
+            color: #64748b !important;
+          }
+        `}
+      </style>
+
       {/* =====================================
           NASLOV STRANI
       ===================================== */}
@@ -638,6 +770,7 @@ function PDF({
                 ] =
                   element;
               }}
+              className="pdf-a4-page"
               style={{
                 width:
                   "210mm",
@@ -649,19 +782,14 @@ function PDF({
                   "11mm 14mm 12mm 14mm",
                 boxSizing:
                   "border-box",
-
-                /*
-                  A4 stran je vedno
-                  bela, ne glede
-                  na temo aplikacije.
-                */
                 backgroundColor:
                   "#ffffff",
                 background:
                   "#ffffff",
-
                 color:
                   "#000000",
+                colorScheme:
+                  "light",
                 fontFamily:
                   "Arial, Helvetica, sans-serif",
                 overflow:
@@ -726,6 +854,7 @@ function PDF({
                   }}
                 >
                   <div
+                    className="pdf-secondary"
                     style={{
                       fontSize:
                         "9px",
@@ -739,6 +868,7 @@ function PDF({
                   </div>
 
                   <div
+                    className="pdf-title"
                     style={{
                       fontSize:
                         "13px",
@@ -771,6 +901,7 @@ function PDF({
                 }}
               >
                 <h2
+                  className="pdf-title"
                   style={{
                     margin: 0,
                     fontSize:
@@ -784,6 +915,7 @@ function PDF({
                 </h2>
 
                 <div
+                  className="pdf-secondary"
                   style={{
                     fontSize:
                       "11px",
@@ -853,6 +985,7 @@ function PDF({
                     />
 
                     <td
+                      className="pdf-summary-total"
                       style={{
                         padding:
                           "2.5mm 2mm",
@@ -897,6 +1030,7 @@ function PDF({
               =================================== */}
 
               <div
+                className="pdf-meal-text"
                 style={{
                   display:
                     "flex",
@@ -932,6 +1066,7 @@ function PDF({
               =================================== */}
 
               <div
+                className="pdf-title"
                 style={{
                   fontSize:
                     DAILY_EVIDENCE_TITLE_FONT_SIZE,
@@ -948,6 +1083,7 @@ function PDF({
               {pageWorkOrders.length ===
               0 ? (
                 <div
+                  className="pdf-empty-state"
                   style={{
                     padding:
                       "5mm",
@@ -959,6 +1095,8 @@ function PDF({
                       "center",
                     fontSize:
                       "10px",
+                    color:
+                      "#000000",
                   }}
                 >
                   Za izbrani mesec ni
@@ -980,6 +1118,7 @@ function PDF({
                 >
                   <thead>
                     <tr
+                      className="pdf-table-header"
                       style={{
                         background:
                           "#17465d",
@@ -1117,6 +1256,13 @@ function PDF({
                           <tr
                             key={
                               workOrder.id
+                            }
+                            className={
+                              index %
+                                2 ===
+                              0
+                                ? "pdf-table-row-even"
+                                : "pdf-table-row-odd"
                             }
                             style={{
                               background:
@@ -1261,6 +1407,7 @@ function PDF({
               =================================== */}
 
               <div
+                className="pdf-footer"
                 style={{
                   marginTop:
                     "4mm",
@@ -1315,6 +1462,7 @@ function PdfSummaryCell({
 }) {
   return (
     <td
+      className="pdf-summary-light"
       style={{
         padding:
           "2.5mm 2mm",

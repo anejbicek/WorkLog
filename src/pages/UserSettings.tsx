@@ -567,22 +567,83 @@ function UserSettings() {
         =================================================== */
 
         if (profileImageChanged) {
-          const {
-            error:
-              avatarError,
-          } = await supabase.auth.updateUser({
-            data: {
-              avatar_url:
-                profileImage || null,
-            },
-          });
+          const avatarPath = `${user.id}/avatar.jpg`;
 
-          if (avatarError) {
-            setError(
-              avatarError.message
-            );
-            setSaving(false);
-            return;
+          if (profileImage) {
+            const imageBlob = await fetch(
+              profileImage
+            ).then((response) => response.blob());
+
+            const { error: uploadError } =
+              await supabase.storage
+                .from("avatars")
+                .upload(avatarPath, imageBlob, {
+                  contentType: "image/jpeg",
+                  upsert: true,
+                });
+
+            if (uploadError) {
+              setError(
+                uploadError.message
+              );
+              setSaving(false);
+              return;
+            }
+
+            const { data: publicUrlData } =
+              supabase.storage
+                .from("avatars")
+                .getPublicUrl(avatarPath);
+
+            const avatarUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+
+            const {
+              error: avatarError,
+            } = await supabase.auth.updateUser({
+              data: {
+                avatar_url: avatarUrl,
+              },
+            });
+
+            if (avatarError) {
+              setError(
+                avatarError.message
+              );
+              setSaving(false);
+              return;
+            }
+
+            setProfileImage(avatarUrl);
+          } else {
+            const {
+              error: removeError,
+            } = await supabase.storage
+              .from("avatars")
+              .remove([avatarPath]);
+
+            if (removeError) {
+              setError(
+                removeError.message
+              );
+              setSaving(false);
+              return;
+            }
+
+            const {
+              error: avatarError,
+            } = await supabase.auth.updateUser({
+              data: {
+                avatar_url: null,
+              },
+            });
+
+            if (avatarError) {
+              setError(
+                avatarError.message
+              );
+              setSaving(false);
+              return;
+            }
           }
 
           setProfileImageChanged(

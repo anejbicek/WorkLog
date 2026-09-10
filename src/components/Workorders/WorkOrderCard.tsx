@@ -130,8 +130,19 @@ function TimeSelect({
   ] =
     useState(false);
 
+  const [
+    editing,
+    setEditing,
+  ] =
+    useState(false);
+
   const containerRef =
     useRef<HTMLDivElement>(
+      null
+    );
+
+  const inputRef =
+    useRef<HTMLInputElement>(
       null
     );
 
@@ -151,6 +162,9 @@ function TimeSelect({
           setOpen(
             false
           );
+          setEditing(
+            false
+          );
         }
       };
 
@@ -166,6 +180,15 @@ function TimeSelect({
       );
     };
   }, []);
+
+  useEffect(() => {
+    if (editing) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 0);
+    }
+  }, [editing]);
 
   useEffect(() => {
     if (open) {
@@ -206,6 +229,48 @@ function TimeSelect({
           "100%",
       }}
     >
+      {editing ? (
+        <input
+          ref={
+            inputRef
+          }
+          type="time"
+          value={
+            value
+          }
+          onChange={(
+            event
+          ) =>
+            onChange(
+              event.target.value
+            )
+          }
+          onBlur={() =>
+            setEditing(
+              false
+            )
+          }
+          onKeyDown={(
+            event
+          ) => {
+            if (
+              event.key ===
+                "Enter" ||
+              event.key ===
+                "Escape"
+            ) {
+              setEditing(
+                false
+              );
+            }
+          }}
+          style={{
+            ...inputStyle,
+            cursor:
+              "text",
+          }}
+        />
+      ) : (
       <button
         type="button"
         onClick={() =>
@@ -216,6 +281,14 @@ function TimeSelect({
               !previous
           )
         }
+        onDoubleClick={(
+          event
+        ) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+          setEditing(true);
+        }}
         style={{
           ...inputStyle,
 
@@ -251,6 +324,7 @@ function TimeSelect({
           ▼
         </span>
       </button>
+      )}
 
       {open && (
         <div
