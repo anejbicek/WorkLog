@@ -173,9 +173,7 @@ function Evidenca() {
     uniqueBreakdown.holiday;
 
   const additionalHours = Number(
-    (
-      calculateOverlapHours(monthWorkOrders) / 3
-    ).toFixed(2)
+    calculateOverlapHours(monthWorkOrders).toFixed(2)
   );
 
   const overtimeHours =
@@ -224,9 +222,7 @@ function Evidenca() {
           );
           const breakdown = calculateUniqueHourBreakdown(orders);
           const additional = Number(
-            (
-              calculateOverlapHours(orders) / 3
-            ).toFixed(2)
+            calculateOverlapHours(orders).toFixed(2)
           );
           const meal = orders.some((order) => Boolean(order.meal));
 

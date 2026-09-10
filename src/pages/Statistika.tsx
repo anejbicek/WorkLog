@@ -241,11 +241,9 @@ function Statistika() {
               workOrder.date
             ].additionalHours =
               Number(
-                (
-                  calculateDailyOverlapHours(
-                    days[workOrder.date].orders,
-                    workOrder.date
-                  ) / 3
+                calculateDailyOverlapHours(
+                  days[workOrder.date].orders,
+                  workOrder.date
                 ).toFixed(2)
               );
 
