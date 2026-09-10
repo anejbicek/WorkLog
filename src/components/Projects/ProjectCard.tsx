@@ -60,6 +60,21 @@ function ProjectCard({
         )
       : 0;
 
+  /*
+   * projectNumber bomo v AdminContextu uporabljali kot pravo
+   * uporabniško številko projekta.
+   *
+   * Za prehodno obdobje uporabimo projectNumber, če obstaja,
+   * sicer trenutni Supabase id.
+   */
+  const projectNumber =
+    (
+      project as AdminProject & {
+        projectNumber?: number;
+      }
+    ).projectNumber ??
+    project.id;
+
   return (
     <div
       style={{
@@ -173,7 +188,8 @@ function ProjectCard({
                   color: "#64748b",
                 }}
               >
-                Serijska št.: {project.serialNumber}
+                Serijska št.:{" "}
+                {project.serialNumber}
               </div>
             )}
 
@@ -192,7 +208,7 @@ function ProjectCard({
                   "12px",
               }}
             >
-              Projekt #{project.id}
+              Projekt #{projectNumber}
             </div>
           </div>
         </div>
