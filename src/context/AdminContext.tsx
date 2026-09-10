@@ -611,11 +611,11 @@ export function AdminProvider({
         } =
           await supabase
             .from(
-              "profiles"
+              "users"
             )
             .delete()
             .eq(
-              "id",
+              "auth_user_id",
               user.authUserId
             );
 
@@ -1284,7 +1284,7 @@ export function AdminProvider({
           } =
             await supabase
               .from(
-                "profiles"
+                "users"
               )
               .select(
                 "*"
