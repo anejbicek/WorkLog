@@ -780,7 +780,7 @@ export function AdminProvider({
           newProject.name,
         serial_number:
           newProject.serialNumber ??
-          null,
+          "",
         required_quantity:
           newProject.requiredQuantity,
         active:
