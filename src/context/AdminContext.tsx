@@ -772,14 +772,9 @@ export function AdminProvider({
       ]
     );
 
-    console.log(
-      "WORKLOG: addProject - INSERT v Supabase"
-    );
-
-    const { error } =
-      await supabase
-        .from("projects")
-        .insert({
+    await supabase
+      .from("projects")
+      .insert({
           id: newId,
           name:
             newProject.name,
@@ -797,10 +792,6 @@ export function AdminProvider({
             false,
         });
 
-    console.log(
-      "WORKLOG: rezultat INSERT projekta:",
-      error
-    );
   };
 
   const updateProject = (
