@@ -740,7 +740,7 @@ export function AdminProvider({
      PROJEKTI
   ======================================================= */
 
-  const addProject = (
+  const addProject = async (
     project: Omit<
       AdminProject,
       "id"
@@ -776,25 +776,31 @@ export function AdminProvider({
       "WORKLOG: addProject - INSERT v Supabase"
     );
 
-    void supabase
-      .from("projects")
-      .insert({
-        id: newId,
-        name:
-          newProject.name,
-        serial_number:
-          newProject.serialNumber ??
-          "",
-        required_quantity:
-          newProject.requiredQuantity,
-        active:
-          newProject.active,
-        status:
-          newProject.status,
-        archived:
-          newProject.archived ??
-          false,
-      });
+    const { error } =
+      await supabase
+        .from("projects")
+        .insert({
+          id: newId,
+          name:
+            newProject.name,
+          serial_number:
+            newProject.serialNumber ??
+            "",
+          required_quantity:
+            newProject.requiredQuantity,
+          active:
+            newProject.active,
+          status:
+            newProject.status,
+          archived:
+            newProject.archived ??
+            false,
+        });
+
+    console.log(
+      "WORKLOG: rezultat INSERT projekta:",
+      error
+    );
   };
 
   const updateProject = (
