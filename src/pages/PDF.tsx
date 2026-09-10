@@ -176,7 +176,7 @@ function PDF({
         sum +
         Number(
           workOrder.regularHours ||
-          0
+            0
         ),
       0
     );
@@ -190,7 +190,7 @@ function PDF({
         sum +
         Number(
           workOrder.nightHours ||
-          0
+            0
         ),
       0
     );
@@ -204,7 +204,7 @@ function PDF({
         sum +
         Number(
           workOrder.holidayHours ||
-          0
+            0
         ),
       0
     );
@@ -218,7 +218,7 @@ function PDF({
         sum +
         Number(
           workOrder.additionalHours ||
-          0
+            0
         ),
       0
     );
@@ -232,7 +232,7 @@ function PDF({
         sum +
         Number(
           workOrder.overtimeHours ||
-          0
+            0
         ),
       0
     );
@@ -396,6 +396,25 @@ function PDF({
         ) {
           pdf.addPage();
         }
+
+        /*
+          PDF stran je vedno
+          eksplicitno bela,
+          ne glede na temo aplikacije.
+        */
+        pdf.setFillColor(
+          255,
+          255,
+          255
+        );
+
+        pdf.rect(
+          0,
+          0,
+          pageWidth,
+          pageHeight,
+          "F"
+        );
 
         /*
           Stran je že A4,
@@ -630,8 +649,17 @@ function PDF({
                   "11mm 14mm 12mm 14mm",
                 boxSizing:
                   "border-box",
+
+                /*
+                  A4 stran je vedno
+                  bela, ne glede
+                  na temo aplikacije.
+                */
+                backgroundColor:
+                  "#ffffff",
                 background:
                   "#ffffff",
+
                 color:
                   "#000000",
                 fontFamily:

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Logo from "./Logo";
+import SearchBar from "./SearchBar";
 import {
-  Search,
   User,
   ChevronDown,
   LogOut,
@@ -15,6 +15,7 @@ type Page =
   | "evidenca"
   | "statistika"
   | "pdf"
+  | "projects"
   | "admin"
   | "settings";
 
@@ -170,40 +171,9 @@ function Header({
         >
           {/* ISKANJE */}
 
-          <div
-            style={{
-              width: "280px",
-              height: "42px",
-              border:
-                "1px solid #d1d5db",
-              borderRadius: "10px",
-              display: "flex",
-              alignItems: "center",
-              padding: "0 13px",
-              boxSizing: "border-box",
-              background: "#ffffff",
-            }}
-          >
-            <Search
-              size={19}
-              color="#64748b"
-            />
-
-            <input
-              type="text"
-              placeholder="Išči..."
-              style={{
-                border: "none",
-                outline: "none",
-                width: "100%",
-                marginLeft: "9px",
-                fontSize: "14px",
-                color: "#334155",
-                background:
-                  "transparent",
-              }}
-            />
-          </div>
+          <SearchBar
+            onNavigate={onNavigate}
+          />
 
           {/* UPORABNIK */}
 
