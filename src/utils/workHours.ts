@@ -41,6 +41,10 @@ function getInterval(
     order.endTime
   );
 
+  /*
+   * Če je konec enak ali pred začetkom,
+   * pomeni, da delo poteka čez polnoč.
+   */
   if (end <= start) {
     end += 24 * 60;
   }
@@ -69,6 +73,10 @@ function splitIntervalByDate(
   let start = interval.start;
   let end = interval.end;
 
+  /*
+   * Če interval preseže polnoč,
+   * ga razdelimo na posamezne dni.
+   */
   while (end > 24 * 60) {
     result.push({
       date: currentDate,
@@ -122,6 +130,64 @@ function addDays(
   )}`;
 }
 
+function mergeIntervals(
+  intervals: Interval[]
+): Interval[] {
+  if (!intervals.length) {
+    return [];
+  }
+
+  const sorted = [...intervals]
+    .filter(
+      (item) =>
+        item.end > item.start
+    )
+    .sort(
+      (a, b) =>
+        a.start - b.start ||
+        a.end - b.end
+    );
+
+  if (!sorted.length) {
+    return [];
+  }
+
+  const merged: Interval[] = [
+    {
+      ...sorted[0],
+    },
+  ];
+
+  for (
+    let i = 1;
+    i < sorted.length;
+    i += 1
+  ) {
+    const current =
+      sorted[i];
+
+    const last =
+      merged[
+        merged.length - 1
+      ];
+
+    if (
+      current.start <=
+      last.end
+    ) {
+      last.end = Math.max(
+        last.end,
+        current.end
+      );
+    } else {
+      merged.push({
+        ...current,
+      });
+    }
+  }
+
+  return merged;
+}
 
 function calculateEaster(
   year: number
@@ -237,6 +303,9 @@ function isHoliday(
     `${year}-12-26`,
   ];
 
+  /*
+   * Velikonočni ponedeljek.
+   */
   const easterMonday =
     calculateEaster(year);
 
@@ -310,15 +379,20 @@ function getDateIntervals(
 /**
  * Dejanski delovni čas.
  *
- * Za vsak dan vzamemo:
- * - najzgodnejši prihod
- * - najpoznejši odhod
+ * Za vsak dan združimo dejanske
+ * delovne intervale.
  *
- * Celoten razpon med njima predstavlja
- * delovni čas dneva.
+ * Primer:
  *
- * Če se kartice prekrivajo, se čas ne
- * prišteva večkrat.
+ * 00:00–01:00 = 1 h
+ * 13:00–20:00 = 7 h
+ *
+ * Skupaj = 8 h
+ *
+ * Čas med 01:00 in 13:00 se NE šteje.
+ *
+ * Če se intervali prekrivajo, se
+ * prekrivajoči čas šteje samo enkrat.
  */
 export function calculateUniqueWorkHours(
   workOrders: WorkOrder[]
@@ -338,29 +412,35 @@ export function calculateUniqueWorkHours(
       continue;
     }
 
-    const firstStart =
-      Math.min(
-        ...intervals.map(
-          (interval) =>
-            interval.start
-        )
+    /*
+     * Združimo prekrivajoče se
+     * intervale.
+     *
+     * Primer:
+     *
+     * 13:00–18:00
+     * 16:00–20:00
+     *
+     * postane:
+     *
+     * 13:00–20:00
+     */
+    const merged =
+      mergeIntervals(
+        intervals
       );
 
-    const lastEnd =
-      Math.max(
-        ...intervals.map(
-          (interval) =>
-            interval.end
-        )
-      );
-
-    if (
-      lastEnd >
-      firstStart
+    for (
+      const interval of merged
     ) {
-      minutes +=
-        lastEnd -
-        firstStart;
+      if (
+        interval.end >
+        interval.start
+      ) {
+        minutes +=
+          interval.end -
+          interval.start;
+      }
     }
   }
 
@@ -575,10 +655,10 @@ export function calculateDailyOverlapHours(
 /**
  * Razvrstitev dejanskega časa dneva.
  *
- * Za vsak dan se uporabi:
- * najzgodnejši prihod → najpoznejši odhod.
+ * Za vsak dan združimo dejanske
+ * delovne intervale.
  *
- * Prvih 8 ur:
+ * Prvih 8 dejansko opravljenih ur:
  * - redne
  * - nočne
  * - praznične
@@ -587,6 +667,10 @@ export function calculateDailyOverlapHours(
  * - nadure
  * - navadne nadure
  * - posebne nadure
+ *
+ * Pomembno:
+ * Čas med dvema ločenima karticama
+ * se ne šteje kot delo.
  */
 export function calculateUniqueHourBreakdown(
   workOrders: WorkOrder[]
@@ -614,33 +698,13 @@ export function calculateUniqueHourBreakdown(
     }
 
     /*
-     * Najzgodnejši prihod dneva.
+     * Združimo prekrivajoče se
+     * intervale.
      */
-    const dayStart =
-      Math.min(
-        ...intervals.map(
-          (interval) =>
-            interval.start
-        )
+    const merged =
+      mergeIntervals(
+        intervals
       );
-
-    /*
-     * Najpoznejši odhod dneva.
-     */
-    const dayEnd =
-      Math.max(
-        ...intervals.map(
-          (interval) =>
-            interval.end
-        )
-      );
-
-    if (
-      dayEnd <=
-      dayStart
-    ) {
-      continue;
-    }
 
     let uniqueWorkedMinutes =
       0;
@@ -654,66 +718,73 @@ export function calculateUniqueHourBreakdown(
       isHoliday(date);
 
     /*
-     * Gremo čez celoten časovni
-     * razpon od prvega prihoda do
-     * zadnjega odhoda.
+     * Gremo samo čez dejanske
+     * delovne intervale.
+     *
+     * Ne več čez celoten razpon
+     * prvega prihoda do zadnjega odhoda.
      */
     for (
-      let minute =
-        dayStart;
-      minute <
-        dayEnd;
-      minute += 1
+      const interval of merged
     ) {
-      const hour =
-        Math.floor(
-          (
-            minute %
-            (24 * 60)
-          ) / 60
-        );
-
-      const nightMinute =
-        hour >= 22 ||
-        hour < 6;
-
-      const special =
-        sunday ||
-        holidayDay ||
-        nightMinute;
-
-      /*
-       * Prvih 8 ur so redne,
-       * vse po 8 urah so nadure.
-       */
-      if (
-        uniqueWorkedMinutes >=
-        8 * 60
+      for (
+        let minute =
+          interval.start;
+        minute <
+          interval.end;
+        minute += 1
       ) {
-        overtime += 1;
+        const hour =
+          Math.floor(
+            (
+              minute %
+              (24 * 60)
+            ) / 60
+          );
 
-        if (special) {
-          overtimeSpecial +=
-            1;
+        const nightMinute =
+          hour >= 22 ||
+          hour < 6;
+
+        const special =
+          sunday ||
+          holidayDay ||
+          nightMinute;
+
+        /*
+         * Prvih 8 dejansko opravljenih
+         * ur so redne, vse nadaljnje
+         * minute pa nadure.
+         */
+        if (
+          uniqueWorkedMinutes >=
+          8 * 60
+        ) {
+          overtime += 1;
+
+          if (special) {
+            overtimeSpecial +=
+              1;
+          } else {
+            overtimeNormal +=
+              1;
+          }
+        } else if (
+          holidayDay ||
+          sunday
+        ) {
+          holiday += 1;
+        } else if (
+          nightMinute
+        ) {
+          night += 1;
         } else {
-          overtimeNormal +=
-            1;
+          regular += 1;
         }
-      } else if (
-        holidayDay ||
-        sunday
-      ) {
-        holiday += 1;
-      } else if (
-        nightMinute
-      ) {
-        night += 1;
-      } else {
-        regular += 1;
-      }
 
-      uniqueWorkedMinutes +=
-        1;
+        uniqueWorkedMinutes +=
+          1;
+      }
     }
   }
 
