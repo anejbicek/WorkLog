@@ -96,7 +96,7 @@ type AdminContextType = {
 
   addProject: (
     project: Omit<AdminProject, "id">
-  ) => void;
+  ) => Promise<void>;
 
   updateProject: (
     id: number,
@@ -788,12 +788,9 @@ export function AdminProvider({
      PROJEKTI
   ======================================================= */
 
-  const addProject = (
-    project: Omit<
-      AdminProject,
-      "id"
-    >
-  ) => {
+  const addProject = async (
+    project: Omit<AdminProject, "id">
+  ): Promise<void> => {
     const newId =
       projects.length > 0
         ? Math.max(
@@ -813,32 +810,65 @@ export function AdminProvider({
           false,
       };
 
+    console.log(
+      "WORKLOG: ustvarjam projekt:",
+      newProject
+    );
+
+    const {
+      data,
+      error,
+    } =
+      await supabase
+        .from("projects")
+        .insert({
+          id: newId,
+          name:
+            newProject.name,
+          serial_number:
+            newProject.serialNumber ??
+            "",
+          required_quantity:
+            newProject.requiredQuantity,
+          active:
+            newProject.active,
+          status:
+            newProject.status,
+          archived:
+            newProject.archived ??
+            false,
+        })
+        .select();
+
+    console.log(
+      "WORKLOG: INSERT projekt data:",
+      data
+    );
+
+    console.log(
+      "WORKLOG: INSERT projekt error:",
+      error
+    );
+
+    if (error) {
+      console.error(
+        "WORKLOG: PROJEKT NI BIL SHRANJEN V SUPABASE:",
+        error
+      );
+
+      return;
+    }
+
+    console.log(
+      "WORKLOG: PROJEKT USPEŠNO SHRANJEN V SUPABASE"
+    );
+
     setProjects(
       (current) => [
         ...current,
         newProject,
       ]
     );
-
-    void supabase
-      .from("projects")
-      .insert({
-        id: newId,
-        name:
-          newProject.name,
-        serial_number:
-          newProject.serialNumber ??
-          "",
-        required_quantity:
-          newProject.requiredQuantity,
-        active:
-          newProject.active,
-        status:
-          newProject.status,
-        archived:
-          newProject.archived ??
-          false,
-      });
   };
 
   const updateProject = async (
@@ -1421,6 +1451,11 @@ export function AdminProvider({
             );
             return;
           }
+
+          console.log(
+            "WORKLOG: projekti iz Supabase:",
+            data
+          );
 
           if (
             data &&
