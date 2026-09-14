@@ -123,7 +123,7 @@ function AdminSystemReports() {
     useState("");
 
   const [isAdmin, setIsAdmin] =
-    useState(false);
+    useState(true);
 
   const [systemErrors, setSystemErrors] =
     useState<SystemError[]>([]);
@@ -154,7 +154,7 @@ function AdminSystemReports() {
     );
 
   const [seasonalThemesOpen, setSeasonalThemesOpen] =
-    useState(false);
+    useState(true);
 
   const activeSeasonalTheme =
     getActiveSeasonalTheme();

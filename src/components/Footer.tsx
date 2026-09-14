@@ -2,21 +2,17 @@ function Footer() {
   return (
     <footer
       style={{
-        height: "50px",
-        background: "#ffffff",
-        borderTop: "1px solid #e5e7eb",
-
+        width: "100%",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-
-        padding: "0 40px",
-        color: "#666",
-        fontSize: "14px",
+        padding: "14px 25px",
+        boxSizing: "border-box",
+        fontSize: "12px",
+        color: "#64748b",
       }}
     >
       <span>© 2026 ŽustAI WorkLog</span>
-
       <span>Verzija 6. 5. 3.</span>
     </footer>
   );

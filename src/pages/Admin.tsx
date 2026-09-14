@@ -410,17 +410,7 @@ function Admin() {
     if (
       activeSection === "security"
     ) {
-      return (
-        <AdminSecurity
-  onNavigate={(page) => {
-    if (
-      page === "admin"
-    ) {
-      setActiveSection("security");
-    }
-  }}
-/>
-      );
+      return <AdminSecurity />;
     }
 
     if (
