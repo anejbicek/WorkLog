@@ -7,7 +7,6 @@ import {
   useAdmin,
   type AdminUser,
   type UserRole,
-  USER_ROLE_LABELS,
 } from "../../context/AdminContext";
 
 import { supabase } from "../../services/supabase";
@@ -21,8 +20,6 @@ function AdminUsers() {
     updateUser,
     deleteUser,
     toggleUserActive,
-  
-    canManageRole,
   } = useAdmin();
 
   const [
@@ -452,20 +449,21 @@ function AdminUsers() {
                   inputStyle
                 }
               >
-                {(Object.keys(USER_ROLE_LABELS) as UserRole[])
-                  .filter((availableRole) =>
-                    availableRole === role ||
-                    availableRole === "worker" ||
-                    canManageRole(availableRole)
-                  )
-                  .map((availableRole) => (
-                    <option
-                      key={availableRole}
-                      value={availableRole}
-                    >
-                      {USER_ROLE_LABELS[availableRole]}
-                    </option>
-                  ))}
+                <option value="worker">
+                  Delavec
+                </option>
+
+                <option value="manager">
+                  Vodja
+                </option>
+
+                <option value="admin">
+                  Administrator
+                </option>
+
+                <option value="super_admin">
+                  Glavni administrator
+                </option>
               </select>
             </Field>
 
@@ -659,8 +657,13 @@ function AdminUsers() {
                     badgeStyle
                   }
                 >
-                  {USER_ROLE_LABELS[user.role] ??
-                    user.role}
+                  {user.role === "super_admin"
+                    ? "Glavni administrator"
+                    : user.role === "admin"
+                      ? "Administrator"
+                      : user.role === "manager"
+                        ? "Vodja"
+                        : "Delavec"}
                 </span>
               </div>
 

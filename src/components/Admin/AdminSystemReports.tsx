@@ -21,9 +21,12 @@ import {
   Server,
   AlertTriangle,
   Info,
+  RefreshCw,
   CalendarDays,
   Palette,
-  RefreshCw,
+  Plus,
+  Trash2,
+  Save,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,16 +34,16 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from "react";
 
 import { useAdmin } from "../../context/AdminContext";
 import { supabase } from "../../services/supabase";
-
 import {
   DEFAULT_SEASONAL_THEMES,
-  getActiveSeasonalTheme,
   loadSeasonalThemes,
   saveSeasonalThemes,
+  getActiveSeasonalTheme,
   type SeasonalTheme,
 } from "../../utils/seasonalTheme";
 
@@ -123,7 +126,7 @@ function AdminSystemReports() {
     useState("");
 
   const [isAdmin, setIsAdmin] =
-    useState(true);
+    useState(false);
 
   const [systemErrors, setSystemErrors] =
     useState<SystemError[]>([]);
@@ -149,15 +152,19 @@ function AdminSystemReports() {
     useState(false);
 
   const [seasonalThemes, setSeasonalThemes] =
-    useState<SeasonalTheme[]>(() =>
-      loadSeasonalThemes()
-    );
-
+    useState<SeasonalTheme[]>(() => loadSeasonalThemes());
   const [seasonalThemesOpen, setSeasonalThemesOpen] =
-    useState(true);
-
-  const activeSeasonalTheme =
-    getActiveSeasonalTheme();
+    useState(false);
+  const [showSeasonalForm, setShowSeasonalForm] =
+    useState(false);
+  const [seasonalName, setSeasonalName] = useState("");
+  const [seasonalStart, setSeasonalStart] = useState("");
+  const [seasonalEnd, setSeasonalEnd] = useState("");
+  const [seasonalPriority, setSeasonalPriority] = useState("50");
+  const [seasonalLoginImage, setSeasonalLoginImage] = useState("");
+  const [seasonalHeaderImage, setSeasonalHeaderImage] = useState("");
+  const [editingSeasonalId, setEditingSeasonalId] = useState<string | null>(null);
+  const activeSeasonalTheme = getActiveSeasonalTheme();
 
   /* =======================================================
      PREVERI ADMINISTRATORSKI DOSTOP
@@ -834,6 +841,70 @@ function AdminSystemReports() {
         user.active
     ).length;
 
+  const resetSeasonalForm = () => {
+    setSeasonalName("");
+    setSeasonalStart("");
+    setSeasonalEnd("");
+    setSeasonalPriority("50");
+    setSeasonalLoginImage("");
+    setSeasonalHeaderImage("");
+    setEditingSeasonalId(null);
+    setShowSeasonalForm(false);
+  };
+
+  const saveSeasonalForm = () => {
+    if (!seasonalName.trim() || !seasonalStart || !seasonalEnd) {
+      return;
+    }
+
+    const theme: SeasonalTheme = {
+      id: editingSeasonalId ?? `${Date.now()}-${seasonalName.trim().toLowerCase().replace(/\s+/g, "-")}`,
+      name: seasonalName.trim(),
+      enabled: true,
+      start: seasonalStart,
+      end: seasonalEnd,
+      priority: Number(seasonalPriority) || 0,
+      loginImage: seasonalLoginImage.trim(),
+      headerImage: seasonalHeaderImage.trim(),
+    };
+
+    const next = editingSeasonalId
+      ? seasonalThemes.map((item) => item.id === editingSeasonalId ? theme : item)
+      : [...seasonalThemes, theme];
+
+    setSeasonalThemes(next);
+    saveSeasonalThemes(next);
+    resetSeasonalForm();
+  };
+
+  const editSeasonalTheme = (theme: SeasonalTheme) => {
+    setEditingSeasonalId(theme.id);
+    setSeasonalName(theme.name);
+    setSeasonalStart(theme.start);
+    setSeasonalEnd(theme.end);
+    setSeasonalPriority(String(theme.priority));
+    setSeasonalLoginImage(theme.loginImage);
+    setSeasonalHeaderImage(theme.headerImage);
+    setShowSeasonalForm(true);
+    setSeasonalThemesOpen(true);
+  };
+
+  const deleteSeasonalTheme = (id: string) => {
+    if (!window.confirm("Ali želiš izbrisati to sezonsko/praznično temo?")) return;
+    const next = seasonalThemes.filter((item) => item.id !== id);
+    setSeasonalThemes(next);
+    saveSeasonalThemes(next);
+    if (editingSeasonalId === id) resetSeasonalForm();
+  };
+
+  const resetSeasonalThemes = () => {
+    if (!window.confirm("Ali želiš ponastaviti vse sezonske teme na privzete?")) return;
+    const next = DEFAULT_SEASONAL_THEMES.map((theme) => ({ ...theme }));
+    setSeasonalThemes(next);
+    saveSeasonalThemes(next);
+    resetSeasonalForm();
+  };
+
   /* =======================================================
      DOSTOP – SAMO AKTIVNI ADMINISTRATORJI
   ======================================================= */
@@ -1259,243 +1330,6 @@ function AdminSystemReports() {
       </section>
 
       {/* =================================================
-          SEZONSKI IN PRAZNIČNI IZGLED
-      ================================================= */}
-
-      <section
-        style={
-          panelStyle
-        }
-      >
-        <PanelHeader
-          icon={CalendarDays}
-          title="Sezonski in praznični izgled"
-          description="Samodejno upravljanje posebnega izgleda prijave in glave WorkLoga."
-        />
-
-        <details
-          open={seasonalThemesOpen}
-          onToggle={(event) =>
-            setSeasonalThemesOpen(
-              (event.currentTarget as HTMLDetailsElement).open
-            )
-          }
-          style={detailsStyle}
-        >
-          <summary
-            style={detailsSummaryStyle}
-          >
-            <Palette size={14} />
-            Upravljanje tem in terminov
-          </summary>
-
-          <div
-            style={seasonalIntroStyle}
-          >
-            <span>
-              Če se termini prekrivajo, se aktivira tema z višjo prioriteto.
-              Spremembe se shranijo lokalno in se takoj uporabijo v prijavi in Headerju.
-            </span>
-
-            <button
-              type="button"
-              onClick={() => {
-                const next = seasonalThemes.map(
-                  (theme) => ({
-                    ...theme,
-                  })
-                );
-                saveSeasonalThemes(next);
-                setSeasonalThemes(next);
-              }}
-              style={secondaryButtonStyle}
-            >
-              <RefreshCw size={13} />
-              Osveži
-            </button>
-          </div>
-
-          <div style={activeSeasonalThemeStyle}>
-            <strong>Trenutno aktivna tema:</strong>{" "}
-            {activeSeasonalTheme?.name ?? "Nobena"}
-          </div>
-
-          <div
-            style={seasonalThemesListStyle}
-          >
-            {seasonalThemes.map(
-              (theme) => (
-                <div
-                  key={theme.id}
-                  style={seasonalThemeRowStyle}
-                >
-                  <div
-                    style={seasonalThemeMainStyle}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={theme.enabled}
-                      onChange={(event) => {
-                        const next = seasonalThemes.map(
-                          (item) =>
-                            item.id === theme.id
-                              ? {
-                                  ...item,
-                                  enabled:
-                                    event.target.checked,
-                                }
-                              : item
-                        );
-                        setSeasonalThemes(next);
-                        saveSeasonalThemes(next);
-                      }}
-                    />
-
-                    <div
-                      style={seasonalThemeNameStyle}
-                    >
-                      {theme.name}
-                    </div>
-                  </div>
-
-                  <label style={seasonalFieldStyle}>
-                    Od
-                    <input
-                      type="text"
-                      value={theme.start}
-                      onChange={(event) => {
-                        const next = seasonalThemes.map(
-                          (item) =>
-                            item.id === theme.id
-                              ? {
-                                  ...item,
-                                  start:
-                                    event.target.value,
-                                }
-                              : item
-                        );
-                        setSeasonalThemes(next);
-                        saveSeasonalThemes(next);
-                      }}
-                      style={seasonalInputStyle}
-                      placeholder="MM-DDTHH:mm"
-                    />
-                  </label>
-
-                  <label style={seasonalFieldStyle}>
-                    Do
-                    <input
-                      type="text"
-                      value={theme.end}
-                      onChange={(event) => {
-                        const next = seasonalThemes.map(
-                          (item) =>
-                            item.id === theme.id
-                              ? {
-                                  ...item,
-                                  end:
-                                    event.target.value,
-                                }
-                              : item
-                        );
-                        setSeasonalThemes(next);
-                        saveSeasonalThemes(next);
-                      }}
-                      style={seasonalInputStyle}
-                      placeholder="MM-DDTHH:mm"
-                    />
-                  </label>
-
-                  <label style={seasonalFieldStyle}>
-                    Prioriteta
-                    <input
-                      type="number"
-                      value={theme.priority}
-                      onChange={(event) => {
-                        const next = seasonalThemes.map(
-                          (item) =>
-                            item.id === theme.id
-                              ? {
-                                  ...item,
-                                  priority:
-                                    Number(event.target.value) || 0,
-                                }
-                              : item
-                        );
-                        setSeasonalThemes(next);
-                        saveSeasonalThemes(next);
-                      }}
-                      style={seasonalSmallInputStyle}
-                    />
-                  </label>
-
-                  <label style={seasonalImageFieldStyle}>
-                    Login slika
-                    <input
-                      type="text"
-                      value={theme.loginImage}
-                      onChange={(event) => {
-                        const next = seasonalThemes.map(
-                          (item) =>
-                            item.id === theme.id
-                              ? {
-                                  ...item,
-                                  loginImage:
-                                    event.target.value,
-                                }
-                              : item
-                        );
-                        setSeasonalThemes(next);
-                        saveSeasonalThemes(next);
-                      }}
-                      style={seasonalImageInputStyle}
-                    />
-                  </label>
-
-                  <label style={seasonalImageFieldStyle}>
-                    Header slika
-                    <input
-                      type="text"
-                      value={theme.headerImage}
-                      onChange={(event) => {
-                        const next = seasonalThemes.map(
-                          (item) =>
-                            item.id === theme.id
-                              ? {
-                                  ...item,
-                                  headerImage:
-                                    event.target.value,
-                                }
-                              : item
-                        );
-                        setSeasonalThemes(next);
-                        saveSeasonalThemes(next);
-                      }}
-                      style={seasonalImageInputStyle}
-                    />
-                  </label>
-                </div>
-              )
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              const next = DEFAULT_SEASONAL_THEMES.map(
-                (theme) => ({ ...theme })
-              );
-              setSeasonalThemes(next);
-              saveSeasonalThemes(next);
-            }}
-            style={resetThemesButtonStyle}
-          >
-            Obnovi privzete teme
-          </button>
-        </details>
-      </section>
-
-            {/* =================================================
           SISTEM
       ================================================= */}
 
@@ -2035,6 +1869,100 @@ function AdminSystemReports() {
       </section>
 
       {/* =================================================
+          SEZONSKI IN PRAZNIČNI IZGLED
+      ================================================= */}
+
+      <section style={panelStyle}>
+        <PanelHeader
+          icon={CalendarDays}
+          title="Sezonski in praznični izgled"
+          description="Glavni administrator lahko sam dodaja, ureja in časovno nastavlja teme WorkLoga."
+        />
+
+        <div style={seasonalToolbarStyle}>
+          <div>
+            <strong>Trenutno aktivna tema:</strong>{" "}
+            {activeSeasonalTheme?.name ?? "Nobena"}
+          </div>
+          <button type="button" onClick={() => { setShowSeasonalForm(true); setSeasonalThemesOpen(true); }} style={primaryButtonStyle}>
+            <Plus size={14} /> Dodaj temo
+          </button>
+        </div>
+
+        {showSeasonalForm && (
+          <div style={seasonalFormStyle}>
+            <div style={seasonalFormTitleStyle}>
+              {editingSeasonalId ? "Uredi temo" : "Nova sezonska/praznična tema"}
+            </div>
+            <div style={seasonalFormGridStyle}>
+              <SeasonalField label="Ime teme">
+                <input value={seasonalName} onChange={(e) => setSeasonalName(e.target.value)} placeholder="npr. Božič" style={inputStyle} />
+              </SeasonalField>
+              <SeasonalField label="Začetek (MM-DDTHH:mm)">
+                <input value={seasonalStart} onChange={(e) => setSeasonalStart(e.target.value)} placeholder="12-20T00:00" style={inputStyle} />
+              </SeasonalField>
+              <SeasonalField label="Konec (MM-DDTHH:mm)">
+                <input value={seasonalEnd} onChange={(e) => setSeasonalEnd(e.target.value)} placeholder="01-05T23:59" style={inputStyle} />
+              </SeasonalField>
+              <SeasonalField label="Prioriteta">
+                <input type="number" value={seasonalPriority} onChange={(e) => setSeasonalPriority(e.target.value)} style={inputStyle} />
+              </SeasonalField>
+              <SeasonalField label="Slika za Login">
+                <input value={seasonalLoginImage} onChange={(e) => setSeasonalLoginImage(e.target.value)} placeholder="/seasonal/moja-login.png" style={inputStyle} />
+              </SeasonalField>
+              <SeasonalField label="Slika za Header">
+                <input value={seasonalHeaderImage} onChange={(e) => setSeasonalHeaderImage(e.target.value)} placeholder="/seasonal/moja-header.png" style={inputStyle} />
+              </SeasonalField>
+            </div>
+            <div style={seasonalFormActionsStyle}>
+              <button type="button" onClick={resetSeasonalForm} style={secondaryButtonStyle}>Prekliči</button>
+              <button type="button" onClick={saveSeasonalForm} style={primaryButtonStyle}>
+                <Save size={14} /> Shrani temo
+              </button>
+            </div>
+          </div>
+        )}
+
+        <button type="button" onClick={() => setSeasonalThemesOpen((value) => !value)} style={detailsToggleStyle}>
+          <Palette size={14} /> {seasonalThemesOpen ? "Skrij teme" : "Prikaži teme"}
+        </button>
+
+        {seasonalThemesOpen && (
+          <div style={seasonalThemeMainStyle}>
+            {seasonalThemes.length === 0 ? (
+              <div style={emptyStyle}>Ni dodanih sezonskih ali prazničnih tem.</div>
+            ) : seasonalThemes.map((theme) => (
+              <div key={theme.id} style={seasonalThemeRowStyle}>
+                <div style={seasonalThemeMainStyle}>
+                  <div style={seasonalThemeNameStyle}>{theme.name}</div>
+                  <div style={seasonalThemeMetaStyle}>
+                    {theme.start} → {theme.end} · prioriteta {theme.priority}
+                  </div>
+                </div>
+                <label style={seasonalEnabledStyle}>
+                  <input type="checkbox" checked={theme.enabled} onChange={(e) => {
+                    const next = seasonalThemes.map((item) => item.id === theme.id ? { ...item, enabled: e.target.checked } : item);
+                    setSeasonalThemes(next);
+                    saveSeasonalThemes(next);
+                  }} />
+                  Aktivna
+                </label>
+                <div style={seasonalActionsStyle}>
+                  <button type="button" onClick={() => editSeasonalTheme(theme)} style={secondaryButtonStyle}>Uredi</button>
+                  <button type="button" onClick={() => deleteSeasonalTheme(theme.id)} style={deleteButtonStyle}>
+                    <Trash2 size={13} /> Izbriši
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div style={seasonalResetRowStyle}>
+              <button type="button" onClick={resetSeasonalThemes} style={secondaryButtonStyle}>Ponastavi privzete teme</button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* =================================================
           VARNOSTNI POVZETEK
       ================================================= */}
 
@@ -2125,6 +2053,10 @@ function AdminSystemReports() {
 /* =========================================================
    PANEL HEADER
 ========================================================= */
+
+function SeasonalField({ label, children }: { label: string; children: ReactNode }) {
+  return <label style={seasonalFieldStyle}>{label}{children}</label>;
+}
 
 function PanelHeader({
   icon: Icon,
@@ -2607,6 +2539,26 @@ const unauthorizedTextStyle = {
 /* =========================================================
    PAGE
 ========================================================= */
+
+const primaryButtonStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", border: "none", borderRadius: "7px", padding: "7px 11px", background: "#1d526b", color: "#ffffff", fontSize: "10px", fontWeight: 700, cursor: "pointer" };
+const inputStyle = { width: "100%", boxSizing: "border-box" as const, border: "1px solid #dbe4ea", borderRadius: "7px", padding: "7px 8px", background: "#ffffff", color: "#334155", fontSize: "11px", outline: "none" };
+const secondaryButtonStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", border: "1px solid #dbe4ea", borderRadius: "7px", padding: "7px 11px", background: "#ffffff", color: "#1d526b", fontSize: "10px", fontWeight: 700, cursor: "pointer" };
+const deleteButtonStyle = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", border: "1px solid #fecaca", borderRadius: "7px", padding: "7px 9px", background: "#fff1f2", color: "#dc2626", fontSize: "10px", fontWeight: 700, cursor: "pointer" };
+const emptyStyle = { padding: "18px", textAlign: "center" as const, border: "1px dashed #dbe4ea", borderRadius: "8px", color: "#94a3b8", fontSize: "11px", background: "#f8fafc" };
+const seasonalToolbarStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "16px" };
+const seasonalFormStyle = { border: "1px solid #dbe3e8", borderRadius: "12px", padding: "16px", marginBottom: "16px", background: "#f8fafc" };
+const seasonalFormTitleStyle = { fontSize: "15px", fontWeight: 700, color: "#12344d", marginBottom: "14px" };
+const seasonalFormGridStyle = { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px" };
+const seasonalFieldStyle = { display: "flex", flexDirection: "column" as const, gap: "6px", fontSize: "12px", fontWeight: 600, color: "#475569" };
+const seasonalFormActionsStyle = { display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "14px" };
+const seasonalActionsStyle = { display: "flex", gap: "8px", alignItems: "center" };
+const seasonalEnabledStyle = { display: "flex", gap: "6px", alignItems: "center", fontSize: "12px", color: "#475569" };
+const detailsToggleStyle = { display: "inline-flex", alignItems: "center", gap: "6px", border: "1px solid #dbe3e8", borderRadius: "8px", background: "#fff", padding: "8px 11px", color: "#334155", fontSize: "12px", fontWeight: 600, cursor: "pointer", marginBottom: "12px" };
+const seasonalThemeRowStyle = { display: "grid", gridTemplateColumns: "1fr auto auto", alignItems: "center", gap: "14px", padding: "13px 0", borderBottom: "1px solid #e5e7eb" };
+const seasonalThemeMainStyle = { minWidth: 0 };
+const seasonalThemeNameStyle = { fontSize: "14px", fontWeight: 700, color: "#12344d" };
+const seasonalThemeMetaStyle = { marginTop: "4px", fontSize: "12px", color: "#64748b" };
+const seasonalResetRowStyle = { display: "flex", justifyContent: "flex-end", paddingTop: "12px" };
 
 const pageStyle = {
   width: "100%",
@@ -3316,127 +3268,6 @@ function TechnicalItem({
     </div>
   );
 }
-
-const seasonalIntroStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "12px",
-  marginTop: "10px",
-  padding: "10px",
-  borderRadius: "8px",
-  background: "#f8fafc",
-  color: "#64748b",
-  fontSize: "10px",
-  lineHeight: 1.5,
-};
-
-const seasonalThemesListStyle = {
-  display: "flex",
-  flexDirection: "column" as const,
-  gap: "7px",
-  marginTop: "10px",
-};
-
-const seasonalThemeRowStyle = {
-  display: "grid",
-  gridTemplateColumns: "minmax(140px, 1fr) 125px 125px 85px minmax(180px, 1fr) minmax(180px, 1fr)",
-  alignItems: "center",
-  gap: "8px",
-  padding: "9px 10px",
-  border: "1px solid #eef2f6",
-  borderRadius: "8px",
-  background: "#ffffff",
-};
-
-const seasonalThemeMainStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-};
-
-const seasonalThemeNameStyle = {
-  fontSize: "11px",
-  fontWeight: 700,
-  color: "#12344d",
-};
-
-const seasonalFieldStyle = {
-  display: "flex",
-  flexDirection: "column" as const,
-  gap: "3px",
-  fontSize: "9px",
-  fontWeight: 700,
-  color: "#94a3b8",
-};
-
-const seasonalInputStyle = {
-  width: "100%",
-  boxSizing: "border-box" as const,
-  border: "1px solid #dbe4ea",
-  borderRadius: "6px",
-  padding: "6px 7px",
-  fontSize: "10px",
-  color: "#334155",
-};
-
-const seasonalSmallInputStyle = {
-  ...seasonalInputStyle,
-  width: "75px",
-};
-
-const activeSeasonalThemeStyle = {
-  marginTop: "9px",
-  padding: "8px 10px",
-  borderRadius: "8px",
-  background: "#eff6ff",
-  color: "#1d526b",
-  fontSize: "10px",
-};
-
-const seasonalImageFieldStyle = {
-  display: "flex",
-  flexDirection: "column" as const,
-  gap: "3px",
-  minWidth: 0,
-  fontSize: "9px",
-  fontWeight: 700,
-  color: "#94a3b8",
-};
-
-const seasonalImageInputStyle = {
-  width: "100%",
-  boxSizing: "border-box" as const,
-  border: "1px solid #dbe4ea",
-  borderRadius: "6px",
-  padding: "6px 7px",
-  fontSize: "9px",
-  color: "#334155",
-};
-
-const secondaryButtonStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "6px",
-  flexShrink: 0,
-  border: "1px solid #dbe4ea",
-  borderRadius: "7px",
-  padding: "6px 9px",
-  background: "#ffffff",
-  color: "#1d526b",
-  fontSize: "10px",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const resetThemesButtonStyle = {
-  marginTop: "9px",
-  border: "none",
-  background: "transparent",
-  color: "#64748b",
-  fontSize: "10px",
-  cursor: "pointer",
-};
 
 /* =========================================================
    LOADING / ERROR
