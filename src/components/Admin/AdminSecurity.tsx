@@ -9,8 +9,6 @@ import {
 } from "lucide-react";
 
 import {
-  DEFAULT_ADMIN_PERMISSIONS,
-  USER_ROLE_HIERARCHY,
   USER_ROLE_LABELS,
   type PermissionKey,
   type UserRole,
@@ -34,9 +32,6 @@ const ROLE_ORDER: RoleKey[] = [
 const ROLE_LABELS: Record<RoleKey, string> =
   USER_ROLE_LABELS;
 
-const ROLE_LEVEL: Record<RoleKey, number> =
-  USER_ROLE_HIERARCHY;
-
 const permissions: PermissionRow[] = [
   { key: "administration", label: "Administracija" },
   { key: "users", label: "Uporabniki" },
@@ -50,9 +45,6 @@ const permissions: PermissionRow[] = [
   { key: "statistics", label: "Statistika" },
   { key: "pdf_reports", label: "PDF poročila" },
 ];
-
-const DEFAULT_PERMISSIONS =
-  DEFAULT_ADMIN_PERMISSIONS;
 
 function normalizeRole(role: string): RoleKey {
   if (
@@ -83,10 +75,6 @@ function AdminSecurity() {
   const {
     users,
     permissions: permissionState,
-    currentUserRole,
-    canManageRole,
-    setPermission,
-    setLastChange,
     lastChange: contextLastChange,
     changeHistory,
   } = adminContext;
@@ -107,42 +95,6 @@ function AdminSecurity() {
   const inactiveUsers = users.filter(
     (user) => !user.active
   ).length;
-
-  const togglePermission = (
-    permissionKey: PermissionKey,
-    role: RoleKey
-  ) => {
-    if (
-      ROLE_LEVEL[currentUserRole] <=
-      ROLE_LEVEL[role]
-    ) {
-      return;
-    }
-
-    const current =
-      permissionState[permissionKey]?.[role] ??
-      DEFAULT_PERMISSIONS[permissionKey]?.[role] ??
-      false;
-
-    const nextValue = !current;
-
-    setPermission(
-      permissionKey,
-      role,
-      nextValue
-    );
-
-    const permission = permissions.find(
-      (item) => item.key === permissionKey
-    );
-
-    const changeText =
-      `${permission?.label || permissionKey} → ` +
-      `${ROLE_LABELS[role]}: ` +
-      `${nextValue ? "Dovoljeno" : "Ni dovoljeno"}`;
-
-    setLastChange(changeText);
-  };
 
   return (
     <div style={pageStyle}>
@@ -262,9 +214,10 @@ function AdminSecurity() {
               </h3>
 
               <p style={panelDescriptionStyle}>
-                Kliknite na dovoljenje, da ga
-                vklopite ali izklopite za posamezno
-                uporabniško vlogo.
+                Pregled pravic dostopa po posameznih
+                uporabniških vlogah. Pravice lahko
+                spreminja samo glavni administrator v
+                Poročilih sistema.
               </p>
             </div>
           </div>
@@ -308,36 +261,14 @@ function AdminSecurity() {
                           key={role}
                           style={tdStyle}
                         >
-                          <button
-                            type="button"
-                            disabled={!canManageRole(role)}
-                            onClick={() =>
-                              togglePermission(
-                                permission.key,
-                                role
-                              )
-                            }
-                            style={{
-                              ...accessButtonStyle,
-                              cursor: canManageRole(role)
-                                ? "pointer"
-                                : "default",
-                              opacity: canManageRole(role)
-                                ? 1
-                                : 0.65,
-                            }}
-                            title={
-                              !canManageRole(role)
-                                ? "Te vloge ne morete urejati."
-                                : allowed
-                                ? "Kliknite za odvzem pravice"
-                                : "Kliknite za dovoljenje"
-                            }
+                          <div
+                            style={accessButtonStyle}
+                            title="Pravice lahko spreminja samo glavni administrator v Poročilih sistema."
                           >
                             <Access
                               value={allowed}
                             />
-                          </button>
+                          </div>
                         </td>
                       );
                     })}
@@ -355,9 +286,9 @@ function AdminSecurity() {
           />
 
           <span>
-            Kliknite na posamezno celico tabele,
-            da spremenite dovoljenje. Spremembe se
-            samodejno shranijo.
+            Pravice so tukaj prikazane samo za pregled.
+            Spreminja jih lahko samo glavni administrator
+            v Poročilih sistema.
           </span>
         </div>
       </section>

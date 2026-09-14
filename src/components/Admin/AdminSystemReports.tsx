@@ -37,7 +37,13 @@ import {
   type ReactNode,
 } from "react";
 
-import { useAdmin } from "../../context/AdminContext";
+import {
+  DEFAULT_ADMIN_PERMISSIONS,
+  USER_ROLE_LABELS,
+  type PermissionKey,
+  type UserRole,
+  useAdmin,
+} from "../../context/AdminContext";
 import { supabase } from "../../services/supabase";
 import {
   DEFAULT_SEASONAL_THEMES,
@@ -105,6 +111,36 @@ type DatabaseTableStatus = {
 };
 
 /* =========================================================
+   PRAVICE DOSTOPA
+========================================================= */
+
+type PermissionRow = {
+  key: PermissionKey;
+  label: string;
+};
+
+const ROLE_ORDER: UserRole[] = [
+  "super_admin",
+  "admin",
+  "manager",
+  "worker",
+];
+
+const permissionRows: PermissionRow[] = [
+  { key: "administration", label: "Administracija" },
+  { key: "users", label: "Uporabniki" },
+  { key: "machines", label: "Stroji" },
+  { key: "settings", label: "Nastavitve" },
+  { key: "security", label: "Varnost in pravice" },
+  { key: "system_reports", label: "Poročila sistema" },
+  { key: "archive", label: "Arhiv" },
+  { key: "work_orders", label: "Delovni nalogi" },
+  { key: "records", label: "Evidenca" },
+  { key: "statistics", label: "Statistika" },
+  { key: "pdf_reports", label: "PDF poročila" },
+];
+
+/* =========================================================
    GLAVNA KOMPONENTA
 ========================================================= */
 
@@ -114,6 +150,9 @@ function AdminSystemReports() {
     projects,
     machines,
     offlineQueue,
+    permissions: permissionState,
+    setPermission,
+    setLastChange,
   } = useAdmin();
 
   const [workOrders, setWorkOrders] =
@@ -895,6 +934,34 @@ function AdminSystemReports() {
     setSeasonalThemes(next);
     saveSeasonalThemes(next);
     if (editingSeasonalId === id) resetSeasonalForm();
+  };
+
+  const togglePermission = (
+    permissionKey: PermissionKey,
+    role: UserRole
+  ) => {
+    const current =
+      permissionState[permissionKey]?.[role] ??
+      DEFAULT_ADMIN_PERMISSIONS[permissionKey]?.[role] ??
+      false;
+
+    const nextValue = !current;
+
+    setPermission(
+      permissionKey,
+      role,
+      nextValue
+    );
+
+    const permission = permissionRows.find(
+      (item) => item.key === permissionKey
+    );
+
+    setLastChange(
+      `${permission?.label || permissionKey} → ${USER_ROLE_LABELS[role]}: ${
+        nextValue ? "Dovoljeno" : "Ni dovoljeno"
+      }`
+    );
   };
 
   const resetSeasonalThemes = () => {
@@ -1869,6 +1936,86 @@ function AdminSystemReports() {
       </section>
 
       {/* =================================================
+          PRAVICE DOSTOPA
+      ================================================= */}
+
+      <section style={panelStyle}>
+        <PanelHeader
+          icon={LockKeyhole}
+          title="Pravice dostopa"
+          description="Glavni administrator lahko tukaj spreminja vse pravice dostopa za posamezne uporabniške vloge."
+        />
+
+        <div style={permissionsIntroStyle}>
+          <span>
+            Kliknite na dovoljenje, da ga vklopite ali izklopite za posamezno uporabniško vlogo.
+          </span>
+          <span style={permissionsOwnerBadgeStyle}>
+            <Shield size={13} /> Samo glavni administrator
+          </span>
+        </div>
+
+        <div style={permissionsTableWrapperStyle}>
+          <table style={permissionsTableStyle}>
+            <thead>
+              <tr>
+                <th style={permissionsThLeftStyle}>Funkcija</th>
+                {ROLE_ORDER.map((role) => (
+                  <th key={role} style={permissionsThStyle}>
+                    {USER_ROLE_LABELS[role]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {permissionRows.map((permission) => (
+                <tr key={permission.key}>
+                  <td style={permissionsTdLeftStyle}>
+                    {permission.label}
+                  </td>
+
+                  {ROLE_ORDER.map((role) => {
+                    const allowed =
+                      permissionState[permission.key]?.[role] ??
+                      DEFAULT_ADMIN_PERMISSIONS[permission.key]?.[role] ??
+                      false;
+
+                    return (
+                      <td key={role} style={permissionsTdStyle}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            togglePermission(
+                              permission.key,
+                              role
+                            )
+                          }
+                          style={permissionsAccessButtonStyle}
+                          title={
+                            allowed
+                              ? "Kliknite za odvzem pravice"
+                              : "Kliknite za dovoljenje"
+                          }
+                        >
+                          <Access value={allowed} />
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={permissionsFooterStyle}>
+          <LockKeyhole size={15} />
+          Spremembe se shranijo takoj in vplivajo na pravice uporabniških vlog v WorkLogu.
+        </div>
+      </section>
+
+      {/* =================================================
           SEZONSKI IN PRAZNIČNI IZGLED
       ================================================= */}
 
@@ -2559,6 +2706,140 @@ const seasonalThemeMainStyle = { minWidth: 0 };
 const seasonalThemeNameStyle = { fontSize: "14px", fontWeight: 700, color: "#12344d" };
 const seasonalThemeMetaStyle = { marginTop: "4px", fontSize: "12px", color: "#64748b" };
 const seasonalResetRowStyle = { display: "flex", justifyContent: "flex-end", paddingTop: "12px" };
+
+function Access({ value }: { value: boolean }) {
+  return value ? (
+    <span style={accessAllowedStyle}>
+      <CheckCircle2 size={13} /> Dovoljeno
+    </span>
+  ) : (
+    <span style={accessDeniedStyle}>
+      <XCircle size={13} /> Ni dovoljeno
+    </span>
+  );
+}
+
+const permissionsIntroStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "12px",
+  flexWrap: "wrap" as const,
+  padding: "10px 14px",
+  marginBottom: "12px",
+  background: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: "9px",
+  color: "#64748b",
+  fontSize: "12px",
+};
+
+const permissionsOwnerBadgeStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "5px",
+  padding: "5px 9px",
+  borderRadius: "999px",
+  background: "#eff6ff",
+  color: "#2563eb",
+  fontWeight: 700,
+  whiteSpace: "nowrap" as const,
+};
+
+const permissionsTableWrapperStyle = {
+  overflowX: "auto" as const,
+  border: "1px solid #dbe3ee",
+  borderRadius: "9px",
+};
+
+const permissionsTableStyle = {
+  width: "100%",
+  minWidth: "760px",
+  borderCollapse: "collapse" as const,
+  background: "#ffffff",
+};
+
+const permissionsThLeftStyle = {
+  padding: "10px 12px",
+  textAlign: "left" as const,
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#334155",
+  background: "#f8fafc",
+  borderBottom: "1px solid #dbe3ee",
+};
+
+const permissionsThStyle = {
+  padding: "10px 8px",
+  textAlign: "center" as const,
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#334155",
+  background: "#f8fafc",
+  borderBottom: "1px solid #dbe3ee",
+};
+
+const permissionsTdLeftStyle = {
+  padding: "9px 12px",
+  textAlign: "left" as const,
+  fontSize: "11px",
+  color: "#334155",
+  borderBottom: "1px solid #e8edf3",
+  whiteSpace: "nowrap" as const,
+};
+
+const permissionsTdStyle = {
+  padding: "7px 8px",
+  textAlign: "center" as const,
+  borderBottom: "1px solid #e8edf3",
+};
+
+const permissionsAccessButtonStyle = {
+  border: "none",
+  background: "transparent",
+  padding: 0,
+  cursor: "pointer",
+};
+
+const accessAllowedStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "5px",
+  minWidth: "82px",
+  padding: "5px 9px",
+  borderRadius: "7px",
+  background: "#f0fdf4",
+  color: "#16a34a",
+  fontSize: "10px",
+  fontWeight: 700,
+};
+
+const accessDeniedStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "5px",
+  minWidth: "82px",
+  padding: "5px 9px",
+  borderRadius: "7px",
+  background: "#f8fafc",
+  color: "#94a3b8",
+  fontSize: "10px",
+  fontWeight: 600,
+};
+
+const permissionsFooterStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "7px",
+  marginTop: "10px",
+  padding: "9px 12px",
+  borderRadius: "9px",
+  background: "#f8fafc",
+  color: "#64748b",
+  fontSize: "11px",
+};
 
 const pageStyle = {
   width: "100%",
