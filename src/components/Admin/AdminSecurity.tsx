@@ -1,721 +1,424 @@
+import { useEffect, useState } from "react";
+import Logo from "../Logo";
+import SearchBar from "../SearchBar";
 import {
-  Check,
-  LockKeyhole,
-  Shield,
-  UserCheck,
-  UserX,
-  Users,
+  User,
+  ChevronDown,
+  LogOut,
+  Settings,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
-
+import { supabase } from "../../services/supabase";
 import { useAdmin } from "../../context/AdminContext";
 
-type PermissionRow = {
-  label: string;
-  admin: boolean;
-  worker: boolean;
+type Page =
+  | "dashboard"
+  | "evidenca"
+  | "statistika"
+  | "pdf"
+  | "projects"
+  | "admin"
+  | "settings";
+
+type HeaderProps = {
+  onNavigate: (page: Page) => void;
 };
 
-function AdminSecurity() {
-  const {
-    users,
-  } = useAdmin();
+function Header({
+  onNavigate,
+}: HeaderProps) {
+  const [userMenuOpen, setUserMenuOpen] =
+    useState(false);
 
-  const activeAdmins = users.filter(
-    (user) =>
-      user.role === "admin" &&
-      user.active
-  ).length;
+  const [userName, setUserName] =
+    useState("Uporabnik");
 
-  const activeWorkers = users.filter(
-    (user) =>
-      user.role === "worker" &&
-      user.active
-  ).length;
+  const [isOnline, setIsOnline] =
+    useState(() => navigator.onLine);
 
-  const inactiveUsers = users.filter(
-    (user) => !user.active
-  ).length;
+  const { users } = useAdmin();
 
-  const permissions: PermissionRow[] = [
-    {
-      label: "Administracija",
-      admin: true,
-      worker: false,
-    },
-    {
-      label: "Uporabniki",
-      admin: true,
-      worker: false,
-    },
-    {
-      label: "Stroji",
-      admin: true,
-      worker: false,
-    },
-    {
-      label: "Nastavitve",
-      admin: true,
-      worker: false,
-    },
-    {
-      label: "Varnost in pravice",
-      admin: true,
-      worker: false,
-    },
-    {
-      label: "Poročila sistema",
-      admin: true,
-      worker: false,
-    },
-    {
-      label: "Arhiv",
-      admin: true,
-      worker: false,
-    },
-    {
-      label: "Delovni nalogi",
-      admin: true,
-      worker: true,
-    },
-    {
-      label: "Evidenca",
-      admin: true,
-      worker: true,
-    },
-    {
-      label: "Statistika",
-      admin: true,
-      worker: true,
-    },
-    {
-      label: "PDF poročila",
-      admin: true,
-      worker: true,
-    },
-  ];
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const loadUserName = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.email) {
+        setUserName("Uporabnik");
+        return;
+      }
+
+      const adminUser = users.find(
+        (adminUser) =>
+          adminUser.email.toLowerCase() ===
+          user.email!.toLowerCase()
+      );
+
+      if (adminUser) {
+        setUserName(adminUser.name);
+      } else {
+        setUserName(user.email);
+      }
+    };
+
+    loadUserName();
+  }, [users]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const handleSettings = () => {
+    setUserMenuOpen(false);
+    onNavigate("settings");
+  };
 
   return (
-    <div style={pageStyle}>
-      <div style={headerStyle}>
-        <div>
-          <h2 style={titleStyle}>
-            Varnost in pravice
-          </h2>
-
-          <p style={subtitleStyle}>
-            Pregled uporabnikov, vlog in
-            dostopnih pravic v WorkLogu.
-          </p>
-        </div>
-
-        <div style={securityBadgeStyle}>
-          <Shield
-            size={20}
-            strokeWidth={2.2}
-          />
-
-          <span>
-            Administratorski nadzor
-          </span>
-        </div>
-      </div>
-
-      <div style={statsGridStyle}>
-        <SecurityStat
-          icon={Shield}
-          title="Administratorji"
-          value={activeAdmins}
-          subtitle="aktivnih"
-          accent="#2563eb"
-        />
-
-        <SecurityStat
-          icon={UserCheck}
-          title="Delavci"
-          value={activeWorkers}
-          subtitle="aktivnih"
-          accent="#16a34a"
-        />
-
-        <SecurityStat
-          icon={UserX}
-          title="Neaktivni"
-          value={inactiveUsers}
-          subtitle="uporabniških računov"
-          accent="#f97316"
-        />
-
-        <SecurityStat
-          icon={Users}
-          title="Skupaj"
-          value={users.length}
-          subtitle="uporabnikov"
-          accent="#7c3aed"
-        />
-      </div>
-
-      <section style={panelStyle}>
-        <div style={panelHeaderStyle}>
-          <div style={panelTitleGroupStyle}>
-            <LockKeyhole
-              size={21}
-              color="#2563eb"
-              strokeWidth={2.2}
-            />
-
-            <div>
-              <h3 style={panelTitleStyle}>
-                Pravice dostopa
-              </h3>
-
-              <p style={panelDescriptionStyle}>
-                Pregled dovoljenj glede na
-                uporabniško vlogo.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div style={tableWrapperStyle}>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thLeftStyle}>
-                  Funkcija
-                </th>
-
-                <th style={thStyle}>
-                  Administrator
-                </th>
-
-                <th style={thStyle}>
-                  Delavec
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {permissions.map(
-                (permission) => (
-                  <tr key={permission.label}>
-                    <td style={tdLeftStyle}>
-                      {permission.label}
-                    </td>
-
-                    <td style={tdStyle}>
-                      <Access
-                        value={permission.admin}
-                      />
-                    </td>
-
-                    <td style={tdStyle}>
-                      <Access
-                        value={permission.worker}
-                      />
-                    </td>
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={noticeStyle}>
-          <Shield
-            size={17}
-            strokeWidth={2}
-          />
-
-          <span>
-            Pravice so trenutno prikazane kot
-            sistemski pregled. Spremembe pravic
-            se izvajajo preko uporabniških vlog.
-          </span>
-        </div>
-      </section>
-
-      <section style={panelStyle}>
-        <div style={panelHeaderStyle}>
-          <div style={panelTitleGroupStyle}>
-            <Users
-              size={21}
-              color="#2563eb"
-              strokeWidth={2.2}
-            />
-
-            <div>
-              <h3 style={panelTitleStyle}>
-                Uporabniki in njihove vloge
-              </h3>
-
-              <p style={panelDescriptionStyle}>
-                Trenutno stanje uporabniških
-                računov.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div style={usersTableWrapperStyle}>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thLeftStyle}>
-                  Uporabnik
-                </th>
-
-                <th style={thLeftStyle}>
-                  E-pošta
-                </th>
-
-                <th style={thStyle}>
-                  Vloga
-                </th>
-
-                <th style={thStyle}>
-                  Status
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {users.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={4}
-                    style={emptyCellStyle}
-                  >
-                    Ni uporabnikov.
-                  </td>
-                </tr>
-              ) : (
-                users.map((user) => (
-                  <tr
-                    key={String(user.id)}
-                  >
-                    <td style={tdLeftStyle}>
-                      <strong
-                        style={userNameStyle}
-                      >
-                        {user.name}
-                      </strong>
-                    </td>
-
-                    <td style={tdLeftStyle}>
-                      <span
-                        style={emailStyle}
-                      >
-                        {user.email}
-                      </span>
-                    </td>
-
-                    <td style={tdStyle}>
-                      <RoleBadge
-                        role={user.role}
-                      />
-                    </td>
-
-                    <td style={tdStyle}>
-                      <StatusBadge
-                        active={user.active}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function SecurityStat({
-  icon: Icon,
-  title,
-  value,
-  subtitle,
-  accent,
-}: {
-  icon: typeof Shield;
-  title: string;
-  value: number;
-  subtitle: string;
-  accent: string;
-}) {
-  return (
-    <div style={statCardStyle}>
+    <header
+      style={{
+        height: "110px",
+        background: "#ffffff",
+        display: "flex",
+        alignItems: "center",
+        boxSizing: "border-box",
+        borderBottom:
+          "1px solid #e2e8f0",
+      }}
+    >
       <div
         style={{
-          ...statIconStyle,
-          background: `${accent}18`,
-          color: accent,
+          width: "100%",
+          margin: "0 auto",
+          padding: "0 25px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent:
+            "space-between",
+          boxSizing: "border-box",
         }}
       >
-        <Icon
-          size={23}
-          strokeWidth={2.2}
-        />
+        {/* LEVA STRAN – LOGO + NAPIS */}
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          {/* LOGO */}
+
+          <div
+            style={{
+              width: "82px",
+              height: "82px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent:
+                "center",
+              flexShrink: 0,
+              marginTop: "17px",
+            }}
+          >
+            <Logo />
+          </div>
+
+          {/* NAPIS */}
+
+          <div
+            style={{
+              marginLeft: "10px",
+              display: "flex",
+              flexDirection:
+                "column",
+              justifyContent:
+                "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "30px",
+                lineHeight: "1",
+                fontWeight: 700,
+                color: "#17465d",
+                letterSpacing:
+                  "-0.5px",
+              }}
+            >
+              ŽustAI
+            </div>
+
+            <div
+              style={{
+                marginTop: "-10px",
+                fontSize: "21px",
+                lineHeight: "2",
+                fontWeight: 400,
+                color: "#5b7180",
+              }}
+            >
+              WorkLog
+            </div>
+          </div>
+        </div>
+
+        {/* DESNA STRAN – ISKANJE + UPORABNIK */}
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "24px",
+            marginLeft: "auto",
+          }}
+        >
+          {/* ISKANJE */}
+
+          <SearchBar
+            onNavigate={onNavigate}
+          />
+
+          {/* STANJE POVEZAVE */}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+              padding: "8px 12px",
+              borderRadius: "20px",
+              background: isOnline ? "#f0fdf4" : "#fef2f2",
+              border: isOnline
+                ? "1px solid #bbf7d0"
+                : "1px solid #fecaca",
+              color: isOnline ? "#15803d" : "#b91c1c",
+              fontSize: "12px",
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
+            title={
+              isOnline
+                ? "Povezava z internetom je aktivna"
+                : "Povezava z internetom ni aktivna"
+            }
+          >
+            {isOnline ? <Wifi size={15} /> : <WifiOff size={15} />}
+            <span>{isOnline ? "ONLINE" : "OFFLINE"}</span>
+          </div>
+
+          {/* UPORABNIK */}
+
+          <div
+            style={{
+              position: "relative",
+            }}
+          >
+            <button
+              onClick={() =>
+                setUserMenuOpen(
+                  !userMenuOpen
+                )
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                color: "#334155",
+                background:
+                  "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
+              {/* IKONA */}
+
+              <div
+                style={{
+                  width: "38px",
+                  height: "38px",
+                  borderRadius: "50%",
+                  background:
+                    "#e6eef2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent:
+                    "center",
+                }}
+              >
+                <User
+                  size={19}
+                  color="#17465d"
+                />
+              </div>
+
+              {/* IME + PROJEKTI */}
+
+              <div
+                style={{
+                  textAlign: "left",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#334155",
+                  }}
+                >
+                  {userName}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#64748b",
+                    marginTop: "2px",
+                  }}
+                >
+                  Projekti
+                </div>
+              </div>
+
+              <ChevronDown
+                size={16}
+                color="#64748b"
+                style={{
+                  marginLeft: "2px",
+                }}
+              />
+            </button>
+
+            {/* SPUSTNI MENI */}
+
+            {userMenuOpen && (
+              <div
+                style={{
+                  position:
+                    "absolute",
+                  top: "52px",
+                  right: 0,
+                  width: "210px",
+                  background:
+                    "#ffffff",
+                  border:
+                    "1px solid #e2e8f0",
+                  borderRadius: "10px",
+                  boxShadow:
+                    "0 10px 30px rgba(0,0,0,0.12)",
+                  overflow: "hidden",
+                  zIndex: 1000,
+                }}
+              >
+                {/* NASTAVITVE */}
+
+                <button
+                  onClick={
+                    handleSettings
+                  }
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems:
+                      "center",
+                    gap: "10px",
+                    padding:
+                      "13px 15px",
+                    border: "none",
+                    background:
+                      "#ffffff",
+                    color: "#334155",
+                    fontSize: "14px",
+                    cursor:
+                      "pointer",
+                    textAlign:
+                      "left",
+                  }}
+                  onMouseEnter={(
+                    e
+                  ) => {
+                    e.currentTarget.style.background =
+                      "#f5f7f6";
+                  }}
+                  onMouseLeave={(
+                    e
+                  ) => {
+                    e.currentTarget.style.background =
+                      "#ffffff";
+                  }}
+                >
+                  <Settings size={18} />
+
+                  <span>
+                    Nastavitve
+                  </span>
+                </button>
+
+                {/* ODJAVA */}
+
+                <button
+                  onClick={
+                    handleLogout
+                  }
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems:
+                      "center",
+                    gap: "10px",
+                    padding:
+                      "13px 15px",
+                    border: "none",
+                    background:
+                      "#ffffff",
+                    color: "#c62828",
+                    fontSize: "14px",
+                    cursor:
+                      "pointer",
+                    textAlign:
+                      "left",
+                  }}
+                  onMouseEnter={(
+                    e
+                  ) => {
+                    e.currentTarget.style.background =
+                      "#fff5f5";
+                  }}
+                  onMouseLeave={(
+                    e
+                  ) => {
+                    e.currentTarget.style.background =
+                      "#ffffff";
+                  }}
+                >
+                  <LogOut size={18} />
+
+                  <span>
+                    Odjava
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-
-      <div>
-        <div style={statTitleStyle}>
-          {title}
-        </div>
-
-        <div style={statValueStyle}>
-          {value}
-        </div>
-
-        <div style={statSubtitleStyle}>
-          {subtitle}
-        </div>
-      </div>
-    </div>
+    </header>
   );
 }
 
-function Access({
-  value,
-}: {
-  value: boolean;
-}) {
-  if (!value) {
-    return (
-      <span style={accessNoStyle}>
-        —
-      </span>
-    );
-  }
-
-  return (
-    <span style={accessYesStyle}>
-      <Check
-        size={15}
-        strokeWidth={2.5}
-      />
-
-      <span>Dovoljeno</span>
-    </span>
-  );
-}
-
-function RoleBadge({
-  role,
-}: {
-  role: string;
-}) {
-  const isAdmin = role === "admin";
-
-  return (
-    <span
-      style={{
-        ...roleBadgeStyle,
-        background: isAdmin
-          ? "#eff6ff"
-          : "#f0fdf4",
-        color: isAdmin
-          ? "#2563eb"
-          : "#16a34a",
-      }}
-    >
-      {isAdmin
-        ? "Administrator"
-        : "Delavec"}
-    </span>
-  );
-}
-
-function StatusBadge({
-  active,
-}: {
-  active: boolean;
-}) {
-  return (
-    <span
-      style={{
-        ...statusBadgeStyle,
-        background: active
-          ? "#f0fdf4"
-          : "#f8fafc",
-        color: active
-          ? "#16a34a"
-          : "#64748b",
-      }}
-    >
-      <span
-        style={{
-          ...statusDotStyle,
-          background: active
-            ? "#16a34a"
-            : "#94a3b8",
-        }}
-      />
-
-      {active
-        ? "Aktiven"
-        : "Neaktiven"}
-    </span>
-  );
-}
-
-const pageStyle = {
-  width: "100%",
-};
-
-const headerStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: "20px",
-  marginBottom: "20px",
-};
-
-const titleStyle = {
-  margin: 0,
-  fontSize: "25px",
-  fontWeight: 700,
-  color: "#12344d",
-};
-
-const subtitleStyle = {
-  marginTop: "6px",
-  marginBottom: 0,
-  fontSize: "14px",
-  color: "#64748b",
-};
-
-const securityBadgeStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  padding: "10px 14px",
-  border: "1px solid #dbe3e8",
-  borderRadius: "10px",
-  background: "#ffffff",
-  color: "#1d526b",
-  fontSize: "12px",
-  fontWeight: 600,
-};
-
-const statsGridStyle = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(4, minmax(0, 1fr))",
-  gap: "14px",
-  marginBottom: "14px",
-};
-
-const statCardStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "13px",
-  minHeight: "105px",
-  padding: "17px",
-  border: "1px solid #e2e8f0",
-  borderRadius: "14px",
-  background: "#ffffff",
-  boxShadow:
-    "0 3px 12px rgba(15,23,42,0.035)",
-};
-
-const statIconStyle = {
-  width: "48px",
-  height: "48px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: "11px",
-  flexShrink: 0,
-};
-
-const statTitleStyle = {
-  fontSize: "11px",
-  fontWeight: 700,
-  color: "#64748b",
-};
-
-const statValueStyle = {
-  marginTop: "3px",
-  fontSize: "27px",
-  lineHeight: 1,
-  fontWeight: 700,
-  color: "#12344d",
-};
-
-const statSubtitleStyle = {
-  marginTop: "6px",
-  fontSize: "11px",
-  color: "#64748b",
-};
-
-const panelStyle = {
-  marginBottom: "14px",
-  padding: "18px",
-  border: "1px solid #e2e8f0",
-  borderRadius: "14px",
-  background: "#ffffff",
-  boxShadow:
-    "0 3px 12px rgba(15,23,42,0.035)",
-};
-
-const panelHeaderStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "12px",
-  marginBottom: "16px",
-};
-
-const panelTitleGroupStyle = {
-  display: "flex",
-  alignItems: "flex-start",
-  gap: "9px",
-};
-
-const panelTitleStyle = {
-  margin: 0,
-  fontSize: "16px",
-  fontWeight: 700,
-  color: "#12344d",
-};
-
-const panelDescriptionStyle = {
-  margin: "4px 0 0",
-  fontSize: "12px",
-  color: "#64748b",
-};
-
-const tableWrapperStyle = {
-  overflowX: "auto" as const,
-  border: "1px solid #e2e8f0",
-  borderRadius: "10px",
-};
-
-const usersTableWrapperStyle = {
-  overflowX: "auto" as const,
-  border: "1px solid #e2e8f0",
-  borderRadius: "10px",
-};
-
-const tableStyle = {
-  width: "100%",
-  borderCollapse:
-    "collapse" as const,
-};
-
-const thLeftStyle = {
-  padding: "11px 13px",
-  borderBottom:
-    "1px solid #e2e8f0",
-  background: "#f8fafc",
-  color: "#475569",
-  fontSize: "11px",
-  fontWeight: 700,
-  textAlign: "left" as const,
-};
-
-const thStyle = {
-  padding: "11px 13px",
-  borderBottom:
-    "1px solid #e2e8f0",
-  background: "#f8fafc",
-  color: "#475569",
-  fontSize: "11px",
-  fontWeight: 700,
-  textAlign: "center" as const,
-};
-
-const tdLeftStyle = {
-  padding: "11px 13px",
-  borderBottom:
-    "1px solid #eef2f6",
-  color: "#334155",
-  fontSize: "12px",
-  textAlign: "left" as const,
-};
-
-const tdStyle = {
-  padding: "11px 13px",
-  borderBottom:
-    "1px solid #eef2f6",
-  color: "#334155",
-  fontSize: "12px",
-  textAlign: "center" as const,
-};
-
-const accessYesStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "5px",
-  padding: "5px 8px",
-  borderRadius: "7px",
-  background: "#f0fdf4",
-  color: "#16a34a",
-  fontSize: "10px",
-  fontWeight: 700,
-};
-
-const accessNoStyle = {
-  color: "#cbd5e1",
-  fontSize: "16px",
-};
-
-const noticeStyle = {
-  display: "flex",
-  alignItems: "flex-start",
-  gap: "9px",
-  marginTop: "13px",
-  padding: "11px 13px",
-  borderRadius: "9px",
-  background: "#f8fafc",
-  color: "#64748b",
-  fontSize: "11px",
-  lineHeight: 1.5,
-};
-
-const roleBadgeStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "5px 9px",
-  borderRadius: "7px",
-  fontSize: "10px",
-  fontWeight: 700,
-};
-
-const statusBadgeStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "6px",
-  padding: "5px 9px",
-  borderRadius: "7px",
-  fontSize: "10px",
-  fontWeight: 700,
-};
-
-const statusDotStyle = {
-  width: "6px",
-  height: "6px",
-  borderRadius: "50%",
-};
-
-const userNameStyle = {
-  color: "#12344d",
-};
-
-const emailStyle = {
-  color: "#64748b",
-};
-
-const emptyCellStyle = {
-  padding: "25px",
-  color: "#94a3b8",
-  fontSize: "12px",
-  textAlign: "center" as const,
-};
-
-export default AdminSecurity;
+export default Header;

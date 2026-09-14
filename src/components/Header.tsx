@@ -10,6 +10,12 @@ import {
 import { supabase } from "../services/supabase";
 import { useAdmin } from "../context/AdminContext";
 
+import {
+  getActiveSeasonalTheme,
+  SEASONAL_THEME_EVENT,
+  type SeasonalTheme,
+} from "../utils/seasonalTheme";
+
 type Page =
   | "dashboard"
   | "evidenca"
@@ -33,6 +39,35 @@ function Header({
     useState("Uporabnik");
 
   const { users } = useAdmin();
+
+  const [seasonalTheme, setSeasonalTheme] =
+    useState<SeasonalTheme | null>(() =>
+      getActiveSeasonalTheme()
+    );
+
+  useEffect(() => {
+    const refreshSeasonalTheme = () => {
+      setSeasonalTheme(getActiveSeasonalTheme());
+    };
+
+    refreshSeasonalTheme();
+    const interval = window.setInterval(
+      refreshSeasonalTheme,
+      60_000
+    );
+    window.addEventListener(
+      SEASONAL_THEME_EVENT,
+      refreshSeasonalTheme
+    );
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener(
+        SEASONAL_THEME_EVENT,
+        refreshSeasonalTheme
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const loadUserName = async () => {
@@ -74,7 +109,18 @@ function Header({
     <header
       style={{
         height: "110px",
-        background: "#ffffff",
+        background: seasonalTheme
+          ? "rgba(255,255,255,0.92)"
+          : "#ffffff",
+        backgroundImage: seasonalTheme
+          ? `url("${seasonalTheme.headerImage}")`
+          : undefined,
+        backgroundSize: seasonalTheme
+          ? "cover"
+          : undefined,
+        backgroundPosition: seasonalTheme
+          ? "center"
+          : undefined,
         display: "flex",
         alignItems: "center",
         boxSizing: "border-box",

@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Logo from "../components/Logo";
 
 import { supabase } from "../services/supabase";
 
 import { useAdmin } from "../context/AdminContext";
+
+import {
+  getActiveSeasonalTheme,
+  SEASONAL_THEME_EVENT,
+  type SeasonalTheme,
+} from "../utils/seasonalTheme";
 
 type LoginProps = {
   onLogin: () => void;
@@ -37,20 +43,34 @@ function Login({
     setLoading,
   ] = useState(false);
 
-  const [
-    resetMode,
-    setResetMode,
-  ] = useState(false);
+  const [seasonalTheme, setSeasonalTheme] =
+    useState<SeasonalTheme | null>(() =>
+      getActiveSeasonalTheme()
+    );
 
-  const [
-    resetLoading,
-    setResetLoading,
-  ] = useState(false);
+  useEffect(() => {
+    const refreshSeasonalTheme = () => {
+      setSeasonalTheme(getActiveSeasonalTheme());
+    };
 
-  const [
-    resetMessage,
-    setResetMessage,
-  ] = useState("");
+    refreshSeasonalTheme();
+    const interval = window.setInterval(
+      refreshSeasonalTheme,
+      60_000
+    );
+    window.addEventListener(
+      SEASONAL_THEME_EVENT,
+      refreshSeasonalTheme
+    );
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener(
+        SEASONAL_THEME_EVENT,
+        refreshSeasonalTheme
+      );
+    };
+  }, []);
 
   const handleLogin =
     async () => {
@@ -98,6 +118,11 @@ function Login({
         ) {
           /* =====================================================
              POIŠČI E-POŠTO UPORABNIKA
+
+             RPC poišče aktivnega uporabnika
+             po njegovem uporabniškem imenu
+             in vrne njegovo e-pošto za prijavo
+             v Supabase Auth.
           ===================================================== */
 
           const {
@@ -185,131 +210,6 @@ function Login({
       }
     };
 
-  /* ===========================================================
-     POZABLJENO GESLO
-  =========================================================== */
-
-  const handleForgotPassword =
-    async () => {
-      setError("");
-      setResetMessage("");
-
-      const trimmedLogin =
-        loginValue.trim().toLowerCase();
-
-      if (!trimmedLogin) {
-        setError(
-          "Vnesite uporabniško ime ali email."
-        );
-
-        return;
-      }
-
-      setResetLoading(true);
-
-      try {
-        let email =
-          trimmedLogin;
-
-        /*
-         * Če je uporabnik vnesel uporabniško ime,
-         * poiščemo njegov email preko iste RPC funkcije
-         * kot pri običajni prijavi.
-         */
-        if (
-          !trimmedLogin.includes("@")
-        ) {
-          const {
-            data: loginEmail,
-            error: lookupError,
-          } = await supabase.rpc(
-            "get_login_email",
-            {
-              login_value:
-                trimmedLogin,
-            }
-          );
-
-          if (
-            lookupError ||
-            !loginEmail
-          ) {
-            setError(
-              "Uporabniško ime ali email ni najden."
-            );
-
-            setResetLoading(false);
-
-            return;
-          }
-
-          email =
-            String(loginEmail);
-        }
-
-        /* =====================================================
-           POŠLJI RESET POVEZAVO
-        ===================================================== */
-
-        const {
-          error: resetError,
-        } =
-          await supabase.auth.resetPasswordForEmail(
-            email,
-            {
-              redirectTo:
-                `${window.location.origin}/`,
-            }
-          );
-
-        if (resetError) {
-          console.error(
-            "Napaka pri ponastavitvi gesla:",
-            resetError
-          );
-
-          setError(
-            "E-pošte za ponastavitev gesla ni bilo mogoče poslati."
-          );
-
-          setResetLoading(false);
-
-          return;
-        }
-
-        setResetMessage(
-          "Povezava za ponastavitev gesla je bila poslana na vaš email."
-        );
-
-        setResetLoading(false);
-      } catch (
-        resetException
-      ) {
-        console.error(
-          "Napaka pri ponastavitvi gesla:",
-          resetException
-        );
-
-        setError(
-          "Ponastavitev gesla ni uspela. Poskusite ponovno."
-        );
-
-        setResetLoading(false);
-      }
-    };
-
-  /* ===========================================================
-     NAZAJ NA PRIJAVO
-  =========================================================== */
-
-  const handleBackToLogin =
-    () => {
-      setResetMode(false);
-      setError("");
-      setResetMessage("");
-      setPassword("");
-    };
-
   return (
     <div
       className="login-page"
@@ -323,7 +223,17 @@ function Login({
         backgroundColor:
           "#f5f8f5",
 
-        backgroundImage: `
+        backgroundSize: seasonalTheme
+          ? "cover"
+          : undefined,
+        backgroundPosition: seasonalTheme
+          ? "center"
+          : undefined,
+        backgroundRepeat: "no-repeat",
+
+        backgroundImage: seasonalTheme
+          ? `url("${seasonalTheme.loginImage}"), radial-gradient(circle at top left, rgba(255,255,255,.35), transparent 48%), radial-gradient(circle at bottom right, rgba(255,255,255,.18), transparent 48%)`
+          : `
           radial-gradient(
             circle at top left,
             rgba(212,230,220,.75),
@@ -418,13 +328,7 @@ function Login({
               event.key ===
               "Enter"
             ) {
-              if (
-                resetMode
-              ) {
-                void handleForgotPassword();
-              } else {
-                void handleLogin();
-              }
+              void handleLogin();
             }
           }}
           placeholder="Vnesite uporabniško ime ali email"
@@ -436,154 +340,64 @@ function Login({
             border:
               "1px solid #d9e5de",
             fontSize: 15,
-            marginBottom:
-              resetMode
-                ? 24
-                : 16,
+            marginBottom: 24,
             boxSizing:
               "border-box",
             outline: "none",
           }}
         />
 
-        {/* =====================================================
-           OBIČAJNA PRIJAVA
-        ===================================================== */}
+        {/* GESLO */}
 
-        {!resetMode && (
-          <>
-            {/* GESLO */}
+        <label
+          style={{
+            display: "block",
+            textAlign:
+              "left",
+            marginBottom: 8,
+            fontWeight: 600,
+            color: "#4c5c54",
+          }}
+        >
+          Geslo
+        </label>
 
-            <label
-              style={{
-                display: "block",
-                textAlign:
-                  "left",
-                marginBottom: 8,
-                fontWeight: 600,
-                color: "#4c5c54",
-              }}
-            >
-              Geslo
-            </label>
-
-            <input
-              type="password"
-              value={
-                password
-              }
-              onChange={(
-                event
-              ) =>
-                setPassword(
-                  event.target.value
-                )
-              }
-              onKeyDown={(
-                event
-              ) => {
-                if (
-                  event.key ===
-                  "Enter"
-                ) {
-                  void handleLogin();
-                }
-              }}
-              placeholder="Vnesite geslo"
-              autoComplete="current-password"
-              style={{
-                width: "100%",
-                padding: "15px",
-                borderRadius: 12,
-                border:
-                  "1px solid #d9e5de",
-                fontSize: 15,
-                boxSizing:
-                  "border-box",
-                outline: "none",
-              }}
-            />
-
-            {/* POZABLJENO GESLO */}
-
-            <div
-              style={{
-                textAlign:
-                  "right",
-                marginTop: 10,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setResetMode(true);
-                  setError("");
-                  setResetMessage("");
-                  setPassword("");
-                }}
-                style={{
-                  border: "none",
-                  background:
-                    "transparent",
-                  color:
-                    "#17465d",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  cursor:
-                    "pointer",
-                  padding: 0,
-                }}
-              >
-                Pozabljeno geslo?
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* =====================================================
-           RESET GESLA
-        ===================================================== */}
-
-        {resetMode && (
-          <div
-            style={{
-              textAlign:
-                "left",
-              color:
-                "#6f7d75",
-              fontSize: 14,
-              lineHeight: 1.5,
-            }}
-          >
-            Vnesite uporabniško ime ali email in poslali vam bomo
-            povezavo za ponastavitev gesla.
-          </div>
-        )}
-
-        {/* USPEŠNO POSLAN RESET EMAIL */}
-
-        {resetMessage && (
-          <div
-            style={{
-              marginTop: 18,
-              padding:
-                "12px 14px",
-              borderRadius: 10,
-              background:
-                "#eef8f1",
-              border:
-                "1px solid #cce8d4",
-              color:
-                "#2e6b42",
-              fontSize: 14,
-              textAlign:
-                "left",
-              lineHeight: 1.5,
-            }}
-          >
-            {resetMessage}
-          </div>
-        )}
+        <input
+          type="password"
+          value={
+            password
+          }
+          onChange={(
+            event
+          ) =>
+            setPassword(
+              event.target.value
+            )
+          }
+          onKeyDown={(
+            event
+          ) => {
+            if (
+              event.key ===
+              "Enter"
+            ) {
+              void handleLogin();
+            }
+          }}
+          placeholder="Vnesite geslo"
+          autoComplete="current-password"
+          style={{
+            width: "100%",
+            padding: "15px",
+            borderRadius: 12,
+            border:
+              "1px solid #d9e5de",
+            fontSize: 15,
+            boxSizing:
+              "border-box",
+            outline: "none",
+          }}
+        />
 
         {/* NAPAKA */}
 
@@ -609,102 +423,38 @@ function Login({
           </div>
         )}
 
-        {/* =====================================================
-           GUMBI
-        ===================================================== */}
+        {/* PRIJAVA */}
 
-        {!resetMode ? (
-          <button
-            onClick={() =>
-              void handleLogin()
-            }
-            disabled={
-              loading
-            }
-            style={{
-              width: "100%",
-              marginTop: 35,
-              padding: "16px",
-              borderRadius: 12,
-              border: "none",
-              background:
-                "#17465d",
-              color: "white",
-              fontSize: 16,
-              fontWeight: 600,
-              cursor: loading
-                ? "default"
-                : "pointer",
-              opacity: loading
-                ? 0.7
-                : 1,
-            }}
-          >
-            {loading
-              ? "Prijavljanje..."
-              : "Prijava"}
-          </button>
-        ) : (
-          <>
-            <button
-              onClick={() =>
-                void handleForgotPassword()
-              }
-              disabled={
-                resetLoading
-              }
-              style={{
-                width: "100%",
-                marginTop: 35,
-                padding: "16px",
-                borderRadius: 12,
-                border: "none",
-                background:
-                  "#17465d",
-                color: "white",
-                fontSize: 16,
-                fontWeight: 600,
-                cursor:
-                  resetLoading
-                    ? "default"
-                    : "pointer",
-                opacity:
-                  resetLoading
-                    ? 0.7
-                    : 1,
-              }}
-            >
-              {resetLoading
-                ? "Pošiljanje..."
-                : "Pošlji povezavo za ponastavitev"}
-            </button>
-
-            <button
-              type="button"
-              onClick={
-                handleBackToLogin
-              }
-              style={{
-                width: "100%",
-                marginTop: 12,
-                padding: "12px",
-                borderRadius: 12,
-                border:
-                  "1px solid #d9e5de",
-                background:
-                  "#ffffff",
-                color:
-                  "#17465d",
-                fontSize: 14,
-                fontWeight: 500,
-                cursor:
-                  "pointer",
-              }}
-            >
-              Nazaj na prijavo
-            </button>
-          </>
-        )}
+        <button
+          onClick={() =>
+            void handleLogin()
+          }
+          disabled={
+            loading
+          }
+          style={{
+            width: "100%",
+            marginTop: 35,
+            padding: "16px",
+            borderRadius: 12,
+            border: "none",
+            background:
+              "#17465d",
+            color: "white",
+            fontSize: 16,
+            fontWeight: 600,
+            cursor: loading
+              ? "default"
+              : "pointer",
+            opacity: loading
+              ? 0.7
+              : 1,
+          }}
+        >
+          {loading
+            ? "Prijavljanje..."
+            : "Prijava"}
+        </button>
 
         {/* NOGA */}
 

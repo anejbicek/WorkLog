@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -12,7 +13,25 @@ import { supabase } from "../services/supabase";
    TIPI
 ========================================================= */
 
-export type UserRole = "admin" | "worker";
+export type UserRole =
+  | "super_admin"
+  | "admin"
+  | "manager"
+  | "worker";
+
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  super_admin: "Super administrator",
+  admin: "Administrator",
+  manager: "Vodja",
+  worker: "Delavec",
+};
+
+export const USER_ROLE_HIERARCHY: Record<UserRole, number> = {
+  super_admin: 4,
+  admin: 3,
+  manager: 2,
+  worker: 1,
+};
 
 export type AdminUser = {
   id: number;
@@ -46,6 +65,118 @@ export type AdminHoliday = {
   name: string;
 };
 
+export type AdminLastChange = {
+  message: string;
+  at: string;
+};
+
+export type AdminChangeLog = {
+  id: string;
+  message: string;
+  at: string;
+  userId?: number;
+  userName: string;
+  userEmail: string;
+  userRole: UserRole;
+};
+
+export type OfflineQueueItem = {
+  id: string;
+  table: "users" | "projects" | "machines";
+  action: "insert" | "update" | "delete";
+  payload: Record<string, unknown>;
+  match?: Record<string, unknown>;
+  createdAt: string;
+  attempts: number;
+};
+
+export type PermissionKey =
+  | "administration"
+  | "users"
+  | "machines"
+  | "settings"
+  | "security"
+  | "system_reports"
+  | "archive"
+  | "work_orders"
+  | "records"
+  | "statistics"
+  | "pdf_reports";
+
+export type AdminPermissions = Record<
+  PermissionKey,
+  Record<UserRole, boolean>
+>;
+
+export const DEFAULT_ADMIN_PERMISSIONS: AdminPermissions = {
+  administration: {
+    super_admin: true,
+    admin: true,
+    manager: false,
+    worker: false,
+  },
+  users: {
+    super_admin: true,
+    admin: true,
+    manager: false,
+    worker: false,
+  },
+  machines: {
+    super_admin: true,
+    admin: true,
+    manager: false,
+    worker: false,
+  },
+  settings: {
+    super_admin: true,
+    admin: true,
+    manager: false,
+    worker: false,
+  },
+  security: {
+    super_admin: true,
+    admin: true,
+    manager: false,
+    worker: false,
+  },
+  system_reports: {
+    super_admin: true,
+    admin: true,
+    manager: false,
+    worker: false,
+  },
+  archive: {
+    super_admin: true,
+    admin: true,
+    manager: false,
+    worker: false,
+  },
+  work_orders: {
+    super_admin: true,
+    admin: true,
+    manager: true,
+    worker: true,
+  },
+  records: {
+    super_admin: true,
+    admin: true,
+    manager: true,
+    worker: true,
+  },
+  statistics: {
+    super_admin: true,
+    admin: true,
+    manager: true,
+    worker: true,
+  },
+  pdf_reports: {
+    super_admin: true,
+    admin: true,
+    manager: true,
+    worker: true,
+  },
+};
+
 export type AdminSettings = {
   companyName: string;
   workDayHours: string;
@@ -70,6 +201,9 @@ type AdminContextType = {
   machines: AdminMachine[];
   holidays: AdminHoliday[];
   settings: AdminSettings;
+  lastChange: AdminLastChange;
+  changeHistory: AdminChangeLog[];
+  offlineQueue: OfflineQueueItem[];
 
   addUser: (
     user: Omit<AdminUser, "id" | "authUserId">,
@@ -156,6 +290,16 @@ type AdminContextType = {
   updateSettings: (
     settings: AdminSettings
   ) => void;
+
+  permissions: AdminPermissions;
+  currentUserRole: UserRole;
+  canManageRole: (role: UserRole) => boolean;
+  setPermission: (
+    permissionKey: PermissionKey,
+    role: UserRole,
+    allowed: boolean
+  ) => void;
+  setLastChange: (message: string) => void;
 };
 
 /* =========================================================
@@ -168,6 +312,10 @@ const STORAGE_KEYS = {
   machines: "zusta_worklog_v2_machines",
   holidays: "zusta_worklog_v2_holidays",
   settings: "zusta_worklog_v2_settings",
+  lastChange: "zusta_worklog_v2_last_change",
+  changeHistory: "zusta_worklog_v2_change_history",
+  permissions: "zusta_worklog_v2_permissions",
+  offlineQueue: "zusta_worklog_v2_offline_queue",
 };
 
 /* =========================================================
@@ -304,6 +452,11 @@ const defaultHolidays: AdminHoliday[] = [
    PRIVZETE NASTAVITVE
 ========================================================= */
 
+const defaultLastChange: AdminLastChange = {
+  message: "Sistem inicializiran",
+  at: new Date().toISOString(),
+};
+
 const defaultSettings: AdminSettings = {
   companyName: "ŽustAI",
   workDayHours: "8",
@@ -360,6 +513,313 @@ export function AdminProvider({
     useState<AdminSettings>(
       defaultSettings
     );
+
+  const [lastChange, setLastChange] =
+    useState<AdminLastChange>(
+      defaultLastChange
+    );
+
+  const [changeHistory, setChangeHistory] =
+    useState<AdminChangeLog[]>([]);
+
+  const [currentActor, setCurrentActor] =
+    useState<{
+      userId?: number;
+      userName: string;
+      userEmail: string;
+      userRole: UserRole;
+    }>({
+      userName: "Neznan uporabnik",
+      userEmail: "",
+      userRole: "worker",
+    });
+
+  const [permissions, setPermissions] =
+    useState<AdminPermissions>(
+      DEFAULT_ADMIN_PERMISSIONS
+    );
+
+  const [currentUserRole, setCurrentUserRole] =
+    useState<UserRole>("admin");
+
+  const [offlineQueue, setOfflineQueue] =
+    useState<OfflineQueueItem[]>(() => {
+      try {
+        const storedQueue = localStorage.getItem(
+          STORAGE_KEYS.offlineQueue
+        );
+
+        return storedQueue
+          ? JSON.parse(storedQueue)
+          : [];
+      } catch {
+        return [];
+      }
+    });
+
+  const enqueueOfflineOperation = (
+    operation: Omit<
+      OfflineQueueItem,
+      "id" | "createdAt" | "attempts"
+    >
+  ) => {
+    const queueItem: OfflineQueueItem = {
+      ...operation,
+      id: `${Date.now()}-${Math.random()}`,
+      createdAt: new Date().toISOString(),
+      attempts: 0,
+    };
+
+    setOfflineQueue((current) => [
+      ...current,
+      queueItem,
+    ]);
+  };
+
+  const recordLastChange = (message: string) => {
+    const at = new Date().toISOString();
+
+    setLastChange({
+      message,
+      at,
+    });
+
+    setChangeHistory((current) => [
+      {
+        id: `${Date.now()}-${Math.random()}`,
+        message,
+        at,
+        ...currentActor,
+      },
+      ...current,
+    ]);
+  };
+
+  /* =======================================================
+     OFFLINE – SINHRONIZACIJA ČAKALNE VRSTE
+  ======================================================= */
+
+  const syncInProgressRef =
+    useRef(false);
+
+  const retryTimeoutRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const synchronizeOfflineQueue = async () => {
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      return;
+    }
+
+    if (
+      offlineQueue.length === 0 ||
+      syncInProgressRef.current
+    ) {
+      return;
+    }
+
+    syncInProgressRef.current = true;
+
+    let synchronizedAny = false;
+
+    try {
+      for (const item of offlineQueue) {
+        try {
+          let error: any = null;
+
+          if (item.table === "users") {
+            if (item.action === "update") {
+              const result = await supabase
+                .from("users")
+                .update(item.payload)
+                .match(item.match ?? {});
+
+              error = result.error;
+            } else if (item.action === "delete") {
+              const result = await supabase
+                .from("users")
+                .delete()
+                .match(item.match ?? {});
+
+              error = result.error;
+            } else {
+              const result = await supabase
+                .from("users")
+                .insert(item.payload);
+
+              error = result.error;
+            }
+          }
+
+          if (item.table === "projects") {
+            if (item.action === "insert") {
+              const result = await supabase
+                .from("projects")
+                .insert(item.payload);
+
+              error = result.error;
+            } else if (item.action === "update") {
+              const result = await supabase
+                .from("projects")
+                .update(item.payload)
+                .match(item.match ?? {});
+
+              error = result.error;
+            } else if (item.action === "delete") {
+              const result = await supabase
+                .from("projects")
+                .delete()
+                .match(item.match ?? {});
+
+              error = result.error;
+            }
+          }
+
+          if (item.table === "machines") {
+            if (item.action === "insert") {
+              const result = await supabase
+                .from("machines")
+                .insert(item.payload);
+
+              error = result.error;
+            } else if (item.action === "update") {
+              const result = await supabase
+                .from("machines")
+                .update(item.payload)
+                .match(item.match ?? {});
+
+              error = result.error;
+            } else if (item.action === "delete") {
+              const result = await supabase
+                .from("machines")
+                .delete()
+                .match(item.match ?? {});
+
+              error = result.error;
+            }
+          }
+
+          if (error) {
+            console.error(
+              "Napaka pri sinhronizaciji offline spremembe:",
+              error
+            );
+
+            setOfflineQueue((current) =>
+              current.map((queuedItem) =>
+                queuedItem.id === item.id
+                  ? {
+                      ...queuedItem,
+                      attempts:
+                        queuedItem.attempts + 1,
+                    }
+                  : queuedItem
+              )
+            );
+
+            return;
+          }
+
+          synchronizedAny = true;
+
+          setOfflineQueue((current) =>
+            current.filter(
+              (queuedItem) =>
+                queuedItem.id !== item.id
+            )
+          );
+        } catch (error) {
+          console.error(
+            "Napaka pri sinhronizaciji offline spremembe:",
+            error
+          );
+
+          setOfflineQueue((current) =>
+            current.map((queuedItem) =>
+              queuedItem.id === item.id
+                ? {
+                    ...queuedItem,
+                    attempts:
+                      queuedItem.attempts + 1,
+                  }
+                : queuedItem
+            )
+          );
+
+          return;
+        }
+      }
+
+      if (synchronizedAny) {
+        recordLastChange(
+          "Offline spremembe so bile sinhronizirane."
+        );
+      }
+    } finally {
+      syncInProgressRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    const handleOnline = () => {
+      void synchronizeOfflineQueue();
+    };
+
+    window.addEventListener(
+      "online",
+      handleOnline
+    );
+
+    if (retryTimeoutRef.current) {
+      clearTimeout(
+        retryTimeoutRef.current
+      );
+      retryTimeoutRef.current = null;
+    }
+
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.onLine &&
+      offlineQueue.length > 0
+    ) {
+      const firstQueuedItem =
+        offlineQueue[0];
+
+      if (firstQueuedItem.attempts === 0) {
+        void synchronizeOfflineQueue();
+      } else {
+        const retryDelay = Math.min(
+          5000 *
+            Math.pow(
+              2,
+              firstQueuedItem.attempts - 1
+            ),
+          60000
+        );
+
+        retryTimeoutRef.current =
+          setTimeout(() => {
+            void synchronizeOfflineQueue();
+          }, retryDelay);
+      }
+    }
+
+    return () => {
+      window.removeEventListener(
+        "online",
+        handleOnline
+      );
+
+      if (retryTimeoutRef.current) {
+        clearTimeout(
+          retryTimeoutRef.current
+        );
+        retryTimeoutRef.current = null;
+      }
+    };
+  }, [offlineQueue]);
 
   /* =======================================================
      LOCAL STORAGE
@@ -431,6 +891,47 @@ export function AdminProvider({
         );
       }
 
+      const storedLastChange =
+        localStorage.getItem(
+          STORAGE_KEYS.lastChange
+        );
+
+      if (storedLastChange) {
+        setLastChange(
+          JSON.parse(
+            storedLastChange
+          )
+        );
+      }
+
+      const storedChangeHistory =
+        localStorage.getItem(
+          STORAGE_KEYS.changeHistory
+        );
+
+      if (storedChangeHistory) {
+        setChangeHistory(
+          JSON.parse(
+            storedChangeHistory
+          )
+        );
+      }
+
+      const storedPermissions =
+        localStorage.getItem(
+          STORAGE_KEYS.permissions
+        );
+
+      if (storedPermissions) {
+        const parsedPermissions =
+          JSON.parse(storedPermissions);
+
+        setPermissions({
+          ...DEFAULT_ADMIN_PERMISSIONS,
+          ...parsedPermissions,
+        });
+      }
+
       const storedSettings =
         localStorage.getItem(
           STORAGE_KEYS.settings
@@ -486,6 +987,103 @@ export function AdminProvider({
       JSON.stringify(settings)
     );
   }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEYS.lastChange,
+      JSON.stringify(lastChange)
+    );
+  }, [lastChange]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEYS.changeHistory,
+      JSON.stringify(changeHistory)
+    );
+  }, [changeHistory]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEYS.permissions,
+      JSON.stringify(permissions)
+    );
+  }, [permissions]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEYS.offlineQueue,
+      JSON.stringify(offlineQueue)
+    );
+  }, [offlineQueue]);
+
+  const setPermission = (
+    permissionKey: PermissionKey,
+    role: UserRole,
+    allowed: boolean
+  ) => {
+    setPermissions((current) => ({
+      ...current,
+      [permissionKey]: {
+        ...current[permissionKey],
+        [role]: allowed,
+      },
+    }));
+  };
+
+  const canManageRole = (role: UserRole) => {
+    return (
+      USER_ROLE_HIERARCHY[currentUserRole] >
+      USER_ROLE_HIERARCHY[role]
+    );
+  };
+
+  useEffect(() => {
+    const loadCurrentActor = async () => {
+      try {
+        const { data } =
+          await supabase.auth.getUser();
+
+        const email =
+          data.user?.email
+            ?.trim()
+            .toLowerCase() ||
+          "";
+
+        if (!email) {
+          return;
+        }
+
+        const user = users.find(
+          (item) =>
+            item.email
+              .trim()
+              .toLowerCase() === email
+        );
+
+        if (user) {
+          setCurrentActor({
+            userId: user.id,
+            userName: user.name,
+            userEmail: user.email,
+            userRole: user.role,
+          });
+        } else {
+          setCurrentActor({
+            userName: email,
+            userEmail: email,
+            userRole: "worker",
+          });
+        }
+      } catch (error) {
+        console.error(
+          "Napaka pri ugotavljanju trenutnega uporabnika:",
+          error
+        );
+      }
+    };
+
+    void loadCurrentActor();
+  }, [users]);
 
   /* =======================================================
      UPORABNIKI
@@ -593,6 +1191,10 @@ export function AdminProvider({
         ]
       );
 
+      recordLastChange(
+        `Dodana je bila nova uporabniška oseba: ${newUser.name}.`
+      );
+
       return true;
     } catch (error) {
       console.error(
@@ -611,6 +1213,43 @@ export function AdminProvider({
       "id"
     >
   ) => {
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setUsers(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    ...user,
+                    id,
+                  }
+                : item
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "users",
+        action: "update",
+        payload: {
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+          active: user.active,
+        },
+        match: { id },
+      });
+
+      recordLastChange(
+        `Posodobljen je bil uporabnik: ${user.name} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
+
     const { error } =
       await supabase
         .from("users")
@@ -644,6 +1283,10 @@ export function AdminProvider({
               : item
         )
     );
+
+    recordLastChange(
+      `Posodobljen je bil uporabnik: ${user.name}.`
+    );
   };
 
   const deleteUser = async (
@@ -664,6 +1307,35 @@ export function AdminProvider({
       );
 
     if (!user) {
+      return;
+    }
+
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setUsers(
+        (current) =>
+          current.filter(
+            (item) =>
+              item.id !== id
+          )
+      );
+
+      if (user.authUserId) {
+        enqueueOfflineOperation({
+          table: "users",
+          action: "delete",
+          payload: {},
+          match: {
+            auth_user_id: user.authUserId,
+          },
+        });
+      }
+
+      recordLastChange(
+        `Izbrisan je bil uporabnik: ${user.name} (čaka na sinhronizacijo).`
+      );
       return;
     }
 
@@ -699,6 +1371,10 @@ export function AdminProvider({
               item.id !== id
           )
       );
+
+      recordLastChange(
+        `Izbrisan je bil uporabnik: ${user.name}.`
+      );
     } catch (error) {
       console.error(
         "Napaka pri brisanju uporabnika:",
@@ -731,6 +1407,38 @@ export function AdminProvider({
     const newActive =
       !currentUser.active;
 
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setUsers(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    active: newActive,
+                  }
+                : item
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "users",
+        action: "update",
+        payload: {
+          active: newActive,
+        },
+        match: { id },
+      });
+
+      recordLastChange(
+        `Uporabnik ${currentUser.name} je bil ${newActive ? "aktiviran" : "deaktiviran"} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
+
     const { error } =
       await supabase
         .from("users")
@@ -759,6 +1467,10 @@ export function AdminProvider({
               : item
         )
     );
+
+    recordLastChange(
+      `Uporabnik ${currentUser.name} je bil ${newActive ? "aktiviran" : "deaktiviran"}.`
+    );
   };
 
   const linkUserAuthId = (
@@ -781,6 +1493,11 @@ export function AdminProvider({
                 }
               : item
         )
+    );
+
+
+    recordLastChange(
+      `Povezan je bil prijavni račun za ${email}.`
     );
   };
 
@@ -809,6 +1526,42 @@ export function AdminProvider({
           project.archived ??
           false,
       };
+
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setProjects(
+        (current) => [
+          ...current,
+          newProject,
+        ]
+      );
+
+      enqueueOfflineOperation({
+        table: "projects",
+        action: "insert",
+        payload: {
+          id: newProject.id,
+          name: newProject.name,
+          serial_number:
+            newProject.serialNumber ??
+            "",
+          required_quantity:
+            newProject.requiredQuantity,
+          active: newProject.active,
+          status: newProject.status,
+          archived:
+            newProject.archived ??
+            false,
+        },
+      });
+
+      recordLastChange(
+        `Dodan je bil projekt: ${newProject.name} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
 
     console.log(
       "WORKLOG: ustvarjam projekt:",
@@ -869,6 +1622,10 @@ export function AdminProvider({
         newProject,
       ]
     );
+
+    recordLastChange(
+      `Dodan je bil projekt: ${newProject.name}.`
+    );
   };
 
   const updateProject = async (
@@ -886,6 +1643,45 @@ export function AdminProvider({
           project.archived ??
           false,
       };
+
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setProjects(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === id
+                ? updatedProject
+                : item
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "projects",
+        action: "update",
+        payload: {
+          name: updatedProject.name,
+          serial_number:
+            updatedProject.serialNumber ??
+            "",
+          required_quantity:
+            updatedProject.requiredQuantity,
+          active: updatedProject.active,
+          status: updatedProject.status,
+          archived:
+            updatedProject.archived ??
+            false,
+        },
+        match: { id },
+      });
+
+      recordLastChange(
+        `Posodobljen je bil projekt: ${updatedProject.name} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
 
     const { error } =
       await supabase
@@ -928,11 +1724,23 @@ export function AdminProvider({
               : item
         )
     );
+
+    recordLastChange(
+      `Posodobljen je bil projekt: ${updatedProject.name}.`
+    );
   };
 
   const deleteProject = async (
     id: number
   ) => {
+    const currentProject = projects.find(
+      (item) => item.id === id
+    );
+
+    if (!currentProject) {
+      return;
+    }
+
     setProjects(
       (current) =>
         current.filter(
@@ -940,6 +1748,23 @@ export function AdminProvider({
             item.id !== id
         )
     );
+
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      enqueueOfflineOperation({
+        table: "projects",
+        action: "delete",
+        payload: {},
+        match: { id },
+      });
+
+      recordLastChange(
+        `Izbrisan je bil projekt: ${currentProject.name} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
 
     const {
       error,
@@ -957,7 +1782,12 @@ export function AdminProvider({
         "Napaka pri brisanju projekta:",
         error
       );
+      return;
     }
+
+    recordLastChange(
+      `Izbrisan je bil projekt: ${currentProject.name}.`
+    );
   };
 
   const toggleProjectActive = async (
@@ -975,6 +1805,38 @@ export function AdminProvider({
 
     const newActive =
       !currentProject.active;
+
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setProjects(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    active: newActive,
+                  }
+                : item
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "projects",
+        action: "update",
+        payload: {
+          active: newActive,
+        },
+        match: { id },
+      });
+
+      recordLastChange(
+        `Projekt ${currentProject.name} je bil ${newActive ? "aktiviran" : "deaktiviran"} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
 
     const { error } =
       await supabase
@@ -1007,11 +1869,51 @@ export function AdminProvider({
               : item
         )
     );
+
+    recordLastChange(
+      `Projekt ${currentProject.name} je bil ${newActive ? "aktiviran" : "deaktiviran"}.`
+    );
   };
 
   const activateProject = async (
     id: number
   ) => {
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setProjects(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    active: true,
+                    status: "active",
+                    archived: false,
+                  }
+                : item
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "projects",
+        action: "update",
+        payload: {
+          active: true,
+          status: "active",
+          archived: false,
+        },
+        match: { id },
+      });
+
+      recordLastChange(
+        `Projekt ${id} je bil aktiviran (čaka na sinhronizacijo).`
+      );
+      return;
+    }
+
     const { error } =
       await supabase
         .from("projects")
@@ -1047,6 +1949,10 @@ export function AdminProvider({
               : item
         )
     );
+
+    recordLastChange(
+      `Projekt ${id} je bil aktiviran.`
+    );
   };
 
   /* =======================================================
@@ -1073,6 +1979,37 @@ export function AdminProvider({
         active: false,
         archived: false,
       };
+
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setProjects(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === id
+                ? updatedProject
+                : item
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "projects",
+        action: "update",
+        payload: {
+          status: "completed",
+          active: false,
+          archived: false,
+        },
+        match: { id },
+      });
+
+      recordLastChange(
+        `Projekt ${updatedProject.name} je bil zaključen (čaka na sinhronizacijo).`
+      );
+      return;
+    }
 
     const { error } =
       await supabase
@@ -1103,6 +2040,10 @@ export function AdminProvider({
               ? updatedProject
               : item
         )
+    );
+
+    recordLastChange(
+      `Projekt ${updatedProject.name} je bil zaključen.`
     );
   };
 
@@ -1142,6 +2083,37 @@ export function AdminProvider({
         archived: true,
       };
 
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setProjects(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === id
+                ? updatedProject
+                : item
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "projects",
+        action: "update",
+        payload: {
+          active: false,
+          status: "completed",
+          archived: true,
+        },
+        match: { id },
+      });
+
+      recordLastChange(
+        `Projekt ${updatedProject.name} je bil arhiviran (čaka na sinhronizacijo).`
+      );
+      return;
+    }
+
     const { error } =
       await supabase
         .from("projects")
@@ -1172,6 +2144,10 @@ export function AdminProvider({
               : item
         )
     );
+
+    recordLastChange(
+      `Projekt ${updatedProject.name} je bil arhiviran.`
+    );
   };
 
   /* =======================================================
@@ -1193,6 +2169,36 @@ export function AdminProvider({
             )
           ) + 1
         : 1;
+
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setMachines(
+        (current) => [
+          ...current,
+          {
+            ...machine,
+            id: newId,
+          },
+        ]
+      );
+
+      enqueueOfflineOperation({
+        table: "machines",
+        action: "insert",
+        payload: {
+          id: newId,
+          name: machine.name,
+          active: machine.active,
+        },
+      });
+
+      recordLastChange(
+        `Dodan je bil stroj: ${machine.name} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
 
     const { error } =
       await supabase
@@ -1220,6 +2226,10 @@ export function AdminProvider({
         },
       ]
     );
+
+    recordLastChange(
+      `Dodan je bil stroj: ${machine.name}.`
+    );
   };
 
   const updateMachine = async (
@@ -1229,6 +2239,39 @@ export function AdminProvider({
       "id"
     >
   ) => {
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setMachines(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === id
+                ? {
+                    ...machine,
+                    id,
+                  }
+                : item
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "machines",
+        action: "update",
+        payload: {
+          name: machine.name,
+          active: machine.active,
+        },
+        match: { id },
+      });
+
+      recordLastChange(
+        `Posodobljen je bil stroj: ${machine.name} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
+
     const { error } =
       await supabase
         .from("machines")
@@ -1261,11 +2304,46 @@ export function AdminProvider({
               : item
         )
     );
+
+    recordLastChange(
+      `Posodobljen je bil stroj: ${machine.name}.`
+    );
   };
 
   const deleteMachine = async (
     id: number
   ) => {
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      const currentMachine =
+        machines.find(
+          (item) =>
+            item.id === id
+        );
+
+      setMachines(
+        (current) =>
+          current.filter(
+            (item) =>
+              item.id !== id
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "machines",
+        action: "delete",
+        payload: {},
+        match: { id },
+      });
+
+      recordLastChange(
+        `Izbrisan je bil stroj: ${currentMachine?.name ?? id} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
+
     const { error } =
       await supabase
         .from("machines")
@@ -1290,6 +2368,10 @@ export function AdminProvider({
             item.id !== id
         )
     );
+
+    recordLastChange(
+      `Izbrisan je bil stroj: ${id}.`
+    );
   };
 
   const toggleMachineActive = async (
@@ -1307,6 +2389,38 @@ export function AdminProvider({
 
     const newActive =
       !currentMachine.active;
+
+    if (
+      typeof navigator !== "undefined" &&
+      !navigator.onLine
+    ) {
+      setMachines(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    active: newActive,
+                  }
+                : item
+          )
+      );
+
+      enqueueOfflineOperation({
+        table: "machines",
+        action: "update",
+        payload: {
+          active: newActive,
+        },
+        match: { id },
+      });
+
+      recordLastChange(
+        `Stroj ${currentMachine.name} je bil ${newActive ? "aktiviran" : "deaktiviran"} (čaka na sinhronizacijo).`
+      );
+      return;
+    }
 
     const { error } =
       await supabase
@@ -1339,6 +2453,10 @@ export function AdminProvider({
               : item
         )
     );
+
+    recordLastChange(
+      `Stroj ${currentMachine.name} je bil ${newActive ? "aktiviran" : "deaktiviran"}.`
+    );
   };
 
   /* =======================================================
@@ -1370,6 +2488,10 @@ export function AdminProvider({
         },
       ]
     );
+
+    recordLastChange(
+      `Dodan je bil praznik: ${holiday.name}.`
+    );
   };
 
   const updateHoliday = (
@@ -1391,6 +2513,10 @@ export function AdminProvider({
               : item
         )
     );
+
+    recordLastChange(
+      `Posodobljen je bil praznik: ${holiday.name}.`
+    );
   };
 
   const deleteHoliday = (
@@ -1403,6 +2529,10 @@ export function AdminProvider({
             item.id !== id
         )
     );
+
+    recordLastChange(
+      `Izbrisan je bil praznik: ${id}.`
+    );
   };
 
   /* =======================================================
@@ -1414,6 +2544,10 @@ export function AdminProvider({
   ) => {
     setSettings(
       newSettings
+    );
+
+    recordLastChange(
+      "Posodobljene so bile sistemske nastavitve."
     );
   };
 
@@ -1580,8 +2714,14 @@ export function AdminProvider({
                     undefined,
                   role:
                     user.role ===
-                    "admin"
+                    "super_admin"
+                      ? "super_admin"
+                      : user.role ===
+                        "admin"
                       ? "admin"
+                      : user.role ===
+                        "manager"
+                      ? "manager"
                       : "worker",
                   active:
                     user.active !==
@@ -1639,6 +2779,29 @@ export function AdminProvider({
 
             setUsers(
               mappedUsers
+            );
+
+            const {
+              data: authData,
+            } = await supabase.auth.getUser();
+
+            const authEmail =
+              authData.user?.email
+                ?.trim()
+                .toLowerCase();
+
+            const signedInUser =
+              mappedUsers.find(
+                (user) =>
+                  user.email
+                    .trim()
+                    .toLowerCase() ===
+                  authEmail
+              );
+
+            setCurrentUserRole(
+              signedInUser?.role ??
+                "admin"
             );
           }
         } catch (error) {
@@ -1733,6 +2896,14 @@ export function AdminProvider({
       machines,
       holidays,
       settings,
+      lastChange,
+      changeHistory,
+      offlineQueue,
+      permissions,
+      currentUserRole,
+      canManageRole,
+      setPermission,
+      setLastChange: recordLastChange,
 
       addUser,
       updateUser,

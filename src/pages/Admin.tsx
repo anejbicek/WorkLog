@@ -1,5 +1,6 @@
 import {
   useMemo,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -23,6 +24,10 @@ import {
 import {
   useAdmin,
 } from "../context/AdminContext";
+
+import {
+  supabase,
+} from "../services/supabase";
 
 import {
   useWorkOrders,
@@ -66,6 +71,48 @@ function Admin() {
     machines,
     projects,
   } = useAdmin();
+
+  const [
+    isSystemOwner,
+    setIsSystemOwner,
+  ] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkSystemOwner = async () => {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+
+      if (!authUser || cancelled) {
+        return;
+      }
+
+      const owner = users.find(
+        (user) => user.id === 1
+      );
+
+      if (!owner) {
+        return;
+      }
+
+      const ownerMatches =
+        owner.authUserId === authUser.id ||
+        owner.email.toLowerCase() ===
+          (authUser.email ?? "").toLowerCase();
+
+      if (!cancelled) {
+        setIsSystemOwner(ownerMatches);
+      }
+    };
+
+    void checkSystemOwner();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [users]);
 
   const {
     allWorkOrders,
@@ -363,7 +410,17 @@ function Admin() {
     if (
       activeSection === "security"
     ) {
-      return <AdminSecurity />;
+      return (
+        <AdminSecurity
+  onNavigate={(page) => {
+    if (
+      page === "admin"
+    ) {
+      setActiveSection("security");
+    }
+  }}
+/>
+      );
     }
 
     if (
@@ -495,8 +552,14 @@ function Admin() {
             ADMINISTRACIJA
           </div>
 
-          {menuItems.map(
-            (item) => {
+          {menuItems
+            .filter(
+              (item) =>
+                item.id !== "reports" ||
+                isSystemOwner
+            )
+            .map(
+              (item) => {
               const Icon =
                 item.icon;
 

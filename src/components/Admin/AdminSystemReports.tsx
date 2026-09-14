@@ -15,6 +15,15 @@ import {
   Users,
   Wrench,
   XCircle,
+  Wifi,
+  WifiOff,
+  Database,
+  Server,
+  AlertTriangle,
+  Info,
+  CalendarDays,
+  Palette,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +35,14 @@ import {
 
 import { useAdmin } from "../../context/AdminContext";
 import { supabase } from "../../services/supabase";
+
+import {
+  DEFAULT_SEASONAL_THEMES,
+  getActiveSeasonalTheme,
+  loadSeasonalThemes,
+  saveSeasonalThemes,
+  type SeasonalTheme,
+} from "../../utils/seasonalTheme";
 
 /* =========================================================
    TIPI
@@ -66,6 +83,24 @@ type ProjectActivity = {
   status: string;
 };
 
+type SystemError = {
+  id: string;
+  source: string;
+  message: string;
+  code: string;
+  details?: string;
+  hint?: string;
+  at: string;
+};
+
+type DatabaseTableStatus = {
+  table: string;
+  accessible: boolean;
+  rows: number | null;
+  errorCode?: string;
+  errorMessage?: string;
+};
+
 /* =========================================================
    GLAVNA KOMPONENTA
 ========================================================= */
@@ -75,6 +110,7 @@ function AdminSystemReports() {
     users,
     projects,
     machines,
+    offlineQueue,
   } = useAdmin();
 
   const [workOrders, setWorkOrders] =
@@ -86,70 +122,255 @@ function AdminSystemReports() {
   const [errorMessage, setErrorMessage] =
     useState("");
 
-  const [isOwner, setIsOwner] =
+  const [isAdmin, setIsAdmin] =
     useState(false);
 
+  const [systemErrors, setSystemErrors] =
+    useState<SystemError[]>([]);
+
+  const [supabaseStatus, setSupabaseStatus] =
+    useState({
+      online: typeof navigator !== "undefined"
+        ? navigator.onLine
+        : true,
+      auth: false,
+      database: false,
+      latencyMs: null as number | null,
+      checkedAt: "",
+    });
+
+  const [databaseTables, setDatabaseTables] =
+    useState<DatabaseTableStatus[]>([]);
+
+  const [diagnosticsLoading, setDiagnosticsLoading] =
+    useState(false);
+
+  const [diagnosticsOpen, setDiagnosticsOpen] =
+    useState(false);
+
+  const [seasonalThemes, setSeasonalThemes] =
+    useState<SeasonalTheme[]>(() =>
+      loadSeasonalThemes()
+    );
+
+  const [seasonalThemesOpen, setSeasonalThemesOpen] =
+    useState(false);
+
+  const activeSeasonalTheme =
+    getActiveSeasonalTheme();
+
   /* =======================================================
-     PREVERI LASTNIKA
+     PREVERI ADMINISTRATORSKI DOSTOP
   ======================================================= */
 
   useEffect(() => {
     let cancelled = false;
 
-    const checkOwner =
-      async () => {
-        const {
-          data: {
-            user: authUser,
-          },
-        } =
-          await supabase.auth.getUser();
+    const checkSystemOwner = async () => {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
 
-        if (
-          !authUser ||
-          cancelled
-        ) {
-          return;
-        }
-
-        const owner =
-          users.find(
-            (user) =>
-              user.id === 1
-          );
-
-        if (!owner) {
-          return;
-        }
-
-        const ownerMatches =
-          owner.authUserId ===
-            authUser.id ||
-          owner.email.toLowerCase() ===
-            (
-              authUser.email ??
-              ""
-            ).toLowerCase();
-
+      if (!authUser || cancelled) {
         if (!cancelled) {
-          setIsOwner(
-            ownerMatches
-          );
+          setIsAdmin(false);
         }
-      };
+        return;
+      }
 
-    void checkOwner();
+      const owner = users.find(
+        (user) => user.id === 1
+      );
+
+      const ownerMatches =
+        !!owner &&
+        owner.active &&
+        (owner.authUserId === authUser.id ||
+          owner.email.toLowerCase() ===
+            (authUser.email ?? "").toLowerCase());
+
+      if (!cancelled) {
+        setIsAdmin(ownerMatches);
+      }
+    };
+
+    void checkSystemOwner();
 
     return () => {
       cancelled = true;
     };
   }, [users]);
 
+  const runDiagnostics = async () => {
+    if (!isAdmin) {
+      return;
+    }
+
+    setDiagnosticsLoading(true);
+
+    const startedAt = performance.now();
+    const errors: SystemError[] = [];
+    const tableResults: DatabaseTableStatus[] = [];
+
+    const online =
+      typeof navigator === "undefined"
+        ? true
+        : navigator.onLine;
+
+    let authOk = false;
+    let databaseOk = false;
+
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error) {
+        errors.push({
+          id: `${Date.now()}-auth`,
+          source: "Supabase Auth",
+          message: error.message,
+          code: error.code ?? "AUTH_ERROR",
+          details: (error as any).details
+            ? String((error as any).details)
+            : undefined,
+          hint: (error as any).hint
+            ? String((error as any).hint)
+            : undefined,
+          at: new Date().toISOString(),
+        });
+      } else {
+        authOk = !!user;
+      }
+    } catch (error) {
+      errors.push({
+        id: `${Date.now()}-auth-exception`,
+        source: "Supabase Auth",
+        message: String(
+          (error as any)?.message ?? error
+        ),
+        code: String(
+          (error as any)?.code ??
+            "AUTH_EXCEPTION"
+        ),
+        at: new Date().toISOString(),
+      });
+    }
+
+    const tables = [
+      "users",
+      "projects",
+      "machines",
+      "work_orders",
+    ];
+
+    for (const table of tables) {
+      try {
+        const { count, error } =
+          await supabase
+            .from(table)
+            .select("*", {
+              count: "exact",
+              head: true,
+            });
+
+        if (error) {
+          tableResults.push({
+            table,
+            accessible: false,
+            rows: null,
+            errorCode: error.code,
+            errorMessage: error.message,
+          });
+
+          errors.push({
+            id: `${Date.now()}-${table}`,
+            source: `Tabela ${table}`,
+            message: error.message,
+            code: error.code ?? "DATABASE_ERROR",
+            details: error.details,
+            hint: error.hint,
+            at: new Date().toISOString(),
+          });
+        } else {
+          databaseOk = true;
+          tableResults.push({
+            table,
+            accessible: true,
+            rows: count ?? 0,
+          });
+        }
+      } catch (error) {
+        const exceptionCode = String(
+          (error as any)?.code ??
+            "DATABASE_EXCEPTION"
+        );
+        const exceptionMessage = String(
+          (error as any)?.message ?? error
+        );
+
+        tableResults.push({
+          table,
+          accessible: false,
+          rows: null,
+          errorCode: exceptionCode,
+          errorMessage: exceptionMessage,
+        });
+
+        errors.push({
+          id: `${Date.now()}-${table}-exception`,
+          source: `Tabela ${table}`,
+          message: exceptionMessage,
+          code: exceptionCode,
+          at: new Date().toISOString(),
+        });
+      }
+    }
+
+    const checkedAt =
+      new Date().toISOString();
+    const latencyMs = Math.round(
+      performance.now() - startedAt
+    );
+
+    databaseOk =
+      tableResults.length === tables.length &&
+      tableResults.every(
+        (item) => item.accessible
+      );
+
+    setSupabaseStatus({
+      online,
+      auth: authOk,
+      database: databaseOk,
+      latencyMs,
+      checkedAt,
+    });
+
+    setDatabaseTables(tableResults);
+    setSystemErrors(errors);
+    setDiagnosticsLoading(false);
+  };
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    void runDiagnostics();
+  }, [isAdmin]);
+
   /* =======================================================
      NALOŽI DELOVNE NALOGE
   ======================================================= */
 
   useEffect(() => {
+    if (!isAdmin) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     const loadWorkOrders =
@@ -285,7 +506,7 @@ function AdminSystemReports() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAdmin]);
 
   /* =======================================================
      STATISTIKA UR
@@ -614,10 +835,10 @@ function AdminSystemReports() {
     ).length;
 
   /* =======================================================
-     DOSTOP – SAMO LASTNIK
+     DOSTOP – SAMO AKTIVNI ADMINISTRATORJI
   ======================================================= */
 
-  if (!isOwner) {
+  if (!isAdmin) {
     return (
       <div
         style={
@@ -699,7 +920,7 @@ function AdminSystemReports() {
           />
 
           <span>
-            Lastniški nadzor
+            Administratorski nadzor
           </span>
         </div>
       </div>
@@ -758,6 +979,523 @@ function AdminSystemReports() {
       </div>
 
       {/* =================================================
+          SISTEMSKA DIAGNOSTIKA
+      ================================================= */}
+
+      <section
+        style={
+          panelStyle
+        }
+      >
+        <PanelHeader
+          icon={Server}
+          title="Sistemska diagnostika"
+          description="Stanje povezave, Supabase, baze in tehničnih podatkov sistema."
+        />
+
+        <div
+          style={diagnosticsGridStyle}
+        >
+          <DiagnosticItem
+            icon={
+              supabaseStatus.online
+                ? Wifi
+                : WifiOff
+            }
+            label="Povezava"
+            value={
+              supabaseStatus.online
+                ? "ONLINE"
+                : "OFFLINE"
+            }
+            ok={
+              supabaseStatus.online
+            }
+          />
+
+          <DiagnosticItem
+            icon={Database}
+            label="Supabase baza"
+            value={
+              supabaseStatus.database
+                ? "DOSTOPNA"
+                : "NI DOSTOPNA"
+            }
+            ok={
+              supabaseStatus.database
+            }
+          />
+
+          <DiagnosticItem
+            icon={Shield}
+            label="Supabase Auth"
+            value={
+              supabaseStatus.auth
+                ? "PRIJAVA OK"
+                : "PREVERI"
+            }
+            ok={
+              supabaseStatus.auth
+            }
+          />
+
+          <DiagnosticItem
+            icon={Clock3}
+            label="Odziv"
+            value={
+              supabaseStatus.latencyMs !== null
+                ? `${supabaseStatus.latencyMs} ms`
+                : "—"
+            }
+            ok={
+              supabaseStatus.latencyMs !== null &&
+              supabaseStatus.latencyMs < 2000
+            }
+          />
+        </div>
+
+        <div
+          style={
+            diagnosticsActionRowStyle
+          }
+        >
+          <div
+            style={
+              diagnosticsSummaryStyle
+            }
+          >
+            <span>
+              Čakalna vrsta offline: <strong>{offlineQueue.length}</strong>
+            </span>
+
+            {supabaseStatus.checkedAt && (
+              <span>
+                Zadnje preverjanje: {new Date(supabaseStatus.checkedAt).toLocaleString("sl-SI")}
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void runDiagnostics()}
+            disabled={diagnosticsLoading}
+            style={diagnosticsButtonStyle}
+          >
+            <RefreshCw
+              size={14}
+              style={
+                diagnosticsLoading
+                  ? { animation: "spin 1s linear infinite" }
+                  : undefined
+              }
+            />
+            {diagnosticsLoading
+              ? "Preverjam..."
+              : "Preveri ponovno"}
+          </button>
+        </div>
+
+        <div
+          style={
+            diagnosticsTechnicalRowStyle
+          }
+        >
+          <span>
+            <strong>Napake:</strong> {systemErrors.length}
+          </span>
+          <span>
+            <strong>Tabele:</strong> {databaseTables.filter((item) => item.accessible).length}/{databaseTables.length || 4} dostopnih
+          </span>
+        </div>
+
+        <details
+          open={diagnosticsOpen}
+          onToggle={(event) =>
+            setDiagnosticsOpen(
+              (event.currentTarget as HTMLDetailsElement).open
+            )
+          }
+          style={detailsStyle}
+        >
+          <summary
+            style={detailsSummaryStyle}
+          >
+            <Info size={14} />
+            Dodatni tehnični podatki
+          </summary>
+
+          <div
+            style={technicalGridStyle}
+          >
+            <TechnicalItem
+              label="Brskalnik"
+              value={navigator.userAgent}
+            />
+            <TechnicalItem
+              label="Platforma"
+              value={navigator.platform || "—"}
+            />
+            <TechnicalItem
+              label="Ločljivost"
+              value={`${window.innerWidth} × ${window.innerHeight}`}
+            />
+            <TechnicalItem
+              label="Jezik"
+              value={navigator.language}
+            />
+            <TechnicalItem
+              label="Online API"
+              value={navigator.onLine ? "true" : "false"}
+            />
+            <TechnicalItem
+              label="Čakalna vrsta"
+              value={`${offlineQueue.length} operacij`}
+            />
+          </div>
+        </details>
+
+        <div
+          style={
+            diagnosticsSubsectionStyle
+          }
+        >
+          <div
+            style={
+              diagnosticsSubsectionTitleStyle
+            }
+          >
+            <Database size={14} />
+            Podatki o bazi
+          </div>
+
+          <div
+            style={
+              databaseTableStyle
+            }
+          >
+            {databaseTables.map((item) => (
+              <div
+                key={item.table}
+                style={databaseRowStyle}
+              >
+                <span
+                  style={databaseNameStyle}
+                >
+                  {item.table}
+                </span>
+                <span>
+                  {item.accessible
+                    ? `${item.rows ?? 0} vrstic`
+                    : "NAPAKA"}
+                </span>
+                {!item.accessible && (
+                  <span
+                    style={databaseErrorStyle}
+                  >
+                    {item.errorCode ?? "UNKNOWN"}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div
+          style={
+            diagnosticsSubsectionStyle
+          }
+        >
+          <div
+            style={
+              diagnosticsSubsectionTitleStyle
+            }
+          >
+            <AlertTriangle size={14} />
+            Sistemske napake in kode
+          </div>
+
+          {systemErrors.length === 0 ? (
+            <div
+              style={
+                noErrorsStyle
+              }
+            >
+              <CheckCircle2 size={15} />
+              Trenutno ni zaznanih sistemskih napak.
+            </div>
+          ) : (
+            <div
+              style={
+                errorsListStyle
+              }
+            >
+              {systemErrors.map((item) => (
+                <div
+                  key={item.id}
+                  style={errorRowStyle}
+                >
+                  <div
+                    style={errorRowMainStyle}
+                  >
+                    <strong>{item.source}</strong>
+                    <span>{item.message}</span>
+                    {item.details && (
+                      <small>Podrobnosti: {item.details}</small>
+                    )}
+                    {item.hint && (
+                      <small>Namig: {item.hint}</small>
+                    )}
+                  </div>
+                  <div
+                    style={errorCodeStyle}
+                  >
+                    {item.code}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* =================================================
+          SEZONSKI IN PRAZNIČNI IZGLED
+      ================================================= */}
+
+      <section
+        style={
+          panelStyle
+        }
+      >
+        <PanelHeader
+          icon={CalendarDays}
+          title="Sezonski in praznični izgled"
+          description="Samodejno upravljanje posebnega izgleda prijave in glave WorkLoga."
+        />
+
+        <details
+          open={seasonalThemesOpen}
+          onToggle={(event) =>
+            setSeasonalThemesOpen(
+              (event.currentTarget as HTMLDetailsElement).open
+            )
+          }
+          style={detailsStyle}
+        >
+          <summary
+            style={detailsSummaryStyle}
+          >
+            <Palette size={14} />
+            Upravljanje tem in terminov
+          </summary>
+
+          <div
+            style={seasonalIntroStyle}
+          >
+            <span>
+              Če se termini prekrivajo, se aktivira tema z višjo prioriteto.
+              Spremembe se shranijo lokalno in se takoj uporabijo v prijavi in Headerju.
+            </span>
+
+            <button
+              type="button"
+              onClick={() => {
+                const next = seasonalThemes.map(
+                  (theme) => ({
+                    ...theme,
+                  })
+                );
+                saveSeasonalThemes(next);
+                setSeasonalThemes(next);
+              }}
+              style={secondaryButtonStyle}
+            >
+              <RefreshCw size={13} />
+              Osveži
+            </button>
+          </div>
+
+          <div style={activeSeasonalThemeStyle}>
+            <strong>Trenutno aktivna tema:</strong>{" "}
+            {activeSeasonalTheme?.name ?? "Nobena"}
+          </div>
+
+          <div
+            style={seasonalThemesListStyle}
+          >
+            {seasonalThemes.map(
+              (theme) => (
+                <div
+                  key={theme.id}
+                  style={seasonalThemeRowStyle}
+                >
+                  <div
+                    style={seasonalThemeMainStyle}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={theme.enabled}
+                      onChange={(event) => {
+                        const next = seasonalThemes.map(
+                          (item) =>
+                            item.id === theme.id
+                              ? {
+                                  ...item,
+                                  enabled:
+                                    event.target.checked,
+                                }
+                              : item
+                        );
+                        setSeasonalThemes(next);
+                        saveSeasonalThemes(next);
+                      }}
+                    />
+
+                    <div
+                      style={seasonalThemeNameStyle}
+                    >
+                      {theme.name}
+                    </div>
+                  </div>
+
+                  <label style={seasonalFieldStyle}>
+                    Od
+                    <input
+                      type="text"
+                      value={theme.start}
+                      onChange={(event) => {
+                        const next = seasonalThemes.map(
+                          (item) =>
+                            item.id === theme.id
+                              ? {
+                                  ...item,
+                                  start:
+                                    event.target.value,
+                                }
+                              : item
+                        );
+                        setSeasonalThemes(next);
+                        saveSeasonalThemes(next);
+                      }}
+                      style={seasonalInputStyle}
+                      placeholder="MM-DDTHH:mm"
+                    />
+                  </label>
+
+                  <label style={seasonalFieldStyle}>
+                    Do
+                    <input
+                      type="text"
+                      value={theme.end}
+                      onChange={(event) => {
+                        const next = seasonalThemes.map(
+                          (item) =>
+                            item.id === theme.id
+                              ? {
+                                  ...item,
+                                  end:
+                                    event.target.value,
+                                }
+                              : item
+                        );
+                        setSeasonalThemes(next);
+                        saveSeasonalThemes(next);
+                      }}
+                      style={seasonalInputStyle}
+                      placeholder="MM-DDTHH:mm"
+                    />
+                  </label>
+
+                  <label style={seasonalFieldStyle}>
+                    Prioriteta
+                    <input
+                      type="number"
+                      value={theme.priority}
+                      onChange={(event) => {
+                        const next = seasonalThemes.map(
+                          (item) =>
+                            item.id === theme.id
+                              ? {
+                                  ...item,
+                                  priority:
+                                    Number(event.target.value) || 0,
+                                }
+                              : item
+                        );
+                        setSeasonalThemes(next);
+                        saveSeasonalThemes(next);
+                      }}
+                      style={seasonalSmallInputStyle}
+                    />
+                  </label>
+
+                  <label style={seasonalImageFieldStyle}>
+                    Login slika
+                    <input
+                      type="text"
+                      value={theme.loginImage}
+                      onChange={(event) => {
+                        const next = seasonalThemes.map(
+                          (item) =>
+                            item.id === theme.id
+                              ? {
+                                  ...item,
+                                  loginImage:
+                                    event.target.value,
+                                }
+                              : item
+                        );
+                        setSeasonalThemes(next);
+                        saveSeasonalThemes(next);
+                      }}
+                      style={seasonalImageInputStyle}
+                    />
+                  </label>
+
+                  <label style={seasonalImageFieldStyle}>
+                    Header slika
+                    <input
+                      type="text"
+                      value={theme.headerImage}
+                      onChange={(event) => {
+                        const next = seasonalThemes.map(
+                          (item) =>
+                            item.id === theme.id
+                              ? {
+                                  ...item,
+                                  headerImage:
+                                    event.target.value,
+                                }
+                              : item
+                        );
+                        setSeasonalThemes(next);
+                        saveSeasonalThemes(next);
+                      }}
+                      style={seasonalImageInputStyle}
+                    />
+                  </label>
+                </div>
+              )
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const next = DEFAULT_SEASONAL_THEMES.map(
+                (theme) => ({ ...theme })
+              );
+              setSeasonalThemes(next);
+              saveSeasonalThemes(next);
+            }}
+            style={resetThemesButtonStyle}
+          >
+            Obnovi privzete teme
+          </button>
+        </details>
+      </section>
+
+            {/* =================================================
           SISTEM
       ================================================= */}
 
@@ -1318,7 +2056,7 @@ function AdminSystemReports() {
         >
           <SecurityItem
             icon={Shield}
-            title="Lastniški dostop"
+            title="Administratorski dostop"
             value="Aktiven"
             ok
           />
@@ -1373,8 +2111,8 @@ function AdminSystemReports() {
 
           <span>
             Ta razdelek je namenjen
-            izključno lastniku
-            sistema in prikazuje
+            aktivnim administratorjem
+            in prikazuje
             sistemske podatke
             WorkLoga.
           </span>
@@ -2313,6 +3051,391 @@ const noticeStyle = {
   color: "#64748b",
   fontSize: "11px",
   lineHeight: 1.5,
+};
+
+/* =========================================================
+   V6.4 – DIAGNOSTIKA
+========================================================= */
+
+const diagnosticsGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gap: "10px",
+};
+
+const diagnosticsActionRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "12px",
+  marginTop: "12px",
+};
+
+const diagnosticsSummaryStyle = {
+  display: "flex",
+  flexWrap: "wrap" as const,
+  gap: "12px",
+  fontSize: "11px",
+  color: "#64748b",
+};
+
+const diagnosticsButtonStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "7px",
+  border: "1px solid #dbe4ea",
+  borderRadius: "8px",
+  padding: "7px 10px",
+  background: "#ffffff",
+  color: "#1d526b",
+  fontSize: "11px",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const diagnosticsTechnicalRowStyle = {
+  display: "flex",
+  flexWrap: "wrap" as const,
+  gap: "16px",
+  marginTop: "11px",
+  paddingTop: "11px",
+  borderTop: "1px solid #eef2f6",
+  fontSize: "10px",
+  color: "#64748b",
+};
+
+const detailsStyle = {
+  marginTop: "13px",
+  borderTop: "1px solid #eef2f6",
+  paddingTop: "12px",
+};
+
+const detailsSummaryStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "7px",
+  cursor: "pointer",
+  color: "#1d526b",
+  fontSize: "11px",
+  fontWeight: 700,
+};
+
+const technicalGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: "8px",
+  marginTop: "10px",
+};
+
+const technicalItemStyle = {
+  padding: "9px 10px",
+  borderRadius: "8px",
+  background: "#f8fafc",
+  border: "1px solid #eef2f6",
+};
+
+const technicalLabelStyle = {
+  fontSize: "9px",
+  fontWeight: 700,
+  color: "#94a3b8",
+};
+
+const technicalValueStyle = {
+  marginTop: "3px",
+  fontSize: "10px",
+  color: "#334155",
+  wordBreak: "break-word" as const,
+};
+
+const diagnosticsSubsectionStyle = {
+  marginTop: "13px",
+  paddingTop: "13px",
+  borderTop: "1px solid #eef2f6",
+};
+
+const diagnosticsSubsectionTitleStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "7px",
+  marginBottom: "9px",
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#475569",
+};
+
+const databaseTableStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: "5px",
+};
+
+const databaseRowStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 120px 100px",
+  alignItems: "center",
+  gap: "8px",
+  padding: "8px 10px",
+  borderRadius: "7px",
+  background: "#f8fafc",
+  fontSize: "10px",
+  color: "#64748b",
+};
+
+const databaseNameStyle = {
+  fontWeight: 700,
+  color: "#12344d",
+};
+
+const databaseErrorStyle = {
+  fontFamily: "monospace",
+  fontWeight: 700,
+  color: "#dc2626",
+  textAlign: "right" as const,
+};
+
+const noErrorsStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "7px",
+  padding: "10px",
+  borderRadius: "8px",
+  background: "#f0fdf4",
+  color: "#15803d",
+  fontSize: "11px",
+};
+
+const errorsListStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: "6px",
+};
+
+const errorRowStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: "12px",
+  padding: "10px",
+  borderRadius: "8px",
+  background: "#fef2f2",
+  border: "1px solid #fee2e2",
+};
+
+const errorRowMainStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: "3px",
+  minWidth: 0,
+  color: "#475569",
+  fontSize: "10px",
+};
+
+const errorCodeStyle = {
+  flexShrink: 0,
+  padding: "4px 7px",
+  borderRadius: "6px",
+  background: "#ffffff",
+  color: "#dc2626",
+  fontFamily: "monospace",
+  fontSize: "10px",
+  fontWeight: 700,
+};
+
+function DiagnosticItem({
+  icon: Icon,
+  label,
+  value,
+  ok,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  ok: boolean;
+}) {
+  return (
+    <div style={diagnosticItemStyle}>
+      <div style={{
+        ...diagnosticIconStyle,
+        background: ok ? "#f0fdf4" : "#fef2f2",
+        color: ok ? "#16a34a" : "#dc2626",
+      }}>
+        <Icon size={17} />
+      </div>
+      <div>
+        <div style={diagnosticLabelStyle}>{label}</div>
+        <div style={diagnosticValueStyle}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+const diagnosticItemStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "9px",
+  padding: "11px",
+  borderRadius: "9px",
+  background: "#f8fafc",
+  border: "1px solid #eef2f6",
+};
+
+const diagnosticIconStyle = {
+  width: "34px",
+  height: "34px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: "8px",
+  flexShrink: 0,
+};
+
+const diagnosticLabelStyle = {
+  fontSize: "9px",
+  fontWeight: 700,
+  color: "#64748b",
+};
+
+const diagnosticValueStyle = {
+  marginTop: "3px",
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#12344d",
+};
+
+function TechnicalItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div style={technicalItemStyle}>
+      <div style={technicalLabelStyle}>{label}</div>
+      <div style={technicalValueStyle}>{value}</div>
+    </div>
+  );
+}
+
+const seasonalIntroStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "12px",
+  marginTop: "10px",
+  padding: "10px",
+  borderRadius: "8px",
+  background: "#f8fafc",
+  color: "#64748b",
+  fontSize: "10px",
+  lineHeight: 1.5,
+};
+
+const seasonalThemesListStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: "7px",
+  marginTop: "10px",
+};
+
+const seasonalThemeRowStyle = {
+  display: "grid",
+  gridTemplateColumns: "minmax(140px, 1fr) 125px 125px 85px minmax(180px, 1fr) minmax(180px, 1fr)",
+  alignItems: "center",
+  gap: "8px",
+  padding: "9px 10px",
+  border: "1px solid #eef2f6",
+  borderRadius: "8px",
+  background: "#ffffff",
+};
+
+const seasonalThemeMainStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+};
+
+const seasonalThemeNameStyle = {
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#12344d",
+};
+
+const seasonalFieldStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: "3px",
+  fontSize: "9px",
+  fontWeight: 700,
+  color: "#94a3b8",
+};
+
+const seasonalInputStyle = {
+  width: "100%",
+  boxSizing: "border-box" as const,
+  border: "1px solid #dbe4ea",
+  borderRadius: "6px",
+  padding: "6px 7px",
+  fontSize: "10px",
+  color: "#334155",
+};
+
+const seasonalSmallInputStyle = {
+  ...seasonalInputStyle,
+  width: "75px",
+};
+
+const activeSeasonalThemeStyle = {
+  marginTop: "9px",
+  padding: "8px 10px",
+  borderRadius: "8px",
+  background: "#eff6ff",
+  color: "#1d526b",
+  fontSize: "10px",
+};
+
+const seasonalImageFieldStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: "3px",
+  minWidth: 0,
+  fontSize: "9px",
+  fontWeight: 700,
+  color: "#94a3b8",
+};
+
+const seasonalImageInputStyle = {
+  width: "100%",
+  boxSizing: "border-box" as const,
+  border: "1px solid #dbe4ea",
+  borderRadius: "6px",
+  padding: "6px 7px",
+  fontSize: "9px",
+  color: "#334155",
+};
+
+const secondaryButtonStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  flexShrink: 0,
+  border: "1px solid #dbe4ea",
+  borderRadius: "7px",
+  padding: "6px 9px",
+  background: "#ffffff",
+  color: "#1d526b",
+  fontSize: "10px",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const resetThemesButtonStyle = {
+  marginTop: "9px",
+  border: "none",
+  background: "transparent",
+  color: "#64748b",
+  fontSize: "10px",
+  cursor: "pointer",
 };
 
 /* =========================================================
