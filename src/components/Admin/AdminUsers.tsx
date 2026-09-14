@@ -21,7 +21,7 @@ function AdminUsers() {
     updateUser,
     deleteUser,
     toggleUserActive,
-    currentUserRole,
+  
     canManageRole,
   } = useAdmin();
 

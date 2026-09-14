@@ -24,11 +24,6 @@ type PermissionRow = {
   label: string;
 };
 
-type PermissionState = Record<
-  PermissionKey,
-  Record<RoleKey, boolean>
->;
-
 const ROLE_ORDER: RoleKey[] = [
   "super_admin",
   "admin",
