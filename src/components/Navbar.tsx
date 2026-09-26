@@ -3,7 +3,7 @@ import {
   Clock3,
   BarChart3,
   FileText,
-  FolderKanban,
+  Calculator,
   Settings,
 } from "lucide-react";
 
@@ -147,12 +147,12 @@ function Navbar({
 
     {
       icon:
-        <FolderKanban
+        <Calculator
           size={20}
         />,
 
       text:
-        "PROJEKTI",
+        "KALKULATOR",
 
       page:
         "projects" as const,

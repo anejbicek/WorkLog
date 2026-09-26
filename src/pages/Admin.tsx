@@ -43,6 +43,8 @@ import AdminSettings from "../components/Admin/AdminSettings";
 import AdminSecurity from "../components/Admin/AdminSecurity";
 import AdminSystemReports from "../components/Admin/AdminSystemReports";
 import AdminArchive from "../components/Admin/AdminArchive";
+import AdminProjectManagement from "../components/Admin/AdminProjectManagement";
+import AdminCalculator from "../components/Admin/AdminCalculator";
 
 type AdminSection =
   | "home"
@@ -51,6 +53,8 @@ type AdminSection =
   | "settings"
   | "security"
   | "reports"
+  | "projects"
+  | "calculator"
   | "archive";
 
 type MenuItem = {
@@ -159,6 +163,20 @@ function Admin() {
       title: "Poročila sistema",
       icon: FileText,
     },
+    {
+      id: "projects",
+      title: "Projekti",
+      icon: Folder,
+    },
+    ...(isSystemOwner
+      ? [
+          {
+            id: "calculator" as const,
+            title: "CNC Kalkulator",
+            icon: Gauge,
+          },
+        ]
+      : []),
     {
       id: "archive",
       title: "Arhiv",
@@ -303,24 +321,6 @@ function Admin() {
     [users]
   );
 
-  const projectStatusCounts = useMemo(
-    () => ({
-      active: projects.filter(
-        (project) =>
-          project.status === "active"
-      ).length,
-      preparation: projects.filter(
-        (project) =>
-          project.status === "preparation"
-      ).length,
-      completed: projects.filter(
-        (project) =>
-          project.status === "completed"
-      ).length,
-    }),
-    [projects]
-  );
-
   const machineStatusCounts = useMemo(
     () => ({
       active: machines.filter(
@@ -420,6 +420,18 @@ function Admin() {
     }
 
     if (
+      activeSection === "projects"
+    ) {
+      return <AdminProjectManagement />;
+    }
+
+    if (
+      activeSection === "calculator"
+    ) {
+      return <AdminCalculator />;
+    }
+
+    if (
       activeSection === "archive"
     ) {
       return <AdminArchive />;
@@ -442,9 +454,6 @@ function Admin() {
           monthOvertime
         }
         roleCounts={roleCounts}
-        projectStatusCounts={
-          projectStatusCounts
-        }
         machineStatusCounts={
           machineStatusCounts
         }
@@ -638,11 +647,6 @@ type AdministrationHomeProps = {
     admin: number;
     worker: number;
   };
-  projectStatusCounts: {
-    active: number;
-    preparation: number;
-    completed: number;
-  };
   machineStatusCounts: {
     active: number;
     inactive: number;
@@ -671,7 +675,6 @@ function AdministrationHome({
   monthHours,
   monthOvertime,
   roleCounts,
-  projectStatusCounts,
   machineStatusCounts,
   projectHours,
   maxProjectHours,
@@ -688,11 +691,6 @@ function AdministrationHome({
   const totalMachines =
     machineStatusCounts.active +
     machineStatusCounts.inactive;
-
-  const totalProjects =
-    projectStatusCounts.active +
-    projectStatusCounts.preparation +
-    projectStatusCounts.completed;
 
   return (
     <>
@@ -863,38 +861,6 @@ function AdministrationHome({
           ]}
         />
 
-        <StatusCard
-          title="Projekti po statusu"
-          icon={Folder}
-          total={totalProjects}
-          centerLabel="projektov"
-          segments={[
-            {
-              label:
-                "V delu",
-              value:
-                projectStatusCounts.active,
-              color:
-                "#16a34a",
-            },
-            {
-              label:
-                "V pripravi",
-              value:
-                projectStatusCounts.preparation,
-              color:
-                "#3b82f6",
-            },
-            {
-              label:
-                "Zaključen",
-              value:
-                projectStatusCounts.completed,
-              color:
-                "#94a3b8",
-            },
-          ]}
-        />
       </div>
 
       <div

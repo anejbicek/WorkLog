@@ -12,7 +12,7 @@ import PDF from "./pages/PDF";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import UserSettings from "./pages/UserSettings";
-import Projects from "./pages/Projects";
+import Calculator from "./pages/Calculator";
 
 import { supabase } from "./services/supabase";
 import {
@@ -269,7 +269,7 @@ function App() {
 
       {currentPage ===
         "projects" && (
-        <Projects />
+        <Calculator />
       )}
       {currentPage ===
         "admin" &&

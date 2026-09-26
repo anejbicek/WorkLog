@@ -39,6 +39,8 @@ type SearchResult = {
     | "admin-holidays"
     | "admin-security"
     | "admin-reports"
+    | "admin-projects"
+    | "admin-calculator"
     | "admin-archive"
     | "user-settings"
     | "user-profile"
@@ -156,11 +158,11 @@ function SearchBar({ onNavigate }: SearchBarProps) {
       keywords: ["pdf", "poročilo", "porocilo", "poročila", "porocila", "izvoz pdf", "izvozi pdf"],
     },
     {
-      id: "nav-projects",
-      title: "Projekti",
-      subtitle: "Odpri upravljanje projektov",
+      id: "nav-calculator",
+      title: "CNC Kalkulator",
+      subtitle: "Odpri CNC kalkulator rezalnih parametrov",
       page: "projects",
-      keywords: ["projekt", "projekti", "projekta", "izdelava", "proizvodnja", "količina", "kolicina", "serijska številka", "serijska stevilka"],
+      keywords: ["kalkulator", "cnc kalkulator", "feeds", "speeds", "rezalni parametri", "vrtljaji", "pomik", "vc", "fz"],
     },
     {
       id: "nav-user-settings",
@@ -286,6 +288,22 @@ function SearchBar({ onNavigate }: SearchBarProps) {
           keywords: ["poročila sistema", "porocila sistema", "sistemska poročila", "sistemska porocila", "aktivnost sistema", "pregled sistema"],
         },
         {
+          id: "nav-admin-projects",
+          title: "Administracija – Projekti",
+          subtitle: "Upravljanje projektov",
+          page: "admin",
+          focus: "admin-projects",
+          keywords: ["projekti", "projekt", "upravljanje projektov", "serijska številka", "serijska stevilka"],
+        },
+        {
+          id: "nav-admin-calculator",
+          title: "Administracija – CNC Kalkulator",
+          subtitle: "Nastavitve CNC kalkulatorja",
+          page: "admin",
+          focus: "admin-calculator",
+          keywords: ["nastavitve kalkulatorja", "cnc kalkulator nastavitve", "materiali kalkulator", "orodja kalkulator", "faktorji kalkulator"],
+        },
+        {
           id: "nav-admin-archive",
           title: "Arhiv",
           subtitle: "Arhiv uporabnikov, strojev in projektov",
@@ -330,42 +348,45 @@ function SearchBar({ onNavigate }: SearchBarProps) {
         focus: item.focus,
       }));
 
-    const projectResults: SearchResult[] = projects
-      .filter((project) => {
-        const typedProject = project as AdminProject & {
-          projectNumber?: number;
-          archived?: boolean;
-        };
+    const projectResults: SearchResult[] = isAdmin
+      ? projects
+          .filter((project) => {
+            const typedProject = project as AdminProject & {
+              projectNumber?: number;
+              archived?: boolean;
+            };
 
-        return matches([
-          typedProject.name,
-          typedProject.id,
-          typedProject.serialNumber,
-          typedProject.projectNumber,
-        ]);
-      })
-      .slice(0, 5)
-      .map((project) => {
-        const typedProject = project as AdminProject & {
-          projectNumber?: number;
-          archived?: boolean;
-        };
+            return matches([
+              typedProject.name,
+              typedProject.id,
+              typedProject.serialNumber,
+              typedProject.projectNumber,
+            ]);
+          })
+          .slice(0, 5)
+          .map((project) => {
+            const typedProject = project as AdminProject & {
+              projectNumber?: number;
+              archived?: boolean;
+            };
 
-        const projectNumber =
-          typedProject.projectNumber ?? typedProject.id;
+            const projectNumber =
+              typedProject.projectNumber ?? typedProject.id;
 
-        return {
-          id: `project-${project.id}`,
-          type: "project",
-          title: `Projekt #${projectNumber} – ${project.name}`,
-          subtitle: typedProject.archived
-            ? "Arhiviran projekt"
-            : typedProject.status === "completed"
-              ? "Zaključen projekt"
-              : "Projekt",
-          page: "projects",
-        };
-      });
+            return {
+              id: `project-${project.id}`,
+              type: "project",
+              title: `Projekt #${projectNumber} – ${project.name}`,
+              subtitle: typedProject.archived
+                ? "Arhiviran projekt"
+                : typedProject.status === "completed"
+                  ? "Zaključen projekt"
+                  : "Projekt",
+              page: "admin",
+              focus: "admin-projects" as const,
+            };
+          })
+      : [];
 
     const machineResults: SearchResult[] = isAdmin
       ? machines
@@ -458,6 +479,8 @@ function SearchBar({ onNavigate }: SearchBarProps) {
       "admin-holidays": ["Nastavitve", "Prazniki"],
       "admin-security": ["Varnost in pravice"],
       "admin-reports": ["Poročila sistema"],
+      "admin-projects": ["Projekti"],
+      "admin-calculator": ["CNC Kalkulator"],
       "admin-archive": ["Arhiv"],
       "user-settings": ["Nastavitve uporabnika"],
       "user-profile": ["Profilna slika", "Podatki uporabnika"],

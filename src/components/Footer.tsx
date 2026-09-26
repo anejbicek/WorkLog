@@ -13,7 +13,7 @@ function Footer() {
       }}
     >
       <span>© 2026 ŽustAI WorkLog</span>
-      <span>Verzija 6. 5. 3.</span>
+      <span>Verzija 7. 3. 1.</span>
     </footer>
   );
 }
