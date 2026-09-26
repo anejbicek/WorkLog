@@ -723,7 +723,6 @@ function ParameterField({
 export default function AdminCalculator() {
   const {
     currentUserRole,
-    users,
   } = useAdmin();
 
   const [toolTypes, setToolTypes] =
@@ -3189,6 +3188,7 @@ export default function AdminCalculator() {
 
                         setSelectedToolType(
                           {
+                            id: type.code,
                             code:
                               type.code,
                             name:
@@ -3196,6 +3196,7 @@ export default function AdminCalculator() {
                             description:
                               type.description ??
                               "",
+                            category: "",
                           },
                         );
 

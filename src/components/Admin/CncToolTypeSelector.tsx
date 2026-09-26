@@ -2,6 +2,7 @@ import type { SVGProps } from "react";
 
 export type CncToolTypeDefinition = {
   id: string;
+  code: string;
   name: string;
   description: string;
   category: string;
@@ -10,78 +11,91 @@ export type CncToolTypeDefinition = {
 export const TOOL_TYPES: CncToolTypeDefinition[] = [
   {
     id: "end_mill_flat",
+    code: "end_mill_flat",
     name: "Čelno rezkalo",
     description: "Standardno ravno čelno rezkalo.",
     category: "Rezkarji",
   },
   {
     id: "end_mill_chamfer",
+    code: "end_mill_chamfer",
     name: "Rezkar s posnetjem",
     description: "Čelno rezkalo s posnetim robom.",
     category: "Rezkarji",
   },
   {
     id: "ball_end_mill",
+    code: "ball_end_mill",
     name: "Kroglasto rezkalo",
     description: "Rezkar s kroglastim čelnim delom.",
     category: "Rezkarji",
   },
   {
     id: "bull_nose_end_mill",
+    code: "bull_nose_end_mill",
     name: "Radialno rezkalo",
     description: "Rezkar z radijem na spodnjem robu.",
     category: "Rezkarji",
   },
   {
     id: "t_slot_cutter",
+    code: "t_slot_cutter",
     name: "T-rezkalo",
     description: "Rezkalo za izdelavo T-utora.",
     category: "Specialna orodja",
   },
   {
     id: "face_mill",
+    code: "face_mill",
     name: "Čelno rezkalo z izmenljivimi ploščicami",
     description: "Večrezno čelno rezkalo.",
     category: "Čelna rezkala",
   },
   {
     id: "dovetail_cutter",
+    code: "dovetail_cutter",
     name: "Lastovičje repno rezkalo",
     description: "Kotno rezkalo za lastovičje repe.",
     category: "Specialna orodja",
   },
   {
     id: "chamfer_mill",
+    code: "chamfer_mill",
     name: "Posnemalno rezkalo",
     description: "Orodje za posnemanje robov.",
     category: "Specialna orodja",
   },
   {
     id: "slot_mill",
+    code: "slot_mill",
     name: "Rezkalo za utore",
     description: "Rezkalo za izdelavo utorov.",
     category: "Rezkarji",
   },
   {
     id: "tapered_end_mill",
+    code: "tapered_end_mill",
     name: "Stožčasto rezkalo",
     description: "Rezkar s stožčasto delovno geometrijo.",
     category: "Rezkarji",
   },
   {
     id: "angular_mill",
+    code: "angular_mill",
     name: "Kotno rezkalo",
     description: "Rezkalo za kotne površine.",
     category: "Specialna orodja",
   },
   {
     id: "drill",
+    code: "drill",
     name: "Sveder",
     description: "Vrtalno orodje.",
     category: "Vrtalna orodja",
   },
   {
     id: "custom_mill",
+    code: "custom_mill",
     name: "Drugo / po meri",
     description: "Poljubno specialno orodje.",
     category: "Drugo",
@@ -89,8 +103,9 @@ export const TOOL_TYPES: CncToolTypeDefinition[] = [
 ];
 
 type CncToolTypeSelectorProps = {
-  selectedTypeId: string | null;
-  onSelect: (toolTypeId: string) => void;
+  selectedTypeId?: string | null;
+  onSelect: (toolType: CncToolTypeDefinition) => void;
+  onCancel?: () => void;
   large?: boolean;
 };
 
@@ -832,6 +847,7 @@ export function CncToolGraphic({
 export default function CncToolTypeSelector({
   selectedTypeId,
   onSelect,
+  onCancel,
   large = false,
 }: CncToolTypeSelectorProps) {
   const categories = Array.from(
@@ -877,7 +893,7 @@ export default function CncToolTypeSelector({
                   <button
                     key={tool.id}
                     type="button"
-                    onClick={() => onSelect(tool.id)}
+                    onClick={() => onSelect(tool)}
                     className={`group overflow-hidden rounded-2xl border bg-white text-left transition ${
                       selected
                         ? "border-blue-500 ring-2 ring-blue-100"
@@ -949,6 +965,18 @@ export default function CncToolTypeSelector({
           <div className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm">
             {selectedTypeId}
           </div>
+        </div>
+      )}
+
+      {onCancel && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl border border-black/10 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5"
+          >
+            Prekliči
+          </button>
         </div>
       )}
     </div>
